@@ -1,0 +1,40 @@
+Feature Request:
+
+  [ generic description of the intended changes ]
+
+
+
+Error: 
+
+  [ description or example error logs ]
+
+
+
+Bug:
+
+  [ underlying problem causing returned errors ]
+
+
+
+Fix:
+
+  [ code we introduce to fix the bug; e.g a diff ]
+
+
+
+Refactor (optional):
+
+  [ code we change along the way to make it better or easier to understand (not the actual fix) ]
+
+ 
+
+Test:
+
+  [ description of how to test code with expected results ]
+  [ optionally, include example test scripts of code ]
+
+
+
+Owner: [username]:[date]
+Review: [username]:[date]
+
