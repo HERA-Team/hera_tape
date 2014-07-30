@@ -18,7 +18,7 @@ _project_name () {
 source _common.shell.sh
 
 alias=${1:-git-d}
-dir=${2:-dconover}
+dir=${2:-hpc}
 
 
 
