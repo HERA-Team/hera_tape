@@ -22,15 +22,18 @@ class archive():
         """Copy files to /dev/shm/$PID, create md5sum data for all files"""
         for file in list:
             transfer_path = self.ensure_dir('%s/%s' % (self.archive_dir, file))
-            self.transfer.scp.get("/papertape/" + file, local_path=transfer_path)
-            self.md5(self.archive_dir, file)
+            print("debug:build_archive:", file)
+            self.transfer.scp.get("/papertape/" + file, local_path=transfer_path, recursive=True)
+            #self.check_md5(self.archive_dir, file)
+            
+    def tar_archive(self):
+        pass
 
     def ensure_dir(self, file):
         dir = os.path.dirname(file)
         if not os.path.exists(dir):
             os.makedirs(dir)
         return dir
-
 
     def md5(self, directory_prefix, file):
         full_path = '%s/%s' % (directory_prefix, file)
@@ -44,4 +47,5 @@ class archive():
         return hasher.hexdigest
     
     def __del__ (self):
-        shutil.rmtree(self.archive_dir)
+        #shutil.rmtree(self.archive_dir)
+        pass

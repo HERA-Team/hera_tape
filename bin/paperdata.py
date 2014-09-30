@@ -15,6 +15,7 @@ class paperdb:
         self.pid = pid
         self.connect = pymysql.connect(read_default_file=credentials)
         self.cur = self.connect.cursor()
+        self.list=[]
 
         self.debug_list = [ 'test:/data/a', 'test:/data/b', 'test:/data/c' ]
 
@@ -52,9 +53,9 @@ class paperdb:
         """Release claimed files"""
         for file in list:
             host, file_path = file.split(":")
-            update_sql - "update paperdata set tape_location='' where host='%s' and raw_location='%s' and tape_location='%s%s'" % (host, file_path, status_type, self.pid)
-            print(update_sql)
-            self.cur.execute(updaet_sql)
+            update_sql = "update paperdata set tape_location='' where host='%s' and raw_location='%s' and tape_location='%s%s'" % (host, file_path, status_type, self.pid)
+            print("debug: unclaim_files", update_sql)
+            self.cur.execute(update_sql)
 
 
     def write_tape_location(self,list,tape_id):
@@ -67,12 +68,12 @@ class paperdb:
         for file in list:
             self.cur.execute('update paperdata set delete_file=1, tape_location="%s" where raw_location="%s"' % (tape_id, file))
 
-        self.cur.commit()
+        self.connect.commit()
 
 
     def __del__ (self):
-        self.cur.close()
+        self.connect.commit()
         self.connect.close()
-        self.unclaim_files(1, self.list)
+        #self.unclaim_files(1, self.list)
 
 

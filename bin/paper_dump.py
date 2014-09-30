@@ -55,4 +55,3 @@ class dump:
         """write a catalog file"""
         pass
 
-

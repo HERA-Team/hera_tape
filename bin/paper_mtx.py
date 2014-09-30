@@ -16,7 +16,6 @@ class changer:
         self._tape_dev='/dev/changer'
         self.check_inventory()
         self.tape_drives = drives()
-        self.mtxdb = mtxdb()
         
     def check_inventory(self):
         output = check_output(['mtx','status']).decode("utf-8")
@@ -26,12 +25,11 @@ class changer:
     def tape_slot(self,tape_id):
         return self.tape_slot[tape_id]
 
-    def load_tape_pair(self):
+    def load_tape_pair(self,ids):
         """load the next available tape pair"""
         if self.drives_empty():
-           ids = self.mtxdb.select_ids()
            if len(ids) == 2:
-               for drive id in enumerate(ids):
+               for drive, id in enumerate(ids):
                    self.load_tape(id,drive)
 
     def unload_tape_pair(self):
@@ -46,7 +44,7 @@ class changer:
 
     def drives_loaded(self):
         self.check_inventory()
-        if len(self.drive_ids)
+        if len(self.drive_ids):
             return(self.get_drive_tape_ids())
         else:
             return False
@@ -164,7 +162,7 @@ class mtxdb:
         pass
 
     def __del__ (self):
-        self.cur.close()
+        self.connect.commit()
         self.connect.close()
             
                 
@@ -183,6 +181,6 @@ class drives:
         self.nst0.flush(text)
         self.nst0.flush(text)
 
-    def __del__(self):
-        self.nst0.close()
-        self.nst1.close()
+    #def __del__(self):
+     #   self.nst0.close()
+      #  self.nst1.close()
