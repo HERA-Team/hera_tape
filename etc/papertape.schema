@@ -1,0 +1,21 @@
+Description: mysql schema for paperdata table
+
+
+Schema:
+Field  			Type			Null	Key	Default	Extra
+host			varchar(100)	YES		folio	
+path			varchar(100)	YES		NULL	
+era				int(11)			YES		NULL	
+era_type		varchar(100)	YES		NULL	
+obsnum			bigint(20)		YES		NULL	
+julian_day		int(11)			YES		NULL	
+julian_date		decimal(16,8)	YES		NULL	
+polarization	varchar(4)		YES		NULL	
+data_length		decimal(20,15)	YES		NULL	
+raw_location	varchar(100)	YES		NULL	
+cal_location	varchar(100)	YES		NULL	
+tape_location	varchar(100)	YES		NULL	
+file_size		varchar(15)		YES		NULL	
+compressed		tinyint(1)		YES		0	
+ready_to_tape	tinyint(1)		YES		0	
+delete_file		tinyint(1)		YES		0	

@@ -1,0 +1,7 @@
+# The password should be added in production
+[client]
+user = papertape
+password = 
+database = paperdata
+host = shredder.physics.upenn.edu
+

@@ -16,35 +16,46 @@ class paperdb:
         self.connect = pymysql.connect(read_default_file=credentials)
         self.cur = self.connect.cursor()
 
+        self.debug_list = [ 'test:/data/a', 'test:/data/b', 'test:/data/c' ]
+
 
     def get_new(self,size_limit):
         """Retrieve a list of available files."""
-        ready_sql = """select host,raw_location, file_size from paperdata
+        ready_sql = """select distinct host,raw_location,file_size from paperdata
             where raw_location is not null and ready_to_tape = 1 
-            order by obsnum limit 1,20"""
+            order by obsnum """
 
         self.cur.execute(ready_sql)
 
-        list = []
+        self.list = []
         total = 0
         
         for file_info in self.cur.fetchall():
             file_size = float(file_info[2].split("M")[0]) 
             if total+file_size < size_limit:
-                list.append(":".join(file_info[0:2]))
+                self.list.append(":".join(file_info[0:2]))
                 total += float(file_info[2].split("M")[0]) 
 
-        return list
+        return self.list
         
     def claim_files (self, status_type, list):
         """Mark files in the database that are "claimed" by a dump process."""
         for file in list:
             host, file_path = file.split(":")
-            update_sql = "update paperdata set tape_location='1%s' where host='%s' and raw_location='%s'" % (self.pid, host, file_path)
+            update_sql = "update paperdata set tape_location='%s%s' where host='%s' and raw_location='%s'" % (status_type, self.pid, host, file_path)
             print(update_sql)
             self.cur.execute(update_sql)
 
         self.connect.commit()
+
+    def unclaim_files(self,status_type, list):
+        """Release claimed files"""
+        for file in list:
+            host, file_path = file.split(":")
+            update_sql - "update paperdata set tape_location='' where host='%s' and raw_location='%s' and tape_location='%s%s'" % (host, file_path, status_type, self.pid)
+            print(update_sql)
+            self.cur.execute(updaet_sql)
+
 
     def write_tape_location(self,list,tape_id):
         """Take a dictionary of files and labels and update the database
@@ -54,7 +65,7 @@ class paperdb:
         """
 
         for file in list:
-            self.cur.execute('update paperdata set delete_file = 1, tape_location = "%s" where raw_location = "%s"' % (tape_id, file))
+            self.cur.execute('update paperdata set delete_file=1, tape_location="%s" where raw_location="%s"' % (tape_id, file))
 
         self.cur.commit()
 
@@ -62,5 +73,6 @@ class paperdb:
     def __del__ (self):
         self.cur.close()
         self.connect.close()
+        self.unclaim_files(1, self.list)
 
 
