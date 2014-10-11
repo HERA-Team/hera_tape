@@ -4,23 +4,39 @@
 #
 # dconover 20140922
 
-from subprocess import check_output
-import re, pymysql
+import re, pymysql, time
 from random import randint
+from subprocess import *
+
 
 class changer:
     'simple tape changer class'
 
-    def __init__ (self,pid):
+    def __init__ (self,pid, tape_size, debug=False):
         self.pid = pid
+        self.tape_size = tape_size
         self._tape_dev='/dev/changer'
         self.check_inventory()
+        self.debug = debug
         self.tape_drives = drives()
         
+    def debug_print(self, debug_output):
+        self.debug=True
+        if self.debug == True:
+            print('debug:',debug_output)
+
     def check_inventory(self):
         output = check_output(['mtx','status']).decode("utf-8")
         lines  = output.split('\n')
         self.drive_ids, self.tape_slot = self.split_mtx_output(output)
+        for id in self.drive_ids:
+            self.debug_print('checkinventory - %s, %s ' % (id, self.drive_ids[id]))
+ 
+    def print_inventory(self):
+        for id in self.drive_ids:
+            print('drive: %s, %s' % (id, self.drive_ids[id]))
+        for id in self.tape_slot:
+            print('slot: %s, %s' % (id, self.tape_slot[id]))
 
     def tape_slot(self,tape_id):
         return self.tape_slot[tape_id]
@@ -35,7 +51,7 @@ class changer:
     def unload_tape_pair(self):
         'unload the tapes in the current drives'
         if not self.drives_empty():
-            for tape_id in self.tape_slot:
+            for tape_id in self.drive_ids:
                 self.unload_tape(tape_id)
            
     def drives_empty(self):
@@ -53,28 +69,34 @@ class changer:
         self.check_inventory()
         return self.drive_ids
         
-
     def load_tape (self, tape_id, tape_drive):
         """Load a tape into a free drive slot"""
         if self.tape_slot[tape_id]:
-            output = check_output(['mtx','load', self.tape_slot[tape_id], tape_drive])
+            output = check_output(['mtx','load', str(self.tape_slot[tape_id]), str(tape_drive)])
             self.check_inventory()
 
     def unload_tape (self, tape_id):
+        """Unload a tape from a drive and put in the original slot""" 
         if self.drive_ids[tape_id]:
-            output = check_output(['mtx','unload',self.drive_ids(tape_id)])
+            command = ['mtx','unload',self.drive_ids[tape_id][1], self.drive_ids[tape_id][0]]
+            self.debug_print('unload_tape - %s' % command)
+            output = check_output(command)
             self.check_inventory()
 
-    def write_tape(self, dir):
+    def write(self, queue_pass):
         """write data to tape"""
         ## tar dir to two drives
-        pass 
+        arcname = "paper.%s.%s" % (self.pid, queue_pass)
+        tar_name = "/papertape/queue/%s/%s.tar" % (self.pid, arcname)
+        catalog_name = "/papertape/queue/%s/%s.list" % (self.pid, arcname)
+        self.tape_drives.arcwrite(tar_name, catalog_name)
 
-    def unload_tape(self, tape_id):
-        """Unload a tape from a drive and put in the original slot""" 
-        if self.drive_slots[tape_id]:
-            output = check_output(['mtx','unload', tape_slot[tape_id], tape_drive])
-            self.check_inventory()
+    def prep_tape(self, catalog_file):
+        """write the catalog to tape. write all of our source code to the first file"""
+        ## write catalog
+        self.tape_drives.dd(catalog_file)
+        self.tape_drives.tar('/root/git/papertape')
+        ## write source code
 
     def split_mtx_output(self,mtx_output):
         """Return dictionaries of tape_ids in drives and slots."""
@@ -100,7 +122,7 @@ class changer:
         return drive_ids, tape_slot
 
 class mtxdb:
-    """class to handle record of label ids
+    """db to handle record of label ids
 
     Field     Type    Null    Key     Default Extra
     id        mediumint(9)    NO      PRI     NULL    auto_increment
@@ -170,17 +192,55 @@ class drives:
     """class to write two tapes"""
 
     def __init__(self):
-        self.nst0 = '/dev/nst0'
-        self.nst1 = '/dev/nst1'
+        pass
 
-    def write(self,text):
-        self.nst0.write(text)
-        self.nst0.write(text)
+    def arcwrite(self,file,catalog):
+        commands = []
+        for int in range(2):
+            commands.append('tar cf /dev/nst%s  %s %s ' % (int, catalog,file))
+        self.exec_commands(commands)
+ 
+    def tar(self,dir):
+        commands = []
+        for int in range(2):
+            commands.append('tar cf /dev/nst%s  %s %s ' % (int, catalog,file))
+        self.exec_commands(commands)
+ 
+    def dd(self,text_file):
+        command = []
+        for int in range(2):
+            commands.append('dd of=/dev/nst%s if=%s bs=32k' % (int, text_file))
+        self.exec_commands(commands)
 
-    def flush(self):
-        self.nst0.flush(text)
-        self.nst0.flush(text)
+    def exec_commands(self, cmds):
+        ''' Exec commands in parallel in multiple process 
+        (as much as we have CPU)
+        '''
+        if not cmds: return # empty list
 
-    #def __del__(self):
-     #   self.nst0.close()
-      #  self.nst1.close()
+        def done(p):
+            return p.poll() is not None
+        def success(p):
+            return p.returncode == 0
+        def fail():
+            return
+
+        processes = []
+        while True:
+            while cmds:
+                task = cmds.pop()
+                processes.append(Popen(task, shell=True))
+
+            for p in processes:
+                if done(p):
+                    if success(p):
+                        processes.remove(p)
+                    else:
+                        fail()
+
+            if not processes and not cmds:
+                break
+            else:
+                time.sleep(0.05)
+
+

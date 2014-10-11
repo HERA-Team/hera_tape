@@ -10,21 +10,25 @@ import pymysql
 
 class paperdb:
 
-    def __init__ (self, credentials, pid):
+    def __init__ (self, credentials, pid, debug=False):
         """Initialize connection and collect list of files to dump.""" 
         self.pid = pid
         self.connect = pymysql.connect(read_default_file=credentials)
         self.cur = self.connect.cursor()
         self.list=[]
+        self.debug = debug
 
         self.debug_list = [ 'test:/data/a', 'test:/data/b', 'test:/data/c' ]
 
+    def debug_print(self, debug_output):
+        if self.debug == True:
+            print('debug:',debug_output) 
 
     def get_new(self,size_limit):
         """Retrieve a list of available files."""
-        ready_sql = """select distinct host,raw_location,file_size from paperdata
-            where raw_location is not null and ready_to_tape = 1 
-            order by obsnum """
+        ready_sql = """select raw_location,raw_file_size_mb from paperdata
+            where raw_location is not null and ready_to_tape = 1 and tape_location!='NULL'
+            group by raw_location order by obsnum """
 
         self.cur.execute(ready_sql)
 
@@ -32,19 +36,21 @@ class paperdb:
         total = 0
         
         for file_info in self.cur.fetchall():
-            file_size = float(file_info[2].split("M")[0]) 
+            file_size = float(file_info[1]) 
+            if file_size > size_limit:
+                self.debug_print ('get_new - file_size (%s) larger than size limit(%s) - %s' % (file_size, size_limit, file_info[0]))
             if total+file_size < size_limit:
-                self.list.append(":".join(file_info[0:2]))
-                total += float(file_info[2].split("M")[0]) 
+                self.list.append(file_info[0])
+                total += file_size
 
-        return self.list
+        return self.list, total
         
     def claim_files (self, status_type, list):
         """Mark files in the database that are "claimed" by a dump process."""
         for file in list:
             host, file_path = file.split(":")
-            update_sql = "update paperdata set tape_location='%s%s' where host='%s' and raw_location='%s'" % (status_type, self.pid, host, file_path)
-            print(update_sql)
+            update_sql = "update paperdata set tape_location='%s%s' where raw_location='%s'" % (status_type, self.pid, file)
+            self.debug_print('claim_files - %s' % update_sql)
             self.cur.execute(update_sql)
 
         self.connect.commit()
@@ -53,8 +59,8 @@ class paperdb:
         """Release claimed files"""
         for file in list:
             host, file_path = file.split(":")
-            update_sql = "update paperdata set tape_location='' where host='%s' and raw_location='%s' and tape_location='%s%s'" % (host, file_path, status_type, self.pid)
-            print("debug: unclaim_files", update_sql)
+            update_sql = "update paperdata set tape_location='' where raw_location='%s' and tape_location='%s%s'" % (file, status_type, self.pid)
+            self.debug_print("unclaim_files - %s" % update_sql)
             self.cur.execute(update_sql)
 
 

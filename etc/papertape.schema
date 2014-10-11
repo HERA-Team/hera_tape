@@ -1,21 +1,32 @@
-Description: mysql schema for paperdata table
+Description: 
 
+    Mysql schema for paperdata table tracks location infromation for all 
+raw and compressed data.
 
-Schema:
-Field  			Type			Null	Key	Default	Extra
-host			varchar(100)	YES		folio	
-path			varchar(100)	YES		NULL	
-era				int(11)			YES		NULL	
-era_type		varchar(100)	YES		NULL	
-obsnum			bigint(20)		YES		NULL	
-julian_day		int(11)			YES		NULL	
-julian_date		decimal(16,8)	YES		NULL	
-polarization	varchar(4)		YES		NULL	
-data_length		decimal(20,15)	YES		NULL	
-raw_location	varchar(100)	YES		NULL	
-cal_location	varchar(100)	YES		NULL	
-tape_location	varchar(100)	YES		NULL	
-file_size		varchar(15)		YES		NULL	
-compressed		tinyint(1)		YES		0	
-ready_to_tape	tinyint(1)		YES		0	
-delete_file		tinyint(1)		YES		0	
+Metadata:
+
+    host: shredder.physics.upenn.edu
+    db_name: paperdata
+    table_name: paperdata
+
+Database schema:
+
+Field               Type            Null  Key   Default  Extra
+path                varchar(100)    YES   NULL
+era                 int(11)         YES   NULL
+era_type            varchar(100)    YES   NULL
+obsnum              bigint(20)      YES   NULL
+md5sum              varchar(32)     YES   NULL
+julian_day          int(11)         YES   NULL
+julian_date         decimal(16,8)   YES   NULL
+polarization        varchar(4)      YES   NULL
+data_length         decimal(20,15)  YES   NULL
+raw_location        varchar(100)    YES   NULL
+cal_location        varchar(100)    YES   NULL
+tape_location       varchar(100)    YES   NULL
+compr_file_size_MB  decimal(6,2)    YES   NULL
+raw_file_size_MB    decimal(10,2)   YES   NULL
+compressed          tinyint(1)      YES   0
+ready_to_tape       tinyint(1)      YES   0
+delete_file         tinyint(1)      YES   0
+restore_history     varchar(255)    YES   NULL
