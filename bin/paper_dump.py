@@ -2,7 +2,7 @@
 from paper_mtx import *
 from paper_io import *
 from paperdata import paperdb
-from paper_debug import debug
+from paper_debug import Debug
 
 from random import randint
 import os, shutil, sys
@@ -18,7 +18,7 @@ class dump:
         self.batch_size_mb = 12000 ## each dump process 6gb to /dev/shm (two can run at a time)
         self.tape_size = (1.5 * 1000 * 1000) - self.batch_size_mb ## (1.5Tb -1 batch)
         #self.tape_size = 13000
-        self.debug = debug(self.pid, debug=debug)
+        self.debug = Debug(self.pid, debug=debug)
 
         self.setup_external_modules()
 

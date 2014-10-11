@@ -7,7 +7,7 @@
 import re, pymysql, time
 from random import randint
 from subprocess import *
-from paper_dubug import debug
+from paper_debug import Debug
 
 
 class changer:
@@ -15,7 +15,7 @@ class changer:
 
     def __init__ (self,pid, tape_size, debug=False):
         self.pid = pid
-        self.debug = debug(self.pid, debug=debug)
+        self.debug = Debug(self.pid, debug=debug)
         self.tape_size = tape_size
         self._tape_dev='/dev/changer'
         self.check_inventory()

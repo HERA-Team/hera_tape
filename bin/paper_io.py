@@ -9,7 +9,7 @@ a single directory where subdirs correspond to host:directory paths.
 import os, hashlib, shutil, tarfile
 from subprocess import check_output
 from paper_paramiko import transfer
-from paper_debug import debug
+from paper_debug import Debug
 
 class archive():
 
@@ -20,9 +20,8 @@ class archive():
         self.archive_dir = self.ensure_dir('/papertape/shm/%s/' % (self.pid))
         self.queue_dir = self.ensure_dir('/papertape/queue/%s/' % (self.pid))
         self.catalog_name = "%s/%s.list" %(self.queue_dir,self.pid)
-        self.debug = debug
 
-        self.debug = debug(self.pid, debug=debug)
+        self.debug = Debug(self.pid, debug=debug)
 
     def build_archive(self, list):
         """Copy files to /dev/shm/$PID, create md5sum data for all files"""

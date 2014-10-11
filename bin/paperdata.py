@@ -7,7 +7,7 @@ are written to tape.
 """
   
 import pymysql
-from paper_debug import debug
+from paper_debug import Debug
 
 class paperdb:
 
@@ -17,7 +17,7 @@ class paperdb:
         self.connect = pymysql.connect(read_default_file=credentials)
         self.cur = self.connect.cursor()
         self.list=[]
-        self.debug = debug(self.pid, debug=debug)
+        self.debug = Debug(self.pid, debug=debug)
 
     def get_new(self,size_limit):
         """Retrieve a list of available files."""
