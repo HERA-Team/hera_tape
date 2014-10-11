@@ -59,15 +59,17 @@ class paperdb:
             self.cur.execute(update_sql)
 
 
-    def write_tape_location(self,list,tape_id):
+    def write_tape_location(self,cumulative_list,tape_id):
         """Take a dictionary of files and labels and update the database
 
         record the barcode of tape in the tape_location field, and
         setting the delete_file field to 1 for all files just written to tape.
         """
 
-        for file in list:
-            self.cur.execute('update paperdata set delete_file=1, tape_location="%s" where raw_location="%s"' % (tape_id, file))
+        for archive_info in cumulative_list:
+            tape_location = ":".join(tape_id,archive_info[0])
+            raw_location = archive_info[1]
+            self.cur.execute('update paperdata set delete_file=1, tape_location="%s" where raw_location="%s"' % (tape_location, raw_location))
 
         self.connect.commit()
 

@@ -42,12 +42,14 @@ class changer:
         if self.drives_empty():
            if len(ids) == 2:
                for drive, id in enumerate(ids):
+                   self.debug.print('loading', str(id), str(drive))
                    self.load_tape(id,drive)
 
     def unload_tape_pair(self):
         'unload the tapes in the current drives'
         if not self.drives_empty():
             for tape_id in self.drive_ids:
+                self.debug.print('unloading', tape_id)
                 self.unload_tape(tape_id)
            
     def drives_empty(self):
@@ -75,7 +77,7 @@ class changer:
         """Unload a tape from a drive and put in the original slot""" 
         if self.drive_ids[tape_id]:
             command = ['mtx','unload',self.drive_ids[tape_id][1], self.drive_ids[tape_id][0]]
-            self.debug.print('unload_tape - %s' % command)
+            self.debug.print('%s' % command)
             output = check_output(command)
             self.check_inventory()
 

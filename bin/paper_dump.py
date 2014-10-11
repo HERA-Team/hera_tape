@@ -7,7 +7,7 @@ from paper_debug import Debug
 from random import randint
 import os, shutil, sys
 
-class dump:
+class Dump:
 
     def  __init__ (self, debug=False, pid=None):
         self.mtx_creds = '~/.my.mtx.cnf'
@@ -39,7 +39,7 @@ class dump:
     def archive_to_tape(self):
         """master method to loop through files to write data to tape"""
         self.queue_pass = 0
-        cummulative_catalog = []
+        cumulative_catalog = []
 
         ## get a list of files, transfer to disk, write to tape
         while self.queue_size + self.batch_size_mb < self.tape_size:
@@ -48,19 +48,20 @@ class dump:
             self.files.queue_archive(self.queue_pass, list)         ## pass files to tar on disk with catalog
             self.queue_size += list_size
             self.queue_pass += 1 
-            cummulative_catalog.extend([self.queue_pass, list])
+            cumulative_catalog.extend([self.queue_pass, list])
             self.debug.print("q:%s l:%s t:%s" % (self.queue_size, list_size, self.tape_size)) 
 
-        self.files.gen_final_catalog(self.files.catalog_name,  cummulative_catalog)
-        self.tar_archive(self.files.catalog_name)
+        self.files.gen_final_catalog(self.files.catalog_name,  cumulative_catalog)
+        self.tar_archive(cumulative_catalog, self.files.catalog_name)
 
-    def manual_to_tape(self, queue_pass):
+    def manual_to_tape(self, queue_pass, cumulative_catalog):
         """if the dump is interrupted, run the files to tape for the current_pid.
 
         This works only if you initialize your dump object with pid=$previous_run_pid."""
         self.queue_pass = queue_pass
         self.debug.print("manual to tape with vars - qp:%s, cn:%s" % (queue_pass, self.files.catalog_name))
-        self.tar_archive(self.files.catalog_name)
+        self.tar_archive(cumulative_catalog,self.files.catalog_name)
+        self.debug.print("manual to tape complete")
        
     def get_list(self, limit=7500):
 
@@ -70,7 +71,7 @@ class dump:
         self.db.claim_files(1, new_list)
         return new_list, list_size
 
-    def tar_archive(self, catalog_file):
+    def tar_archive(self, cumulative_list, catalog_file):
 
         ## select ids
         tape_label_ids = self.labeldb.select_ids()
@@ -82,12 +83,13 @@ class dump:
         ## tar files to tape
         self.tape.prep_tape(catalog_file)
         for  _pass in range(self.queue_pass):
+            self.debug.print('sending to tape', str(_pass))
             self.tape.write(_pass)
             
         self.tape.unload_tape_pair()
 
         ## write tape locations
-        self.db.write_tape_locations(','.join(tape_label_ids))
+        self.db.write_tape_location(cumulative_list, ','.join(tape_label_ids))
 
 
  
