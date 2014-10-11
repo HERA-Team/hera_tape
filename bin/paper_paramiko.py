@@ -1,16 +1,24 @@
+"""use paramiko to scp files from remote host"""
+
 from paramiko import SSHClient
 from scp import SCPClient
 
 
-class transfer:
+class Transfer:
+    """Implemnet scp"""
 
-   def __init__(self, host='shredder.physics.upenn.edu', key_file='/root/.ssh/cluster.key'):
-       self.ssh = SSHClient()
-       self.ssh.load_system_host_keys()
+    default_host = 'shredder.physics.upenn.edu'
+    default_key = '/root/.ssh/cluster.key'
+
+    def __init__(self, host=default_host, key_file=default_key):
+        """initaliaze connection with host=default_host, key_file=default_key"""
+
+        self.ssh = SSHClient()
+        self.ssh.load_system_host_keys()
        
-       self.ssh.connect(host,key_filename=key_file)
+        self.ssh.connect(host, key_filename=key_file)
 
-       self.scp = SCPClient(self.ssh.get_transport())
+        self.scp = SCPClient(self.ssh.get_transport())
 
 
    

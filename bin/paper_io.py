@@ -8,18 +8,18 @@ a single directory where subdirs correspond to host:directory paths.
 
 import os, hashlib, shutil, tarfile
 from subprocess import check_output
-from paper_paramiko import transfer
+from paper_paramiko import Transfer
 from paper_debug import Debug
 
-class archive():
+class archive:
 
     def __init__(self,pid, debug=False):
         """Record $PID"""
         self.pid=pid
-        self.transfer = transfer()
+        self.transfer = Transfer()
         self.archive_dir = self.ensure_dir('/papertape/shm/%s/' % (self.pid))
         self.queue_dir = self.ensure_dir('/papertape/queue/%s/' % (self.pid))
-        self.catalog_name = "%s/%s.list" %(self.queue_dir,self.pid)
+        self.catalog_name = "%s/paper.%s.list" %(self.queue_dir,self.pid)
 
         self.debug = Debug(self.pid, debug=debug)
 

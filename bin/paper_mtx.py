@@ -26,7 +26,7 @@ class changer:
         lines  = output.split('\n')
         self.drive_ids, self.tape_slot = self.split_mtx_output(output)
         for id in self.drive_ids:
-            self.debug.print(__name__,'- %s, %s ' % (id, self.drive_ids[id]))
+            self.debug.print('- %s, %s ' % (id, self.drive_ids[id]))
  
     def print_inventory(self):
         for id in self.drive_ids:
@@ -85,11 +85,13 @@ class changer:
         arcname = "paper.%s.%s" % (self.pid, queue_pass)
         tar_name = "/papertape/queue/%s/%s.tar" % (self.pid, arcname)
         catalog_name = "/papertape/queue/%s/%s.list" % (self.pid, arcname)
+        self.debug.print("writing", tar_name, catalog_name)
         self.tape_drives.arcwrite(tar_name, catalog_name)
 
     def prep_tape(self, catalog_file):
         """write the catalog to tape. write all of our source code to the first file"""
         ## write catalog
+        self.debug.print("writing catalog to tape", catalog_file)
         self.tape_drives.dd(catalog_file)
         ## write source code
         #self.tape_drives.tar('/root/git/papertape')
@@ -129,10 +131,11 @@ class mtxdb:
 
     """
 
-    def __init__ (self, _credentials, pid):
+    def __init__ (self, _credentials, pid, debug=False):
         """Initialize connection and collect list of tape_ids.""" 
 
         self.pid = pid
+        self.debug = Debug(self.pid, debug=debug)
         self.connect = pymysql.connect(read_default_file=_credentials)
         self.cur = self.connect.cursor()
 
@@ -163,7 +166,8 @@ class mtxdb:
     def claim_ids (self, ids):
         """Mark files in the database that are "claimed" by a dump process."""
         for id in ids:
-            claim_query = 'update ids set status=%s where label=%s' % (self.pid,id)
+            claim_query = 'update ids set status="%s" where label="%s"' % (self.pid,id)
+            self.debug.print(claim_query)
             self.cur.execute(claim_query)
 
         self.connect.commit()
@@ -203,7 +207,7 @@ class drives:
         self.exec_commands(commands)
  
     def dd(self,text_file):
-        command = []
+        commands = []
         for int in range(2):
             commands.append('dd of=/dev/nst%s if=%s bs=32k' % (int, text_file))
         self.exec_commands(commands)

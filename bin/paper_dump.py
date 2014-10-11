@@ -54,6 +54,14 @@ class dump:
         self.files.gen_final_catalog(self.files.catalog_name,  cummulative_catalog)
         self.tar_archive(self.files.catalog_name)
 
+    def manual_to_tape(self, queue_pass):
+        """if the dump is interrupted, run the files to tape for the current_pid.
+
+        This works only if you initialize your dump object with pid=$previous_run_pid."""
+        self.queue_pass = queue_pass
+        self.debug.print("manual to tape with vars - qp:%s, cn:%s" % (queue_pass, self.files.catalog_name))
+        self.tar_archive(self.files.catalog_name)
+       
     def get_list(self, limit=7500):
 
         ## get a 7.5 gb list of files to transfer
@@ -72,7 +80,7 @@ class dump:
         self.tape.load_tape_pair(tape_label_ids)
 
         ## tar files to tape
-        self.tape.prep_tape()
+        self.tape.prep_tape(catalog_file)
         for  _pass in range(self.queue_pass):
             self.tape.write(_pass)
             
