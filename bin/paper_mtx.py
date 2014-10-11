@@ -7,6 +7,7 @@
 import re, pymysql, time
 from random import randint
 from subprocess import *
+from paper_dubug import debug
 
 
 class changer:
@@ -14,23 +15,18 @@ class changer:
 
     def __init__ (self,pid, tape_size, debug=False):
         self.pid = pid
+        self.debug = debug(self.pid, debug=debug)
         self.tape_size = tape_size
         self._tape_dev='/dev/changer'
         self.check_inventory()
-        self.debug = debug
         self.tape_drives = drives()
         
-    def debug_print(self, debug_output):
-        self.debug=True
-        if self.debug == True:
-            print('debug:',debug_output)
-
     def check_inventory(self):
         output = check_output(['mtx','status']).decode("utf-8")
         lines  = output.split('\n')
         self.drive_ids, self.tape_slot = self.split_mtx_output(output)
         for id in self.drive_ids:
-            self.debug_print('checkinventory - %s, %s ' % (id, self.drive_ids[id]))
+            self.debug.print(__name__,'- %s, %s ' % (id, self.drive_ids[id]))
  
     def print_inventory(self):
         for id in self.drive_ids:
@@ -79,7 +75,7 @@ class changer:
         """Unload a tape from a drive and put in the original slot""" 
         if self.drive_ids[tape_id]:
             command = ['mtx','unload',self.drive_ids[tape_id][1], self.drive_ids[tape_id][0]]
-            self.debug_print('unload_tape - %s' % command)
+            self.debug.print('unload_tape - %s' % command)
             output = check_output(command)
             self.check_inventory()
 
@@ -95,8 +91,8 @@ class changer:
         """write the catalog to tape. write all of our source code to the first file"""
         ## write catalog
         self.tape_drives.dd(catalog_file)
-        self.tape_drives.tar('/root/git/papertape')
         ## write source code
+        #self.tape_drives.tar('/root/git/papertape')
 
     def split_mtx_output(self,mtx_output):
         """Return dictionaries of tape_ids in drives and slots."""

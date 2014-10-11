@@ -9,6 +9,7 @@ a single directory where subdirs correspond to host:directory paths.
 import os, hashlib, shutil, tarfile
 from subprocess import check_output
 from paper_paramiko import transfer
+from paper_debug import debug
 
 class archive():
 
@@ -21,26 +22,31 @@ class archive():
         self.catalog_name = "%s/%s.list" %(self.queue_dir,self.pid)
         self.debug = debug
 
-    def debug_print(self, debug_output):
-        if self.debug == True:
-            print('debug:',debug_output)
+        self.debug = debug(self.pid, debug=debug)
 
     def build_archive(self, list):
         """Copy files to /dev/shm/$PID, create md5sum data for all files"""
         for file in list:
             transfer_path = self.ensure_dir('%s/%s' % (self.archive_dir, file))
-            self.debug_print("build_archive - %s" % file)
+            self.debug.print("build_archive - %s" % file)
             self.transfer.scp.get("/papertape/" + file, local_path=transfer_path, recursive=True)
             #self.check_md5(self.archive_dir, file)
         
-    def gen_catalog(self, catalog, list):
+    def gen_catalog(self, catalog, list, queue_pass):
         cfile = open(catalog, 'w') 
         int = 1
         for file in list:
-            cfile.write("%s:%s\n" % (int, file))
+            cfile.write("%s:%s:%s\n" % (queue_pass, int, file))
             int += 1
+
+    def gen_final_catalog(self, catalog, list):
+        cfile = open(catalog, 'w')
+        int = 1
+        for file in list:
+            cfile.write('%s:%s:%s\n' % (file[0], int, file[1]))
+        
             
-    def queue_archive(self, id, list):
+    def queue_archive(self, id, list, queue_pass):
         """move the archive from /dev/shm to a tar file in the queue directory
            once we have 1.5tb of data we will create a catalog and write all the queued
            archives to tape.
@@ -56,7 +62,7 @@ class archive():
         self.clear_dir(list)
 
         ## make the catalog
-        self.gen_catalog(catalog_name,list)
+        self.gen_catalog(catalog_name,list, queue_pass)
 
 
     def clear_dir (self, list):

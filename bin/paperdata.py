@@ -7,6 +7,7 @@ are written to tape.
 """
   
 import pymysql
+from paper_debug import debug
 
 class paperdb:
 
@@ -16,13 +17,7 @@ class paperdb:
         self.connect = pymysql.connect(read_default_file=credentials)
         self.cur = self.connect.cursor()
         self.list=[]
-        self.debug = debug
-
-        self.debug_list = [ 'test:/data/a', 'test:/data/b', 'test:/data/c' ]
-
-    def debug_print(self, debug_output):
-        if self.debug == True:
-            print('debug:',debug_output) 
+        self.debug = debug(self.pid, debug=debug)
 
     def get_new(self,size_limit):
         """Retrieve a list of available files."""
@@ -38,7 +33,7 @@ class paperdb:
         for file_info in self.cur.fetchall():
             file_size = float(file_info[1]) 
             if file_size > size_limit:
-                self.debug_print ('get_new - file_size (%s) larger than size limit(%s) - %s' % (file_size, size_limit, file_info[0]))
+                self.debug.print ('get_new - file_size (%s) larger than size limit(%s) - %s' % (file_size, size_limit, file_info[0]))
             if total+file_size < size_limit:
                 self.list.append(file_info[0])
                 total += file_size
@@ -50,7 +45,7 @@ class paperdb:
         for file in list:
             host, file_path = file.split(":")
             update_sql = "update paperdata set tape_location='%s%s' where raw_location='%s'" % (status_type, self.pid, file)
-            self.debug_print('claim_files - %s' % update_sql)
+            self.debug.print('claim_files - %s' % update_sql)
             self.cur.execute(update_sql)
 
         self.connect.commit()
@@ -60,7 +55,7 @@ class paperdb:
         for file in list:
             host, file_path = file.split(":")
             update_sql = "update paperdata set tape_location='' where raw_location='%s' and tape_location='%s%s'" % (file, status_type, self.pid)
-            self.debug_print("unclaim_files - %s" % update_sql)
+            self.debug.print("unclaim_files - %s" % update_sql)
             self.cur.execute(update_sql)
 
 
