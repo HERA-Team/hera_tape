@@ -45,7 +45,7 @@ class archive:
             cfile.write('%s:%s:%s\n' % (file[0], int, file[1]))
         
             
-    def queue_archive(self, id, list, queue_pass):
+    def queue_archive(self, id, list):
         """move the archive from /dev/shm to a tar file in the queue directory
            once we have 1.5tb of data we will create a catalog and write all the queued
            archives to tape.
@@ -61,7 +61,7 @@ class archive:
         self.clear_dir(list)
 
         ## make the catalog
-        self.gen_catalog(catalog_name,list, queue_pass)
+        self.gen_catalog(catalog_name,list, id)
 
 
     def clear_dir (self, list):

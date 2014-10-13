@@ -44,12 +44,13 @@ class Dump:
         ## get a list of files, transfer to disk, write to tape
         while self.queue_size + self.batch_size_mb < self.tape_size:
             list, list_size = self.get_list(self.batch_size_mb)                  ## get a list of files
-            self.files.build_archive(list)                                   ## copy the files to b5, generate a catalog file
-            self.files.queue_archive(self.queue_pass, list)         ## pass files to tar on disk with catalog
-            self.queue_size += list_size
-            self.queue_pass += 1 
-            cumulative_catalog.extend([self.queue_pass, list])
-            self.debug.print("q:%s l:%s t:%s" % (self.queue_size, list_size, self.tape_size)) 
+            if list: 
+                self.files.build_archive(list)                                   ## copy the files to b5, generate a catalog file
+                self.files.queue_archive(self.queue_pass, list)         ## pass files to tar on disk with catalog
+                self.queue_size += list_size
+                self.queue_pass += 1 
+                cumulative_catalog.extend([self.queue_pass, list])
+                self.debug.print("q:%s l:%s t:%s" % (self.queue_size, list_size, self.tape_size)) 
 
         self.files.gen_final_catalog(self.files.catalog_name,  cumulative_catalog)
         self.tar_archive(cumulative_catalog, self.files.catalog_name)
@@ -67,8 +68,9 @@ class Dump:
 
         ## get a 7.5 gb list of files to transfer
         new_list, list_size = self.db.get_new(limit)
-        self.debug.print (list_size)
-        self.db.claim_files(1, new_list)
+        if new_list: 
+            self.debug.print (str(list_size))
+            self.db.claim_files(1, new_list)
         return new_list, list_size
 
     def tar_archive(self, cumulative_list, catalog_file):

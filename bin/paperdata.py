@@ -22,7 +22,7 @@ class paperdb:
     def get_new(self,size_limit):
         """Retrieve a list of available files."""
         ready_sql = """select raw_location,raw_file_size_mb from paperdata
-            where raw_location is not null and ready_to_tape = 1 and tape_location!='NULL'
+            where raw_location is not null and ready_to_tape = 1 and tape_location='NULL'
             group by raw_location order by obsnum """
 
         self.cur.execute(ready_sql)
@@ -31,10 +31,12 @@ class paperdb:
         total = 0
         
         for file_info in self.cur.fetchall():
+            self.debug.print('found file - %s' % file_info[0])
             file_size = float(file_info[1]) 
             if file_size > size_limit:
                 self.debug.print ('get_new - file_size (%s) larger than size limit(%s) - %s' % (file_size, size_limit, file_info[0]))
             if total+file_size < size_limit:
+                self.debug.print('file:', file_info[0])
                 self.list.append(file_info[0])
                 total += file_size
 
@@ -67,8 +69,9 @@ class paperdb:
         """
 
         for archive_info in cumulative_list:
-            tape_location = ":".join(tape_id,archive_info[0])
+            tape_location = ":".join([tape_id,str(archive_info[0])])
             raw_location = archive_info[1]
+            self.debug.print("writing tapelocation: %s for %s" % (tape_location, raw_location))
             self.cur.execute('update paperdata set delete_file=1, tape_location="%s" where raw_location="%s"' % (tape_location, raw_location))
 
         self.connect.commit()
