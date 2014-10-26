@@ -1,0 +1,134 @@
+Feature Request:
+
+    Reconnect to database before making update to data following connection timeout
+
+
+
+Error: 
+
+After dumping all the data to tape (>3000 minutes) the mysql connection had gone away.
+
+Traceback (most recent call last):
+  File "test-paper-dump.py", line 4, in <module>
+    x.archive_to_tape()
+  File "/root/git/papertape/bin/paper_dump.py", line 55, in archive_to_tape
+    self.files.gen_final_catalog(self.files.catalog_name,  cumulative_catalog)
+  File "/root/git/papertape/bin/paper_io.py", line 45, in gen_final_catalog
+    cfile.write('%s:%s:%s\n' % (file[0], int, file[1]))
+TypeError: 'int' object is not subscriptable
+Exception ignored in: <bound method mtxdb.__del__ of <paper_mtx.mtxdb object at 0x2b78f7d345f8>>
+Traceback (most recent call last):
+  File "/root/git/papertape/bin/paper_mtx.py", line 189, in __del__
+    self.connect.commit()
+  File "/root/.pyenv/versions/3.4.1/lib/python3.4/site-packages/pymysql/connections.py", line 673, in commit
+    self._execute_command(COM_QUERY, "COMMIT")
+  File "/root/.pyenv/versions/3.4.1/lib/python3.4/site-packages/pymysql/connections.py", line 888, in _execute_command
+    self._write_bytes(prelude + sql[:chunk_size-1])
+  File "/root/.pyenv/versions/3.4.1/lib/python3.4/site-packages/pymysql/connections.py", line 848, in _write_bytes
+    raise OperationalError(2006, "MySQL server has gone away (%r)" % (e,))
+pymysql.err.OperationalError: (2006, "MySQL server has gone away (BrokenPipeError(32, 'Broken pipe'))")
+
+
+
+Bug:
+
+  The mysql connection timeout was reached before the script tried updating the db. 
+
+
+
+Fix:
+
+    1. variable containing the database timeout
+    2. variable containing the timestamp from when the connection was last used
+    3. a function to reconnect to database when initializing, or if the timeout
+       is exceeded
+
+root@backup5[~/git/papertape/bin]# diff paperdata.py paperdata.py.new
+9a10
+> from datetime import datetime
+17,19d17
+<         self.connect = pymysql.connect(read_default_file=credentials)
+<         self.cur = self.connect.cursor()
+<         self.list=[]
+21a20,41
+>         self.connection_timeout=90
+>         self.db_connect('init', credentials)
+>         self.list=[]
+> 
+> 
+>     def update_connection_time(self):
+>         self.connection_time = datetime.now()
+> 
+>     def connection_time_delta(self):
+>         delta = datetime.now() - self.connection_time 
+> 
+>     def db_connect (self,command, credentials=None):
+>         self.credentials = credentials if credentials != None else '/root/my.cnf'
+>         time_delta = self.connection_timeout + 1 if command == 'init' else self.connection_time_delta()
+>         
+>         self.debug.print("time_delta:%s" % time_delta)
+>         if time_delta > self.connection_timeout:
+>             self.debug.print("setting connction")
+>             self.connect =  pymysql.connect(read_default_file=credentials, connect_timeout=self.connection_timeout)
+>             self.cur = self.connect.cursor()
+>             self.update_connection_time()
+> 
+28a49
+>         self.update_connection_time()
+46a68
+>         self.db_connect()
+56a79
+>         self.db_connect()
+63d85
+< 
+70a93
+>         self.db_connect()
+79d101
+< 
+
+
+Refactor (optional):
+
+root@backup5[~/git/papertape/bin]# diff paper_debug.py paper_debug.new
+2c2
+< import datetime, inspect
+---
+> import datetime, inspect, sys
+17a18,20
+>  
+>     def exit(self):
+>         sys.exit()
+
+ 
+
+Test:
+
+    root@backup5[~/git/papertape/bin]# _t test-getnew.py
+root@backup5[~/git/papertape/bin]# _t test-getnew.py 
+Sun Oct 26 11:41:45 EDT 2014
+test-getnew.py
+debug:20141026-1141:1:db_connect:time_delta:91
+debug:20141026-1141:1:db_connect:setting connction
+debug:20141026-1141:1:get_new:found file - node16:/mnt/MartinVanBuren/psa6262/zen.2456262.54965.uv
+debug:20141026-1141:1:get_new:file: node16:/mnt/MartinVanBuren/psa6262/zen.2456262.54965.uv
+debug:20141026-1141:1:get_new:found file - node16:/mnt/MartinVanBuren/psa6262/zen.2456262.55661.uv
+debug:20141026-1141:1:get_new:file: node16:/mnt/MartinVanBuren/psa6262/zen.2456262.55661.uv
+debug:20141026-1141:1:get_new:found file - node16:/mnt/MartinVanBuren/psa6262/zen.2456262.56357.uv
+
+...
+
+debug:20141026-1141:1:get_new:found file - node16:/mnt/MartinVanBuren/psa6268/zen.2456268.65407.uv
+(['node16:/mnt/MartinVanBuren/psa6262/zen.2456262.54965.uv', 'node16:/mnt/MartinVanBuren/psa6262/zen.2456262.55661.uv'], 7447.2)
+
+real    0m0.399s
+user    0m0.188s
+sys     0m0.048s
+Sun Oct 26 11:41:46 EDT 2014
+/root/git/papertape/bin/log/t.err.1861
+
+
+
+
+Owner: dconover:20141026
+Review: [username]:[date]
+
