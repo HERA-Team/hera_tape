@@ -91,7 +91,7 @@ class Dump:
         self.tape.unload_tape_pair()
 
         ## write tape locations
-        self.db.write_tape_location(cumulative_list, ','.join(tape_label_ids))
+        self.db.write_tape_location(self.files.catalog_list, ','.join(tape_label_ids))
 
 
  
