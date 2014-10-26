@@ -1,7 +1,7 @@
 # The password should be added in production
 [client]
-user = papertape
-password = 
-database = paperdata
-host = shredder.physics.upenn.edu
+user = example_user
+password = example_password
+database = example_db_name
+host = example_host.physics.upenn.edu
 

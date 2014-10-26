@@ -1,6 +1,13 @@
 Description: table (ids) used to keep track of tape ids in use by tape library
 
-Schema: 
+Metadata:
+
+    host: shredder.physics.upenn.edu
+    user: mtx
+    db_name: mtx
+    table_name: ids
+
+Schema(ids): 
 
 Field		Type			Null	Key	Default	Extra
 id			mediumint(9)	NO		PRI	NULL	auto_increment ## unique mysql row id
