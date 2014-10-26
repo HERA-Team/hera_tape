@@ -52,7 +52,7 @@ class Dump:
                 cumulative_catalog.extend([self.queue_pass, list])
                 self.debug.print("q:%s l:%s t:%s" % (self.queue_size, list_size, self.tape_size)) 
 
-        self.files.gen_final_catalog(self.files.catalog_name,  cumulative_catalog)
+        self.files.gen_final_catalog(self.files.catalog_name, cumulative_catalog)
         self.tar_archive(cumulative_catalog, self.files.catalog_name)
 
     def manual_to_tape(self, queue_pass, cumulative_catalog):

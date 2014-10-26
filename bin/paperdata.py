@@ -92,6 +92,7 @@ class paperdb:
 
         self.db_connect()
         for archive_info in cumulative_list:
+            ## like: [papr1001,papr2001]-132:3:node16:/mnt/MartinVanBuren/psa6262/zen.2456262.54269.uv   
             tape_location = ":".join([tape_id,str(archive_info[0])])
             raw_location = archive_info[1]
             self.debug.print("writing tapelocation: %s for %s" % (tape_location, raw_location))
