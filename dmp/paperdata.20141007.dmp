@@ -1,0 +1,33 @@
+Filename: paperdata.20141007.dmp
+Description:
+
+    The "paperdata" database tracks location information for all
+raw and compressed data.
+
+Metadata:
+
+    db_hostname: shredder.physics.upenn.edu
+    db_name: paperdata
+    table_name: paperdata
+
+Table schema(paperdata):
+
+Field          Type            Null  Key    Default  Extra
+host           varchar(100)    YES   folio     ## host where compressed data lives
+path           varchar(100)    YES   NULL      ## path to compressed data
+era            int(11)         YES   NULL
+era_type       varchar(100)    YES   NULL
+obsnum         bigint(20)      YES   NULL
+julian_day     int(11)         YES   NULL
+julian_date    decimal(16,8)   YES   NULL
+polarization   varchar(4)      YES   NULL
+data_length    decimal(20,15)  YES   NULL
+raw_location   varchar(100)    YES   NULL      ## path of raw data directory (host:file_path)
+cal_location   varchar(100)    YES   NULL
+tape_location  varchar(100)    YES   NULL
+file_size      varchar(15)     YES   NULL
+compressed     tinyint(1)      YES   0
+ready_to_tape  tinyint(1)      YES   0
+delete_file    tinyint(1)      YES   0
+
+
