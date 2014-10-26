@@ -1,5 +1,5 @@
 
-import datetime, inspect
+import datetime, inspect, sys
 
 class Debug:
 
@@ -15,3 +15,6 @@ class Debug:
         caller = call_info[1] if call_info[3] == '<module>' else call_info[3]
 
         print(":".join(["debug",date,self.pid,caller,output]), flush=True)
+ 
+    def exit(self):
+        sys.exit()

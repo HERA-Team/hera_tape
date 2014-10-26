@@ -7,6 +7,7 @@ are written to tape.
 """
   
 import pymysql
+from datetime import datetime
 from paper_debug import Debug
 
 class paperdb:
@@ -14,10 +15,29 @@ class paperdb:
     def __init__ (self, credentials, pid, debug=False):
         """Initialize connection and collect list of files to dump.""" 
         self.pid = pid
-        self.connect = pymysql.connect(read_default_file=credentials)
-        self.cur = self.connect.cursor()
-        self.list=[]
         self.debug = Debug(self.pid, debug=debug)
+
+        self.connection_timeout=90
+        self.db_connect('init', credentials)
+        self.list=[]
+
+
+    def update_connection_time(self):
+        self.connection_time = datetime.now()
+
+    def connection_time_delta(self):
+        delta = datetime.now() - self.connection_time 
+
+    def db_connect (self,command, credentials=None):
+        self.credentials = credentials if credentials != None else '/root/my.cnf'
+        time_delta = self.connection_timeout + 1 if command == 'init' else self.connection_time_delta()
+        
+        self.debug.print("time_delta:%s" % time_delta)
+        if time_delta > self.connection_timeout:
+            self.debug.print("setting connction")
+            self.connect =  pymysql.connect(read_default_file=credentials, connect_timeout=self.connection_timeout)
+            self.cur = self.connect.cursor()
+            self.update_connection_time()
 
     def get_new(self,size_limit):
         """Retrieve a list of available files."""
@@ -26,6 +46,7 @@ class paperdb:
             group by raw_location order by obsnum """
 
         self.cur.execute(ready_sql)
+        self.update_connection_time()
 
         self.list = []
         total = 0
@@ -44,6 +65,7 @@ class paperdb:
         
     def claim_files (self, status_type, list):
         """Mark files in the database that are "claimed" by a dump process."""
+        self.db_connect()
         for file in list:
             host, file_path = file.split(":")
             update_sql = "update paperdata set tape_location='%s%s' where raw_location='%s'" % (status_type, self.pid, file)
@@ -54,12 +76,12 @@ class paperdb:
 
     def unclaim_files(self,status_type, list):
         """Release claimed files"""
+        self.db_connect()
         for file in list:
             host, file_path = file.split(":")
             update_sql = "update paperdata set tape_location='' where raw_location='%s' and tape_location='%s%s'" % (file, status_type, self.pid)
             self.debug.print("unclaim_files - %s" % update_sql)
             self.cur.execute(update_sql)
-
 
     def write_tape_location(self,cumulative_list,tape_id):
         """Take a dictionary of files and labels and update the database
@@ -68,6 +90,7 @@ class paperdb:
         setting the delete_file field to 1 for all files just written to tape.
         """
 
+        self.db_connect()
         for archive_info in cumulative_list:
             tape_location = ":".join([tape_id,str(archive_info[0])])
             raw_location = archive_info[1]
@@ -75,7 +98,6 @@ class paperdb:
             self.cur.execute('update paperdata set delete_file=1, tape_location="%s" where raw_location="%s"' % (tape_location, raw_location))
 
         self.connect.commit()
-
 
     def __del__ (self):
         self.connect.commit()
