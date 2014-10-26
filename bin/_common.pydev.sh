@@ -1,9 +1,48 @@
 
+## open a a log and send all output to that log
+## close the logfile
+## or kill the logfile; print it's contents; remove the evidence
+_logfile () {    ## open, close, or kill the logfile
+    local action=$1
+    local log=$2
 
-log_dir=/root/git/papertape/bin/log
+    case $action in
+        open)
+            exec 6>&1
+            exec 1>$log 2>&1
+        ;;
+        close)
+            exec 1>&6 6>&-
+        ;;
+        kill)
+            exec 1>&6 6>&-
+            cat $log && rm $log
+        ;;
+        tty)
+            exec >/dev/tty 2>&1
+            cat $log
+            echo $log
+        ;;
+    esac
+}
+
+
+LOG_DIR=/root/git/papertape/bin/log
 
 _p () { python -c "$1"; }
 _r () { rm -r /papertape/shm/*; ssh shredder 'mysql paperdatatest <x; mysql mtx <y'; }
-_t () { echo >/dev/null; (date; echo ${1:-$tlast}; time python ${1:-$tlast}; date;) >$log_dir/t.err.$! 2>&1; cat t.err.$!; echo $log_dir/t.err.$!; tlast=${1:-$tlast}; }
+_t (){
+    
+    local log_file=$LOG_DIR/t.err.$RANDOM
+    _logfile open $log_file
+
+    date
+    echo ${1:-$TLAST}
+    time python ${1:-$TLAST}
+    date
+
+    _logfile tty $log_file
+    TLAST=${1:-$TLAST}
+}
 _v () { vim ${1:-$last};last=${1-$last}; }
 _m () { echo using file: ${2:-$mlast}; echo "$1"| mysql --defaults-extra-file=/root/.my.${2:-$mlast}.cnf||ls /root/.my.*; mlast=${2:-$mlast}; }
