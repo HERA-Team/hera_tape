@@ -17,27 +17,33 @@ class paperdb:
         self.pid = pid
         self.debug = Debug(self.pid, debug=debug)
 
-        self.connection_timeout=90
+        self.connection_timeout = 90
         self.db_connect('init', credentials)
         self.list=[]
 
 
     def update_connection_time(self):
+        self.debug.print('updating connection_time')
         self.connection_time = datetime.now()
 
     def connection_time_delta(self):
+        self.debug.print('connection_time:%s' % self.connection_time)
         delta = datetime.now() - self.connection_time 
+        return delta.total_seconds()
 
-    def db_connect (self,command, credentials=None):
+    def db_connect (self,command=None, credentials=None):
         self.credentials = credentials if credentials != None else '/root/my.cnf'
+        self.debug.print('input:%s %s' % (command, credentials))
         time_delta = self.connection_timeout + 1 if command == 'init' else self.connection_time_delta()
         
-        self.debug.print("time_delta:%s" % time_delta)
+        self.debug.print("time_delta:%s" % (time_delta))
         if time_delta > self.connection_timeout:
-            self.debug.print("setting connction")
+            self.debug.print("setting connection")
             self.connect =  pymysql.connect(read_default_file=credentials, connect_timeout=self.connection_timeout)
             self.cur = self.connect.cursor()
-            self.update_connection_time()
+
+        self.update_connection_time()
+        self.debug.print("connection_time:%s" % (self.connection_time))
 
     def get_new(self,size_limit):
         """Retrieve a list of available files."""
@@ -83,25 +89,30 @@ class paperdb:
             self.debug.print("unclaim_files - %s" % update_sql)
             self.cur.execute(update_sql)
 
-    def write_tape_location(self,cumulative_list,tape_id):
+    def write_tape_location(self, catalog_list, tape_id):
         """Take a dictionary of files and labels and update the database
 
         record the barcode of tape in the tape_location field, and
         setting the delete_file field to 1 for all files just written to tape.
         """
 
-        self.db_connect()
-        for archive_info in cumulative_list:
-            tape_location = ":".join([tape_id,str(archive_info[0])])
-            raw_location = archive_info[1]
+        self.db_connect('debug write location')
+
+        ## catalog list is set in paper_io.py: self.catalog_list.append([queue_pass, int, file])
+        for catalog in catalog_list:
+            ## tape_location: [papr1001,papr2001]-132:3
+            tape_location = "[%s]-%s:%s" % (tape_id, catalog[0], catalog[1])
+            raw_location = catalog[2]
             self.debug.print("writing tapelocation: %s for %s" % (tape_location, raw_location))
             self.cur.execute('update paperdata set delete_file=1, tape_location="%s" where raw_location="%s"' % (tape_location, raw_location))
 
         self.connect.commit()
 
     def __del__ (self):
-        self.connect.commit()
-        self.connect.close()
+        #self.db_connect()
+        #self.connect.commit()
+        #self.connect.close()
         #self.unclaim_files(1, self.list)
+        pass
 
 

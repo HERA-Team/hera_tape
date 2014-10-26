@@ -34,7 +34,9 @@ class archive:
     def gen_catalog(self, catalog, list, queue_pass):
         cfile = open(catalog, 'w') 
         int = 1
+        self.catalog_list = []
         for file in list:
+            self.catalog_list.append([queue_pass, int, file])
             cfile.write("%s:%s:%s\n" % (queue_pass, int, file))
             int += 1
 
