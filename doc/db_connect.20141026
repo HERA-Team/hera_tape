@@ -38,11 +38,12 @@ Bug:
 
 Fix:
 
-    2. variable containing the database timeout
-    1. variable containing the timestamp from when the connection was last used
-    2. a function to compare the timestamp to the current time
-    3. a function to reconnect to database if timeout is exceeded
+    1. variable containing the database timeout
+    2. variable containing the timestamp from when the connection was last used
+    3. a function to reconnect to database when initializing, or if the timeout
+       is exceeded
 
+root@backup5[~/git/papertape/bin]# diff paperdata.py paperdata.py.new
 9a10
 > from datetime import datetime
 17,19d17
@@ -88,7 +89,6 @@ Fix:
 
 Refactor (optional):
 
-  [ code we change along the way to make it better or easier to understand (not the actual fix) ]
 
  
 
