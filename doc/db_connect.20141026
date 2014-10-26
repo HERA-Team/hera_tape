@@ -89,13 +89,43 @@ root@backup5[~/git/papertape/bin]# diff paperdata.py paperdata.py.new
 
 Refactor (optional):
 
+root@backup5[~/git/papertape/bin]# diff paper_debug.py paper_debug.new
+2c2
+< import datetime, inspect
+---
+> import datetime, inspect, sys
+17a18,20
+>  
+>     def exit(self):
+>         sys.exit()
 
  
 
 Test:
 
-  [ description of how to test code with expected results ]
-  [ optionally, include example test scripts of code ]
+    root@backup5[~/git/papertape/bin]# _t test-getnew.py
+root@backup5[~/git/papertape/bin]# _t test-getnew.py 
+Sun Oct 26 11:41:45 EDT 2014
+test-getnew.py
+debug:20141026-1141:1:db_connect:time_delta:91
+debug:20141026-1141:1:db_connect:setting connction
+debug:20141026-1141:1:get_new:found file - node16:/mnt/MartinVanBuren/psa6262/zen.2456262.54965.uv
+debug:20141026-1141:1:get_new:file: node16:/mnt/MartinVanBuren/psa6262/zen.2456262.54965.uv
+debug:20141026-1141:1:get_new:found file - node16:/mnt/MartinVanBuren/psa6262/zen.2456262.55661.uv
+debug:20141026-1141:1:get_new:file: node16:/mnt/MartinVanBuren/psa6262/zen.2456262.55661.uv
+debug:20141026-1141:1:get_new:found file - node16:/mnt/MartinVanBuren/psa6262/zen.2456262.56357.uv
+
+...
+
+debug:20141026-1141:1:get_new:found file - node16:/mnt/MartinVanBuren/psa6268/zen.2456268.65407.uv
+(['node16:/mnt/MartinVanBuren/psa6262/zen.2456262.54965.uv', 'node16:/mnt/MartinVanBuren/psa6262/zen.2456262.55661.uv'], 7447.2)
+
+real    0m0.399s
+user    0m0.188s
+sys     0m0.048s
+Sun Oct 26 11:41:46 EDT 2014
+/root/git/papertape/bin/log/t.err.1861
+
 
 
 
