@@ -43,6 +43,48 @@ Fix:
     2. a function to compare the timestamp to the current time
     3. a function to reconnect to database if timeout is exceeded
 
+9a10
+> from datetime import datetime
+17,19d17
+<         self.connect = pymysql.connect(read_default_file=credentials)
+<         self.cur = self.connect.cursor()
+<         self.list=[]
+21a20,41
+>         self.connection_timeout=90
+>         self.db_connect('init', credentials)
+>         self.list=[]
+> 
+> 
+>     def update_connection_time(self):
+>         self.connection_time = datetime.now()
+> 
+>     def connection_time_delta(self):
+>         delta = datetime.now() - self.connection_time 
+> 
+>     def db_connect (self,command, credentials=None):
+>         self.credentials = credentials if credentials != None else '/root/my.cnf'
+>         time_delta = self.connection_timeout + 1 if command == 'init' else self.connection_time_delta()
+>         
+>         self.debug.print("time_delta:%s" % time_delta)
+>         if time_delta > self.connection_timeout:
+>             self.debug.print("setting connction")
+>             self.connect =  pymysql.connect(read_default_file=credentials, connect_timeout=self.connection_timeout)
+>             self.cur = self.connect.cursor()
+>             self.update_connection_time()
+> 
+28a49
+>         self.update_connection_time()
+46a68
+>         self.db_connect()
+56a79
+>         self.db_connect()
+63d85
+< 
+70a93
+>         self.db_connect()
+79d101
+< 
+
 
 Refactor (optional):
 
