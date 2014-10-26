@@ -1,0 +1,45 @@
+Description:
+ 
+	Raw data collected from Precision Array to Probe Epoch of Reionization
+(PAPER) is moving from disk to tape. Compressed versions of the data are being
+kept on disk for analysis. Files collected on disk are also catalogued in a
+mysql database (mysql@shredder:paperdata). This data is being transfered to
+tape for final archival storage.
+
+Archival process:
+
+    1. LTO5 tapes are labeled according to the date of transfer to tape
+    2. md5 hashes are computed for each raw data file
+    3. a list of files and hashes is written to the first 64kb block on tape
+	4. the second file on the tape is a tar archive of the scripts (bash and
+	   python) that are used to print the barcoded labels, read/write archive
+       status to the database, and write the files to tape
+    5. each block of data is streamed to two tapes at once
+    6. a random file from each written tape is restored and checked for integrity
+    7. the tape ids for each file is updated in the paperdata db
+    8. after writing data to two tapes the raw data files are later deleted from disk
+    9. tapes are to be stored in DRL
+
+Archive monitoring:
+
+	1. tapes are checked once every five years to ensure data integrity and
+       to evaluate new storage options
+   
+Tape Labels:
+
+    1. tape ids are an 8-character sequence composed of a 4-character prefix, a
+       1-digit "Copy" index, and a 3-digit, 0-padded increment (the first two
+       1.49 TB of data are written to tapes with ids: PAPR1001 and PAPR2001) 
+	2. tape labels include the tape id printed with both a scannable font
+       (code39) and a human readable font (Helvetica)
+	3. tape labels also include the date the labels are printed, the name of
+	   the project (PAPER), the type of the data (RAW), and the copy index
+       (e.g. [ 20140922 - paper - raw - copy 1])
+    4. tape labels are laser printed on self-adhesive white avery 1/3 cut file
+       folder labels
+     
+Data Longevity: Perpetuity
+Tape Lifespan: 30 years          
+
+Data Owner: James Aguirre <jaguirre@sas.upenn.edu>
+Tape Operator: Dareus Conover <dconover@sas.upenn.edu>
