@@ -16,8 +16,8 @@ class LocalScp:
         pass
 
     ## self.transfer.scp.get("/papertape/" + file, local_path=transfer_path, recursive=True)
-    def get(self, src_dir, local_path=None, recursive=True):
-        pass
+    def get(self, src_dir, local_path='/dev/null', recursive=True):
+        shutil.copytree(src_dir, local_path)
 
 class LocalTransfer:
     "special class to implement local scp"
@@ -42,7 +42,7 @@ class Archive:
     def build_archive(self, file_list, source_select=None):
         """Copy files to /dev/shm/$PID, create md5sum data for all files"""
         for file in file_list:
-            transfer_path = self.ensure_dir('%s/%s' % (self.archive_dir, file))
+            transfer_path = '%s/%s' % (self.archive_dir, file)
             self.debug.print("build_archive - %s" % file)
             self.transfer.scp.get("/papertape/" + file, local_path=transfer_path, recursive=True)
             #self.check_md5(self.archive_dir, file)

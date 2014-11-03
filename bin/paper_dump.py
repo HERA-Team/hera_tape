@@ -31,11 +31,11 @@ class Dump:
         self.tape_size = (1.5 * 1000 * 1000) - self.batch_size_mb
         #self.tape_size = 13000
 
-        ## setup tape library
-        self.labeldb = MtxDB(self.mtx_creds, self.pid)
-
         ## setup PaperDB connection
         self.paperdb = PaperDB(self.paper_creds, self.pid, debug=True)
+
+        ## setup tape library
+        self.labeldb = MtxDB(self.mtx_creds, self.pid)
 
         ## setup file access
         self.files = Archive(self.pid)

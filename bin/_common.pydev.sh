@@ -1,6 +1,7 @@
 
 LOG_DIR=/root/git/papertape.shredder/bin/log
 alias pylint='pylint --rcfile=~/.pylint.d/pylintrc'
+alias _h='highlight -A'
 
 ## open a a log and send all output to that log
 ## close the logfile

@@ -40,8 +40,8 @@ class PaperDB:
 
     def db_connect(self, command=None, credentials=None):
         "connect to the database or reconnect an old session"
-        self.credentials = credentials if credentials != None else '/root/my.cnf'
         self.debug.print('input:%s %s' % (command, credentials))
+        self.credentials = credentials if credentials != None else '/root/my.cnf'
         time_delta = self.connection_timeout + 1 if command == 'init' else self.connection_time_delta()
 
         self.debug.print("time_delta:%s" % (time_delta))
