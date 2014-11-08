@@ -1,0 +1,33 @@
+Feature Request:
+
+  Create a script to catalog the old paper0 tapes written by gavin using amanda.
+
+
+Description:
+
+  Gavin wrote paper data to tape using amanda. Every tape has a machine readable 
+barcode and a handwritten label "paper0".
+
+  1. catalog each tape and add them to the database
+  2. confirm that each file is duplicated on tape
+  3. confirm that each file can be restored from tape
+  4. create paper0.dmp with tape scheme
+  3. relabel each tape with a human readable barcode
+  
+
+Manifest:
+
+    36 lto4 tapes dumped with amanda
+
+
+Test:
+
+  1. list number of files on tape
+  2. catalog files on tape
+  3. restore files from tape
+
+
+
+Owner: [username]:[date]
+Review: [username]:[date]
+
