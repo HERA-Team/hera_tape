@@ -1,7 +1,7 @@
 
 from paper_mtx import *
 from paper_io import *
-from paperdata import paperdb
+from paperdata import PaperDB
 from paper_debug import Debug
 
 from random import randint
@@ -9,7 +9,7 @@ import os, shutil, sys
 
 class Dump:
 
-    def  __init__ (self, debug=False, pid=None):
+    def  __init__ (self, debug=False, pid=None, tape_select=2):
         self.mtx_creds = '~/.my.mtx.cnf'
         self.paper_creds = '~/.my.papertape.cnf'
         self.pid = "%0.6d%0.3d" % (os.getpid(),randint(1,999)) if pid==None else pid
@@ -20,21 +20,21 @@ class Dump:
         #self.tape_size = 13000
         self.debug = Debug(self.pid, debug=debug)
 
-        self.setup_external_modules()
+        self.setup_external_modules(tape_select=tape_select)
 
-    def setup_external_modules(self):
+    def setup_external_modules(self, tape_select=2):
 
         ## setup tape library
-        self.labeldb = mtxdb(self.mtx_creds, self.pid)
+        self.labeldb = Mtxdb(self.mtx_creds, self.pid)
 
-        ## setup paperdb connection
-        self.db = paperdb(self.paper_creds, self.pid, debug=True)
+        ## setup PaperDB connection
+        self.db = PaperDB(self.paper_creds, self.pid, debug=True)
 
         ## setup file access
-        self.files = archive(self.pid)
+        self.files = Archive(self.pid)
 
         ## use the pid here to lock changer
-        self.tape = changer(self.pid, self.tape_size, debug=True)
+        self.tape = Changer(self.pid, self.tape_size, debug=True, tape_select=tape_select)
 
     def archive_to_tape(self):
         """master method to loop through files to write data to tape"""
@@ -69,7 +69,7 @@ class Dump:
         ## get a 7.5 gb list of files to transfer
         new_list, list_size = self.db.get_new(limit)
         if new_list: 
-            self.debug.print (str(list_size))
+            self.debug.print(str(list_size))
             self.db.claim_files(1, new_list)
         return new_list, list_size
 
@@ -93,6 +93,27 @@ class Dump:
         ## write tape locations
         self.db.write_tape_location(self.files.catalog_list, ','.join(tape_label_ids))
 
+    def tar_archive_single(self, catalog_file):
+
+        ## select ids
+        tape_label_ids = self.labeldb.select_ids()
+        self.labeldb.claim_ids(tape_label_ids)
+
+        ## load up a fresh set of tapes
+        for id in tape_label_ids: 
+            self.tape.load_tape_drive(id)
+
+            ## tar files to tape
+            self.tape.prep_tape(catalog_file)
+
+            for _pass in range(self.queue_pass):
+                self.debug.print('sending tar to single drive', str(_pass))
+                self.tape.write(_pass)
+
+            self.tape.unload_tape_drive(id)
+         
+        self.db.write_tape_locations(self.files.catalog_list, ','.join(tape_label_ids))
+       
 
  
 
