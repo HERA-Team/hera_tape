@@ -10,16 +10,16 @@ from subprocess import *
 from paper_debug import Debug
 
 
-class changer:
+class Changer:
     'simple tape changer class'
 
-    def __init__ (self,pid, tape_size, debug=False):
+    def __init__ (self,pid, tape_size, debug=False, tape_select=2):
         self.pid = pid
         self.debug = Debug(self.pid, debug=debug)
         self.tape_size = tape_size
         self._tape_dev='/dev/changer'
         self.check_inventory()
-        self.tape_drives = drives()
+        self.tape_drives = Drives(tape_select=tape_select)
         
     def check_inventory(self):
         output = check_output(['mtx','status']).decode("utf-8")
@@ -45,6 +45,11 @@ class changer:
                    self.debug.print('loading', str(id), str(drive))
                    self.load_tape(id,drive)
 
+    def load_tape_drive(self,id):
+        if self.drives_empty():
+            self.debug.print('loading', str(id), str(drive))
+            self.load_tape(id, drive)
+
     def unload_tape_pair(self):
         'unload the tapes in the current drives'
         if not self.drives_empty():
@@ -52,6 +57,12 @@ class changer:
                 self.debug.print('unloading', tape_id)
                 self.unload_tape(tape_id)
            
+    def unload_tape_drive(self, id):
+        'unload the tapes in the current drives'
+        if not self.drives_empty():
+            self.debug.print('unloading', id)
+            self.unload_tape(id)
+
     def drives_empty(self):
         self.check_inventory()
         return not len(self.drive_ids)
@@ -121,7 +132,7 @@ class changer:
 
         return drive_ids, tape_slot
 
-class mtxdb:
+class MtxDB:
     """db to handle record of label ids
 
     Field     Type    Null    Key     Default Extra
@@ -190,27 +201,28 @@ class mtxdb:
         self.connect.close()
             
                 
-class drives:
+class Drives:
     """class to write two tapes"""
 
-    def __init__(self):
+    def __init__(self, drive_select=2):
+        self.drive_select = drive_select
         pass
 
     def arcwrite(self,file,catalog):
         commands = []
-        for int in range(2):
+        for int in range(self.drive_select):
             commands.append('tar cf /dev/nst%s  %s %s ' % (int, catalog,file))
         self.exec_commands(commands)
  
     def tar(self,dir):
         commands = []
-        for int in range(2):
+        for int in range(self.drive_select):
             commands.append('tar cf /dev/nst%s  %s %s ' % (int, catalog,file))
         self.exec_commands(commands)
  
     def dd(self,text_file):
         commands = []
-        for int in range(2):
+        for int in range(self.drive_select):
             commands.append('dd of=/dev/nst%s if=%s bs=32k' % (int, text_file))
         self.exec_commands(commands)
 

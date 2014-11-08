@@ -10,7 +10,7 @@ import pymysql
 from datetime import datetime
 from paper_debug import Debug
 
-class paperdb:
+class PaperDB:
 
     def __init__ (self, credentials, pid, debug=False):
         """Initialize connection and collect list of files to dump.""" 

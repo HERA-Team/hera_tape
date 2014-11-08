@@ -1,12 +1,11 @@
 Feature Request:
 
-  [ description of the intended changes ]
+  Allow for selection of one or two available drives to be used at a time
 
 
+Description:
 
-API:
-
-  [ description of the new features ]
+  1. a variable contains the list of drive ids to use for the tape dump.
 
 
 
