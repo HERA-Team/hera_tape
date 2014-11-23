@@ -217,6 +217,12 @@ class Drives:
             commands.append('tar cf /dev/nst%s  %s %s ' % (int, catalog, file))
         self.exec_commands(commands)
 
+    def fileswrite(self, files):
+        commands = []
+        for int in range(self.drive_select):
+            commands.append('tar cf /dev/nst%s  %s ' % (int, ' '.join(files)))
+        self.exec_commands(commands)
+
     def tar(self, file):
         commands = []
         for drive_int in range(self.drive_select):

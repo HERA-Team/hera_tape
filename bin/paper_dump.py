@@ -10,7 +10,7 @@ from paperdata import PaperDB
 from paper_debug import Debug
 
 from random import randint
-import os 
+import os
 
 class Dump:
     "Coordinate a dump to tape based on deletable files in database"
@@ -94,6 +94,23 @@ class Dump:
 
         self.files.gen_final_catalog(self.files.catalog_name, cumulative_catalog)
 
+    def test_fast_archive(self):
+        """skip tar of local archive on disk"""
+
+        cumulative_catalog = []
+        ## get files in batch size chunks
+        while self.queue_size + self.batch_size_mb < self.tape_size:
+
+            ## get a list of files smaller than our batch size
+            file_list, list_size = self.get_list(self.batch_size_mb)
+
+            if file_list:
+                self.queue_size += list_size
+                self.queue_pass += 1
+                cumulative_catalog.extend([self.queue_pass, file_list])
+                self.debug.print("queue list:", self.queue_pass)
+
+        self.tar_fast_archive(cumulative_catalog)
 
     def manual_to_tape(self, queue_pass, cumulative_catalog):
         """if the dump is interrupted, run the files to tape for the current_pid.
@@ -134,6 +151,29 @@ class Dump:
 
         ## write tape locations
         self.paperdb.write_tape_locations(self.files.catalog_list, ','.join(tape_label_ids))
+
+    def tar_archive_single_fast(self, file_list):
+        "Archive files directly to tape"
+
+        ## select ids
+        tape_label_ids = self.labeldb.select_ids()
+        self.labeldb.claim_ids(tape_label_ids)
+
+        ## load up a fresh set of tapes
+        for label_id in tape_label_ids:
+            self.tape.load_tape_drive(label_id)
+
+            ## tar files to tape
+            self.tape.prep_tape(catalog_file)
+
+            for _pass in range(self.queue_pass):
+                self.debug.print('sending tar to single drive', str(_pass))
+                self.tape.write(_pass)
+
+            self.tape.unload_tape_drive(label_id)
+
+        self.paperdb.write_tape_locations(self.files.catalog_list, ','.join(tape_label_ids))
+        self.paperdb.status = 0
 
     def tar_archive_single(self, catalog_file):
         "send archives to single tape drive using tar"

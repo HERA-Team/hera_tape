@@ -32,7 +32,8 @@ class Archive:
     def __init__(self, pid, debug_level=False, local_transfer=True):
         """Record $PID"""
         self.pid = pid
-        self.transfer = LocalTransfer() if local_transfer else Transfer()
+        #self.transfer = LocalTransfer() if local_transfer else Transfer()
+        self.transfer = LocalTransfer() if local_transfer else None
         self.archive_dir = self.ensure_dir('/papertape/shm/%s/' % (self.pid))
         self.queue_dir = self.ensure_dir('/papertape/queue/%s/' % (self.pid))
         self.catalog_name = "%s/paper.%s.list" %(self.queue_dir, self.pid)
@@ -45,7 +46,6 @@ class Archive:
             transfer_path = '%s/%s' % (self.archive_dir, file)
             self.debug.print("build_archive - %s" % file)
             self.transfer.scp.get("/papertape/" + file, local_path=transfer_path, recursive=True)
-            #self.check_md5(self.archive_dir, file)
 
     def gen_catalog(self, catalog, list, queue_pass):
         cfile = open(catalog, 'w')
@@ -77,6 +77,19 @@ class Archive:
 
         ## make room for additional transfers
         self.clear_dir(file_list)
+
+        ## make the catalog
+        self.gen_catalog(catalog_name, file_list, tape_id)
+
+
+    def tar_fast_archive(self, tape_id, file_list):
+        "send tar of file chunks directly to tape."
+        arcname = "%s.%s.%s" % ('paper', self.pid, tape_id)
+        tar_name = "%s/%s.tar" % (self.queue_dir, arcname)
+        catalog_name = "%s/%s.list" %(self.queue_dir, arcname)
+
+        ## make the tar in the queue_directory
+        self.tar_archive(self.archive_dir, arcname, tar_name)
 
         ## make the catalog
         self.gen_catalog(catalog_name, file_list, tape_id)
