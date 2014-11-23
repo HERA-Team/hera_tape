@@ -37,6 +37,7 @@ class Archive:
         self.archive_dir = self.ensure_dir('/papertape/shm/%s/' % (self.pid))
         self.queue_dir = self.ensure_dir('/papertape/queue/%s/' % (self.pid))
         self.catalog_name = "%s/paper.%s.list" %(self.queue_dir, self.pid)
+        self.catalog_list = []
 
         self.debug = Debug(self.pid, debug_level)
 
@@ -93,7 +94,6 @@ class Archive:
 
         ## make the catalog
         self.gen_catalog(catalog_name, file_list, tape_id)
-
 
     def clear_dir(self, file_list):
         for dir_path in file_list:

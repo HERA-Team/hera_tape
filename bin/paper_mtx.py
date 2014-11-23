@@ -232,7 +232,7 @@ class Drives:
     def dd(self, text_file):
         commands = []
         for drive_int in range(self.drive_select):
-            commands.append('dd of=/dev/nst%s if=%s bs=32k' % (drive_int, text_file))
+            commands.append('dd conv=sync,block of=/dev/nst%s if=%s bs=32k' % (drive_int, text_file))
         self.exec_commands(commands)
 
     def exec_commands(self, cmds):

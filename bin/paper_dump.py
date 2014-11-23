@@ -49,7 +49,6 @@ class Dump:
 
     def archive_to_tape(self):
         """master method to loop through files to write data to tape"""
-        cumulative_catalog = []
 
         ## get a list of files, transfer to disk, write to tape
         while self.queue_size + self.batch_size_mb < self.tape_size:
@@ -65,15 +64,14 @@ class Dump:
                 self.files.queue_archive(self.queue_pass, file_list)
                 self.queue_size += list_size
                 self.queue_pass += 1
-                cumulative_catalog.extend([self.queue_pass, file_list])
+                self.files.catalog_list.extend([self.queue_pass, file_list])
                 self.debug.print("q:%s l:%s t:%s" % (self.queue_size, list_size, self.tape_size))
 
-        self.files.gen_final_catalog(self.files.catalog_name, cumulative_catalog)
-        self.tar_archive(cumulative_catalog, self.files.catalog_name)
+        self.files.gen_final_catalog(self.files.catalog_name, self.files.catalog_list)
+        self.tar_archive(self.files.catalog_name)
 
     def test_build_archive(self):
         """master method to loop through files to write data to tape"""
-        cumulative_catalog = []
 
         ## get a list of files, transfer to disk, write to tape
         while self.queue_size + self.batch_size_mb < self.tape_size:
@@ -89,15 +87,16 @@ class Dump:
                 self.files.queue_archive(self.queue_pass, file_list)
                 self.queue_size += list_size
                 self.queue_pass += 1
-                cumulative_catalog.extend([self.queue_pass, file_list])
+                self.files.catalog_list.extend([self.queue_pass, file_list])
                 self.debug.print("q:%s l:%s t:%s" % (self.queue_size, list_size, self.tape_size))
 
-        self.files.gen_final_catalog(self.files.catalog_name, cumulative_catalog)
+        self.files.gen_final_catalog(self.files.catalog_name, self.files.catalog_list)
 
     def test_fast_archive(self):
-        """skip tar of local archive on disk"""
+        """skip tar of local archive on disk
 
-        cumulative_catalog = []
+           send files to two tapes using a single drive."""
+
         ## get files in batch size chunks
         while self.queue_size + self.batch_size_mb < self.tape_size:
 
@@ -107,18 +106,18 @@ class Dump:
             if file_list:
                 self.queue_size += list_size
                 self.queue_pass += 1
-                cumulative_catalog.extend([self.queue_pass, file_list])
+                self.files.catalog_list.extend([self.queue_pass, file_list])
                 self.debug.print("queue list:", self.queue_pass)
 
-        self.tar_fast_archive(cumulative_catalog)
+        self.tar_archive_fast_single(self.files.catalog_name)
 
-    def manual_to_tape(self, queue_pass, cumulative_catalog):
+    def manual_to_tape(self, queue_pass, cumulative_list):
         """if the dump is interrupted, run the files to tape for the current_pid.
 
         This works only if you initialize your dump object with pid=$previous_run_pid."""
         self.queue_pass = queue_pass
-        self.debug.print("manual vars - qp:%s, cn:%s" % (queue_pass, self.files.catalog_name))
-        self.tar_archive(cumulative_catalog, self.files.catalog_name)
+        self.debug.print("manual vars - qp:%s, cn:%s" % (queue_pass, cumulative_list))
+        self.tar_archive(self.files.catalog_name)
         self.debug.print("manual to tape complete")
 
     def get_list(self, limit=7500):
@@ -152,8 +151,8 @@ class Dump:
         ## write tape locations
         self.paperdb.write_tape_locations(self.files.catalog_list, ','.join(tape_label_ids))
 
-    def tar_archive_single_fast(self, file_list):
-        "Archive files directly to tape"
+    def tar_archive_fast_single(self, catalog_file):
+        "Archive files directly to tape using only a single drive to write 2 tapes"
 
         ## select ids
         tape_label_ids = self.labeldb.select_ids()
