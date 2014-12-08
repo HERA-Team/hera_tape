@@ -13,10 +13,16 @@ from paper_debug import Debug
 class PaperDB:
     "Paper database contains information on file locations"
 
-    def __init__(self, credentials, pid, status=0, debug=False):
-        """Initialize connection and collect list of files to dump."""
+    def __init__(self, credentials, pid, status=0, debug=False, debug_threshold=255):
+        """Initialize connection and collect list of files to dump.
+        :type credentials: string
+        :type pid: int
+        :type status: int
+        :type debug: bool
+        :type debug_threshold: int
+        """
         self.pid = pid
-        self.debug = Debug(self.pid, debug=debug)
+        self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
 
         self.status = status
         self.connection_timeout = 90
@@ -41,23 +47,47 @@ class PaperDB:
     def db_connect(self, command=None, credentials=None):
         "connect to the database or reconnect an old session"
         self.debug.print('input:%s %s' % (command, credentials))
-        self.credentials = credentials if credentials != None else '/root/my.cnf'
+        self.credentials = credentials if credentials != None else self.credentials
         time_delta = self.connection_timeout + 1 if command == 'init' else self.connection_time_delta()
 
-        self.debug.print("time_delta:%s" % (time_delta))
+        self.debug.print("time_delta:%s, timeout:%s" % (time_delta, self.connection_timeout))
         if time_delta > self.connection_timeout:
-            self.debug.print("setting connection")
-            self.connect = pymysql.connect(read_default_file=credentials, connect_timeout=self.connection_timeout)
+            self.debug.print("setting connection %s %s" % (credentials, self.connection_timeout))
+            self.connect = pymysql.connect(read_default_file=self.credentials, connect_timeout=self.connection_timeout)
             self.cur = self.connect.cursor()
 
         self.update_connection_time()
         self.debug.print("connection_time:%s" % (self.connection_time))
 
-    def get_new(self, size_limit):
-        """Retrieve a list of available files."""
-        ready_sql = """select raw_location,raw_file_size_mb from paperdata
-            where raw_location is not null and ready_to_tape = 1 and tape_location='NULL'
-            group by raw_location order by obsnum """
+    def get_new(self, size_limit, regex=False, pid=False):
+        """Retrieve a list of available files. 
+
+        Outputs files that are "ready_to_tape"
+        Optionally, limit search by file_path regex or pid in tape_location
+
+        Arguments:
+        :param size_limit: int
+        :param regex: str
+        """
+
+        if regex:
+            ready_sql = """select raw_location, raw_file_size_mb from paperdata
+                where raw_location is not null
+                and ready_to_tape = 1 
+                and tape_location='NULL'
+                and raw_location like '%s'
+            """ % regex
+        elif pid:
+            read_sql = """select raw_location, raw_file_size_mb from paperdata
+                where tape_location = 1{0:s}
+            """.format(pid)
+        else:
+            ready_sql = """select raw_location, raw_file_size_mb from paperdata
+                where raw_location is not null 
+                and ready_to_tape = 1 
+                and tape_location='NULL'
+                group by raw_location order by obsnum;
+            """
 
         self.cur.execute(ready_sql)
         self.update_connection_time()
@@ -66,12 +96,12 @@ class PaperDB:
         total = 0
 
         for file_info in self.cur.fetchall():
-            self.debug.print('found file - %s' % file_info[0])
+            self.debug.print('found file - %s' % file_info[0], debug_level=254)
             file_size = float(file_info[1])
             if file_size > size_limit:
-                self.debug.print('get_new - file_size (%s) larger than size limit(%s) - %s' % (file_size, size_limit, file_info[0]))
+                self.debug.print('file_size (%s) larger than size limit(%s) - %s' % (file_size, size_limit, file_info[0]), debug_level=254)
             if total+file_size < size_limit:
-                self.debug.print('file:', file_info[0])
+                self.debug.print('file:', file_info[0], debug_level=254)
                 self.file_list.append(file_info[0])
                 total += file_size
 
@@ -104,9 +134,11 @@ class PaperDB:
 
         record the barcode of tape in the tape_location field, and
         setting the delete_file field to 1 for all files just written to tape.
+        :param catalog_list: dict
+        :param tape_id: str
         """
 
-        self.db_connect('debug write location')
+        self.db_connect()
 
         ## catalog list is set in paper_io.py: self.catalog_list.append([queue_pass, int, file])
         for catalog in catalog_list:
@@ -118,12 +150,5 @@ class PaperDB:
 
         self.connect.commit()
 
-    def __del__(self):
-        "close unused resources"
-        #self.db_connect()
-        #self.connect.commit()
-        #self.connect.close()
-        #self.unclaim_files(1, self.list)
-        pass
 
 

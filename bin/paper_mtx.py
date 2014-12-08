@@ -1,8 +1,9 @@
-#! /usr/bin/python
-#
-# handle the tape changer
-#
-# dconover 20140922
+"""Manage tapes
+
+    Changer: access mtx features
+    MtxDB: a mysql database to manage tape usage
+    Drives: access to mt functions and writing data to tape
+"""
 
 import re, pymysql, time
 from random import randint
@@ -14,6 +15,7 @@ def split_mtx_output(mtx_output):
     """Return dictionaries of tape_ids in drives and slots."""
     drive_ids = {}
     tape_slot = {}
+    label_in_drive = {}
 
     for line in mtx_output.split('\n'):
         drive_line = re.compile('^Data Transfer Element (\d):Full \(Storage Element (\d+) Loaded\):VolumeTag = ([A-Z0-9]{8})')
@@ -24,6 +26,7 @@ def split_mtx_output(mtx_output):
             drive_info = drive_line.match(line).groups()
             ## dict of storage_slots by tape_id
             drive_ids[drive_info[2]] = drive_info[0:2]
+            label_in_drive[drive_info[0]] = drive_info[2]
 
         elif storage_line.match(line):
             """Storage Element 10:Full :VolumeTag=PAPR1010"""
@@ -31,7 +34,7 @@ def split_mtx_output(mtx_output):
             ## dict of tapes slots by tape_id
             tape_slot[storage_info[1]] = storage_info[0]
 
-    return drive_ids, tape_slot
+    return drive_ids, tape_slot, label_in_drive
 
 class Changer:
     'simple tape changer class'
@@ -42,16 +45,17 @@ class Changer:
         self.tape_size = tape_size
         self._tape_dev = '/dev/changer'
 
-        self.drive_ids = []
+        self.drive_ids = [] 
         self.tape_ids = []
+        self.label_in_drive = [] ## return label in given drive
 
         self.check_inventory()
         self.tape_drives = Drives(drive_select=drive_select)
 
     def check_inventory(self):
         output = check_output(['mtx', 'status']).decode("utf-8")
-        self.debug.print(output)
-        self.drive_ids, self.tape_ids = split_mtx_output(output)
+        self.debug.print(output, debug_level=250)
+        self.drive_ids, self.tape_ids, self.label_in_drive = split_mtx_output(output)
         for drive_id in self.drive_ids:
             self.debug.print('- %s, %s ' % (id, self.drive_ids[drive_id]))
 
@@ -72,10 +76,24 @@ class Changer:
                     self.debug.print('loading', str(id), str(drive))
                     self.load_tape(tape_id, drive)
 
-    def load_tape_drive(self, tape_id, drive=0):
-        if self.drives_empty():
-            self.debug.print('loading', str(tape_id), str(drive))
-            self.load_tape(tape_id, drive)
+    def load_tape_drive(self, tape_id:str, drive=0) -> bool:
+        '''load a given tape_id into a given drive=drive_id, unload if necessary.
+        :type  tape_id: label of tape to load
+        :param tape_id: label of tape to load'''
+        for attempt in range(3):
+            if self.drives_empty():
+                self.debug.print('loading', str(tape_id), str(drive), debug_level=128)
+                self.load_tape(tape_id, drive)
+                status = True
+                break
+
+            ## if the drive is full attempt to unload, then retry
+            else:
+                self.debug.print('unable to load, drive filled', str(self.label_in_drive), str(drive), debug_level=128)
+                self.unload_tape_drive(self.label_in_drive[str(drive)])
+                status = False
+
+        return status
 
     def unload_tape_pair(self):
         'unload the tapes in the current drives'
@@ -84,11 +102,13 @@ class Changer:
                 self.debug.print('unloading', tape_id)
                 self.unload_tape(tape_id)
 
-    def unload_tape_drive(self, id):
+    def unload_tape_drive(self, tape_int):
         'unload the tapes in the current drives'
         if not self.drives_empty():
-            self.debug.print('unloading', id)
-            self.unload_tape(id)
+            self.debug.print('unloading', str(tape_int))
+            self.unload_tape(tape_int)
+        else:
+            self.debug.print('tape already empty', str(tape_int))
 
     def drives_empty(self):
         self.check_inventory()
@@ -126,7 +146,7 @@ class Changer:
         tar_name = "/papertape/queue/%s/%s.tar" % (self.pid, arcname)
         catalog_name = "/papertape/queue/%s/%s.list" % (self.pid, arcname)
         self.debug.print("writing", tar_name, catalog_name)
-        self.tape_drives.arcwrite(tar_name, catalog_name)
+        self.tape_drives.tar_files([catalog_name, tar_name])
 
     def prep_tape(self, catalog_file):
         """write the catalog to tape. write all of our source code to the first file"""
@@ -199,10 +219,6 @@ class MtxDB:
         """Write out unused capacity to database."""
         pass
 
-    def __del__(self):
-        self.connect.commit()
-        self.connect.close()
-
 
 class Drives:
     """class to write two tapes"""
@@ -211,16 +227,10 @@ class Drives:
         self.drive_select = drive_select
         pass
 
-    def arcwrite(self, file, catalog):
+    def tar_files(self, files):
         commands = []
-        for int in range(self.drive_select):
-            commands.append('tar cf /dev/nst%s  %s %s ' % (int, catalog, file))
-        self.exec_commands(commands)
-
-    def fileswrite(self, files):
-        commands = []
-        for int in range(self.drive_select):
-            commands.append('tar cf /dev/nst%s  %s ' % (int, ' '.join(files)))
+        for drive_int in range(self.drive_select):
+            commands.append('tar cf /dev/nst%s  %s ' % (drive_int, ' '.join(files)))
         self.exec_commands(commands)
 
     def tar(self, file):
