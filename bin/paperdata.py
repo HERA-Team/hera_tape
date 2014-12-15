@@ -62,8 +62,8 @@ class PaperDB:
     def get_new(self, size_limit, regex=False, pid=False):
         """Retrieve a list of available files. 
 
-        Outputs files that are "ready_to_tape"
-        Optionally, limit search by file_path regex or pid in tape_location
+        Outputs files that are "write_to_tape"
+        Optionally, limit search by file_path regex or pid in tape_index
 
         Arguments:
         :param size_limit: int
@@ -71,22 +71,22 @@ class PaperDB:
         """
 
         if regex:
-            ready_sql = """select raw_location, raw_file_size_mb from paperdata
-                where raw_location is not null
-                and ready_to_tape = 1 
-                and tape_location='NULL'
-                and raw_location like '%s'
+            ready_sql = """select raw_path, raw_file_size_mb from paperdata
+                where raw_path is not null
+                and write_to_tape = 1 
+                and tape_index='NULL'
+                and raw_path like '%s'
             """ % regex
         elif pid:
-            read_sql = """select raw_location, raw_file_size_mb from paperdata
-                where tape_location = 1{0:s}
+            read_sql = """select raw_path, raw_file_size_mb from paperdata
+                where tape_index = 1{0:s}
             """.format(pid)
         else:
-            ready_sql = """select raw_location, raw_file_size_mb from paperdata
-                where raw_location is not null 
-                and ready_to_tape = 1 
-                and tape_location='NULL'
-                group by raw_location order by obsnum;
+            ready_sql = """select raw_path, raw_file_size_mb from paperdata
+                where raw_path is not null 
+                and write_to_tape = 1 
+                and tape_index='NULL'
+                group by raw_path order by obsnum;
             """
 
         self.cur.execute(ready_sql)
@@ -111,7 +111,7 @@ class PaperDB:
         """Mark files in the database that are "claimed" by a dump process."""
         self.db_connect()
         for file in file_list:
-            update_sql = "update paperdata set tape_location='%s%s' where raw_location='%s'" % (status_type, self.pid, file)
+            update_sql = "update paperdata set tape_index='%s%s' where raw_path='%s'" % (status_type, self.pid, file)
             self.debug.print('claim_files - %s' % update_sql)
             self.cur.execute(update_sql)
 
@@ -122,7 +122,7 @@ class PaperDB:
         """Release claimed files"""
         self.db_connect()
         for file in file_list:
-            update_sql = "update paperdata set tape_location='' where raw_location='%s' and tape_location='%s%s'" % (file, status_type, self.pid)
+            update_sql = "update paperdata set tape_index='' where raw_path='%s' and tape_index='%s%s'" % (file, status_type, self.pid)
             self.debug.print("unclaim_files - %s" % update_sql)
             self.cur.execute(update_sql)
 
@@ -132,7 +132,7 @@ class PaperDB:
     def write_tape_locations(self, catalog_list, tape_id):
         """Take a dictionary of files and labels and update the database
 
-        record the barcode of tape in the tape_location field, and
+        record the barcode of tape in the tape_index field, and
         setting the delete_file field to 1 for all files just written to tape.
         :param catalog_list: dict
         :param tape_id: str
@@ -142,11 +142,11 @@ class PaperDB:
 
         ## catalog list is set in paper_io.py: self.catalog_list.append([queue_pass, int, file])
         for catalog in catalog_list:
-            ## tape_location: [papr1001,papr2001]-132:3
-            tape_location = "[%s]-%s:%s" % (tape_id, catalog[0], catalog[1])
-            raw_location = catalog[2]
-            self.debug.print("writing tapelocation: %s for %s" % (tape_location, raw_location))
-            self.cur.execute('update paperdata set delete_file=1, tape_location="%s" where raw_location="%s"' % (tape_location, raw_location))
+            ## tape_index: [papr1001,papr2001]-132:3
+            tape_index = "[%s]-%s:%s" % (tape_id, catalog[0], catalog[1])
+            raw_path = catalog[2]
+            self.debug.print("writing tapelocation: %s for %s" % (tape_index, raw_path))
+            self.cur.execute('update paperdata set delete_file=1, tape_index="%s" where raw_path="%s"' % (tape_index, raw_path))
 
         self.connect.commit()
 

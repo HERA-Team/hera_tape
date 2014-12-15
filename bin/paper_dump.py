@@ -122,6 +122,7 @@ class Dump:
         '''read in the cumulative list from file and send to tape'''
 
         self.queue_pass, catalog = self.files.final_from_file()
+        self.debug.print('pass: %s' % self.queue_pass)
         self.manual_to_tape(self.queue_pass, catalog)
 
     def manual_to_tape(self, queue_pass, cumulative_list):

@@ -84,7 +84,7 @@ class Archive:
                 if catalog_line.match(line):
                     catalog_info = catalog_line.match(line).groups()
            #         print(catalog_info[0], catalog_info[1], catalog_info[2])
-                    queue_pass = int(catalog_info[0])
+                    queue_pass = int(catalog_info[0]) + 1
                     self.catalog_list.append([int(catalog_info[0]), int(catalog_info[1]), catalog_info[2]])
                     ## should be list of lists of files in tar files
         

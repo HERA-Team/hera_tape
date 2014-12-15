@@ -145,7 +145,8 @@ class Changer:
         arcname = "paper.%s.%s" % (self.pid, queue_pass)
         tar_name = "/papertape/queue/%s/%s.tar" % (self.pid, arcname)
         catalog_name = "/papertape/queue/%s/%s.list" % (self.pid, arcname)
-        self.debug.print("writing", tar_name, catalog_name)
+
+        self.debug.print("writing", catalog_name, tar_name)
         self.tape_drives.tar_files([catalog_name, tar_name])
 
     def prep_tape(self, catalog_file):
