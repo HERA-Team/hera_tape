@@ -38,7 +38,7 @@ class Dump:
         self.labeldb = MtxDB(self.mtx_creds, self.pid)
 
         ## setup file access
-        self.files = Archive(self.pid)
+        self.files = Archive(self.pid, debug=debug, debug_threshold=debug_threshold)
 
         ## use the pid here to lock changer
         self.drive_select = drive_select
@@ -125,6 +125,19 @@ class Dump:
         self.debug.print('pass: %s' % self.queue_pass)
         self.manual_to_tape(self.queue_pass, catalog)
 
+    def manual_write_tape_location(self):
+        '''on a tape dump that fails after writing to tape, but before writing
+        locations to tape, use this to resume writing locations to tape.
+
+        The dump must be initialized with the pid of the queued files.
+        '''
+
+        self.queue_pass, catalog = self.files.final_from_file()
+        self.tape_ids = self.files.tape_ids_from_file()
+        self.debug.print('write tape location', ','.join(self.tape_ids))
+        self.paperdb.write_tape_locations(self.files.catalog_list, ','.join(self.tape_ids))
+        self.paperdb.status = 0
+
     def manual_to_tape(self, queue_pass, cumulative_list):
         """if the dump is interrupted, run the files to tape for the current_pid.
 
@@ -158,9 +171,9 @@ class Dump:
         self.tape.prep_tape(catalog_file)
         for  _pass in range(self.queue_pass):
             self.debug.print('sending to tape', str(_pass))
-            try: 
+            try:
                 self.tape.write(_pass)
-            except: 
+            except:
                 break
 
         self.tape.unload_tape_pair()

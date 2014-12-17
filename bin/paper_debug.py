@@ -17,6 +17,38 @@ class Debug:
         self.debug_state = debug
         self.debug_threshold = debug_threshold
 
+    def caller_name(self, skip=2):
+        """Get a name of a caller in the format module.class.method
+        
+           `skip` specifies how many levels of stack to skip while getting caller
+           name. skip=1 means "who calls me", skip=2 "who calls my caller" etc.
+           
+           An empty string is returned if skipped levels exceed stack height
+        """
+        stack = inspect.stack()
+        start = 0 + skip
+        if len(stack) < start + 1:
+          return ''
+        parentframe = stack[start][0]
+
+        name = []
+        module = inspect.getmodule(parentframe)
+        # `modname` can be None when frame is executed directly in console
+        # TODO(techtonik): consider using __main__
+        if module:
+            name.append(module.__name__)
+        # detect classname
+        if 'self' in parentframe.f_locals:
+            # I don't know any way to detect call from the object method
+            # XXX: there seems to be no way to detect static method call - it will
+            #      be just a function call
+            name.append(parentframe.f_locals['self'].__class__.__name__)
+        codename = parentframe.f_code.co_name
+        if codename != '<module>':  # top level usually
+            name.append( codename ) # function or a method
+        del parentframe
+        return ".".join(name)
+
     def print(self, *messages, debug_level=0):
         """Print arguments as debug message if the message debug_level
         is < than the instance debug_threshold.
@@ -31,10 +63,14 @@ class Debug:
             output = " ".join(messages)
 
             call_info = inspect.stack()[1]
-            caller = call_info[1] if call_info[3] == '<module>' else call_info[3]
+            #caller = call_info[1] if call_info[3] == '<module>' else call_info[3]
 
-            _message = ":".join(["debug", date, self.pid, caller, output])
+            #_message = ":".join(["debug", date, self.pid, caller, output])
+            _message = ":".join(["debug", date, self.pid, self.caller_name(), output])
             print(_message, flush=True)
+
+    def print_source(self):
+        print(''.join(inspect.getsourcelines(self.caller_name())[0]))
 
     def exit(self, debug_level=255):
         """Force exit if debugging and level is less than debug_threshold"""

@@ -226,7 +226,6 @@ class Drives:
 
     def __init__(self, drive_select=2):
         self.drive_select = drive_select
-        pass
 
     def tar_files(self, files):
         commands = []
@@ -244,6 +243,20 @@ class Drives:
         commands = []
         for drive_int in range(self.drive_select):
             commands.append('dd conv=sync,block of=/dev/nst%s if=%s bs=32k' % (drive_int, text_file))
+        self.exec_commands(commands)
+
+    def md5sum_at_index(self, tape_index, drive_int=0):
+        """given a tape_index and drive_int, return the md5sum of the file
+        at that index on the tape in /dev/nst$drive_index."""
+
+        self.debug.print("getting md5 of file at %s in drive %s" % (tape_index, drive_int))
+        commands = [ ]
+        ## the index is stored like: [PAPR1001, PAPR2001]-0:1
+        ## the first number gives the file on tape
+        ## the second number gives the file on tar
+        ## but the tar is inside another tar with the full file table
+        ## to get at an indexed file you must do something like:
+        ## 
         self.exec_commands(commands)
 
     def exec_commands(self, cmds):

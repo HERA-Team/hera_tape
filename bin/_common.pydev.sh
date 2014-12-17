@@ -47,6 +47,8 @@ _t (){
 
     echo opening $_log_file
     _logfile open $_log_file
+    [ -f "/root/git/papertape.shredder/bin/x.log" ] && rm x.log
+    ln -s $_log_file /root/git/papertape.shredder/bin/x.log
 
     local _command=${1:-$TLAST}
     local _comment=${2}

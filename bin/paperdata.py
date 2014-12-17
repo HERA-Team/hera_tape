@@ -138,6 +138,7 @@ class PaperDB:
         :param tape_id: str
         """
 
+        
         self.db_connect()
 
         ## catalog list is set in paper_io.py: self.catalog_list.append([queue_pass, int, file])
