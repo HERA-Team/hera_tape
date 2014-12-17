@@ -27,22 +27,68 @@ _logfile () {    ## open, close, or kill the logfile
 }
 
 
-LOG_DIR=/root/git/papertape/bin/log
+export LOG_DIR=/root/git/papertape.shredder/bin/log TERM=ansi
+#alias pylint='pylint --rcfile=~/.pylint.d/pylintrc'
 
+_highlight () { highlight -A $1; }
+_pylint () { /root/.pyenv/shims/pylint --rcfile=~/.pylint.d/pylintrc $1; }
+
+_l () { TLAST=${1:-TLAST}; _pylint $TLAST; cat pylint_${TLAST%.py}.txt; }
 _p () { python -c "$1"; }
 _r () { rm -r /papertape/shm/*; ssh shredder 'mysql paperdatatest <x; mysql mtx <y'; }
+
+_date () {
+    date +%Y%m%d-%H%M
+}
 _t (){
     
-    local log_file=$LOG_DIR/t.err.$RANDOM
-    _logfile open $log_file
+    local _pid=$RANDOM
+    local _log_file=$LOG_DIR/t.err.$_pid
 
-    date
-    echo ${1:-$TLAST}
-    time python ${1:-$TLAST}
-    date
+    echo opening $_log_file
+    _logfile open $_log_file
+    [ -f "/root/git/papertape.shredder/bin/x.log" ] && rm x.log
+    ln -s $_log_file /root/git/papertape.shredder/bin/x.log
 
-    _logfile tty $log_file
-    TLAST=${1:-$TLAST}
+    local _command=${1:-$TLAST}
+    local _comment=${2}
+
+    echo _t:$(_date):$_command${_comment:+:$_comment}
+    time python $_command
+    echo _t:$(_date)
+
+    _logfile tty $_log_file
+    TLAST=$_command
 }
 _v () { vim ${1:-$last};last=${1-$last}; }
 _m () { echo using file: ${2:-$mlast}; echo "$1"| mysql --defaults-extra-file=/root/.my.${2:-$mlast}.cnf||ls /root/.my.*; mlast=${2:-$mlast}; }
+_dd () {  dd if=/dev/nst0 bs=32k count=1 conv=sync,block; }
+_rewi () { mt -f /dev/nst0 rewi; }
+_fsf () { mt -f /dev/nst0 fsf $1; }
+_tf () { tar tf /dev/nst0 ; }
+
+_comment () { sed -e 's/^/# /'; }
+
+_pi () {   ## inpsect fucntion source code (takes: _module, _class, _function)
+    local _module=$1
+    local _class=$2
+    local _function=$3
+    cat <<eop|sed -e 's/        //'|python|highlight -AS py
+        import $_module, inspect
+        print(''.join(inspect.getsourcelines($_module${_class:+.$_class}.$_function)[0]))
+eop
+}
+
+_pm () {    ## inspect class and list all methods
+
+    local _module=$1
+    local _class=$2
+    
+    cat <<eop|sed -e 's/        //' | python | highlight -AS py
+        import $_module, inspect
+        for function in inspect.getmembers($_module.$_class, predicate=inspect.isfunction):
+            print(function)
+eop
+}
+
+
