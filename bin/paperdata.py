@@ -78,7 +78,7 @@ class PaperDB:
                 and raw_path like '%s'
             """ % regex
         elif pid:
-            read_sql = """select raw_path, raw_file_size_mb from paperdata
+            ready_sql = """select raw_path, raw_file_size_mb from paperdata
                 where tape_index = 1{0:s}
             """.format(pid)
         else:
@@ -132,13 +132,13 @@ class PaperDB:
     def write_tape_locations(self, catalog_list, tape_id):
         """Take a dictionary of files and labels and update the database
 
-        record the barcode of tape in the tape_index field, and
+        record the barcode of tape in the tape_index field, but not
         setting the delete_file field to 1 for all files just written to tape.
         :param catalog_list: dict
         :param tape_id: str
         """
 
-        
+        self.debug.print("catalog_list contains %s files, and with ids: %s" % (len(catalog_list), tape_id))
         self.db_connect()
 
         ## catalog list is set in paper_io.py: self.catalog_list.append([queue_pass, int, file])
@@ -147,9 +147,19 @@ class PaperDB:
             tape_index = "[%s]-%s:%s" % (tape_id, catalog[0], catalog[1])
             raw_path = catalog[2]
             self.debug.print("writing tapelocation: %s for %s" % (tape_index, raw_path))
-            self.cur.execute('update paperdata set delete_file=1, tape_index="%s" where raw_path="%s"' % (tape_index, raw_path))
+            self.cur.execute('update paperdata set tape_index="%s" where raw_path="%s"' % (tape_index, raw_path))
 
         self.connect.commit()
+
+    def check_tape_locations(self, catalog_list, tape_id):
+         """Take a dictionary of files and labels and confirm existence of files on tape.
+
+         :param catalog_list: dict
+         :param tape_id: str
+         """
+
+         pass
+
 
 
 

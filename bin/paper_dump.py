@@ -24,6 +24,8 @@ class Dump:
         self.mtx_creds = '~/.my.mtx.cnf'
         self.paper_creds = '~/.my.papertape.cnf'
 
+        self.tape_ids = ''
+
         ## each dump process 6gb to /dev/shm (two at a time)
         self.batch_size_mb = 12000
 
@@ -42,7 +44,7 @@ class Dump:
 
         ## use the pid here to lock changer
         self.drive_select = drive_select
-        self.tape = Changer(self.pid, self.tape_size, debug=True, drive_select=drive_select)
+        self.tape = Changer(self.pid, self.tape_size, debug=True, drive_select=drive_select, debug_threshold=debug_threshold)
 
         self.dump_list = []
         self.queue_pass = 0
@@ -95,6 +97,7 @@ class Dump:
 
             ## get a list of files smaller than our batch size
             file_list, list_size = self.get_list(self.batch_size_mb, regex=regex, pid=pid, claim=claim)
+            self.debug.print("list_size %s" % (list_size))
 
             if file_list:
                 ## copy files to b5, gen catalog file
@@ -105,18 +108,24 @@ class Dump:
                 self.queue_size += list_size
                 self.queue_pass += 1
                 self.files.catalog_list.extend([self.queue_pass, file_list])
-                self.debug.print("queue list:", str(self.queue_pass))
+                self.debug.print("queue list: %s, len(catalog_list): %s" % (str(self.queue_pass), len(self.files.catalog_list)))
+
+            else:
+                break
 
         self.debug.print("complete:%s:%s:%s:%s" % (queue, regex, pid, claim))
+        return True if self.queue_size != 0 else False
 
     def test_fast_archive(self):
         """skip tar of local archive on disk
 
            send files to two tapes using a single drive."""
-        self.batch_files()
-        self.debug.print('found %s files' % len(self.files.catalog_list))
-        self.files.gen_final_catalog(self.files.catalog_name, self.files.catalog_list)
-        self.tar_archive_fast_single(self.files.catalog_name)
+        if self.batch_files():
+            self.debug.print('found %s files' % len(self.files.catalog_list))
+            self.files.gen_final_catalog(self.files.catalog_name, self.files.catalog_list)
+            self.tar_archive_fast_single(self.files.catalog_name)
+        else:
+            self.debug.print("no files batched")
 
     def manual_resume_to_tape(self):
         '''read in the cumulative list from file and send to tape'''
@@ -203,6 +212,7 @@ class Dump:
 
             self.tape.unload_tape_drive(label_id)
 
+        self.debug.print('writing tape_indexes')
         self.paperdb.write_tape_locations(self.files.catalog_list, ','.join(tape_label_ids))
         self.paperdb.status = 0
 

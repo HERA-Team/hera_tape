@@ -72,6 +72,7 @@ class Archive:
         cfile = open(catalog, 'w')
         pass_int = 1
         for file in file_list:
+            self.debug.print("%s - %s" % (catalog, file))
             self.debug.print(file[0], pass_int, file[1])
             cfile.write('%s:%s:%s\n' % (file[0], pass_int, file[1]))
             pass_int += 1

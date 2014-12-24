@@ -9,21 +9,65 @@ tape for final archival storage.
 Archival process:
 
     1. LTO5 tapes are labeled according to the date of transfer to tape
+
     2. md5 hashes are computed for each raw data file
-    3. a list of files and hashes is written to the first 64kb block on tape
-	4. the second file on the tape is a tar archive of the scripts (bash and
+
+    3. a list of files and hashes is written to the first 32kb block on tape
+       a. the list includes both the path of data parent diretory and a
+          numerical index pointing to the location of every directory on tape
+       b. the list also includes the md5sum of the data file in each directory
+
+    4. data is written to tape in multi-GB tar file "chunks"
+       a. the contents of several data directories are written to a tar file
+       b. the names of the data directories are written to a catalog file
+       c. the catalog file and tar file are appended to tape using tar
+
+	5. the lastfile on the tape is a tar archive of the scripts (bash and
 	   python) that are used to print the barcoded labels, read/write archive
        status to the database, and write the files to tape
-    5. each block of data is streamed to two tapes at once
-    6. a random file from each written tape is restored and checked for integrity
-    7. the tape ids for each file is updated in the paperdata db
-    8. after writing data to two tapes the raw data files are later deleted from disk
-    9. tapes are to be stored in DRL
+
+    6. all data is written to two tapes
+
+    7. a random file from each written tape is restored and checked for 
+       integrity
+
+    8. the tape ids and numerical location index for each file is updated in the 
+       paperdata db
+
+    9. after writing data to each tape, the tape write count is compared to the
+       number of tars "sent" to tape
+
+    10. the tape catalog is checked to confirm all files are indexed
+    
+    11. a block md5sum is performed on one tape randomly selected from the 
+        taple catalog
+
+    10. tapes are to be stored on a shelf in DRL-4nxx
+
+
+Integrity checking:
+
+    Several types of integrity checking may be performed either alone or in 
+combination, when determining if files can be deleted.
+
+    1. tape write count - the number of files ("chunks") on tape 
+    2. tape catalog - file names, md5 hashes, and positional indexes are written 
+       to the first 32kb block of tape
+    4. tar catalog - paths are read from the catalog on each tar "chunk"
+    5. tar table - paths are read from the actual tar file containing data 
+    6. block md5sum - files are streamed to a hashing algorithm directly from 
+       tape but never written to disk
+    7. file md5sum - files are written to disk then an md5sum is calculated
+
 
 Archive monitoring:
 
-	1. tapes are checked once every five years to ensure data integrity and
-       to evaluate new storage options
+	1. once a month, one tape is selected from the written collection and
+       sample files are restored from the selected tape to check data integrity 
+       and to evaluate new archive options
+    2. results for each test are logged in the database so that no tape will be 
+       repeatedly checked unless all the tapes have already been checked
+
    
 Tape Labels:
 
@@ -33,13 +77,15 @@ Tape Labels:
 	2. tape labels include the tape id printed with both a scannable font
        (code39) and a human readable font (Helvetica)
 	3. tape labels also include the date the labels are printed, the name of
-	   the project (PAPER), the type of the data (RAW), and the copy index
+	   the project (paper), the type of the data (raw), and the copy index
        (e.g. [ 20140922 - paper - raw - copy 1])
     4. tape labels are laser printed on self-adhesive white avery 1/3 cut file
        folder labels
-     
+
+
 Data Longevity: Perpetuity
 Tape Lifespan: 30 years          
 
 Data Owner: James Aguirre <jaguirre@sas.upenn.edu>
 Tape Operator: Dareus Conover <dconover@sas.upenn.edu>
+Review: dconover - last updated 20141228

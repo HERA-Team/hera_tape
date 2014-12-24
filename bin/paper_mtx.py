@@ -39,9 +39,9 @@ def split_mtx_output(mtx_output):
 class Changer:
     'simple tape changer class'
 
-    def __init__(self, pid, tape_size, debug=False, drive_select=2):
+    def __init__(self, pid, tape_size, debug=False, drive_select=2, debug_threshold=255):
         self.pid = pid
-        self.debug = Debug(self.pid, debug=debug)
+        self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
         self.tape_size = tape_size
         self._tape_dev = '/dev/changer'
 
@@ -54,7 +54,7 @@ class Changer:
 
     def check_inventory(self):
         output = check_output(['mtx', 'status']).decode("utf-8")
-        self.debug.print(output, debug_level=250)
+        self.debug.print(output, debug_level=251)
         self.drive_ids, self.tape_ids, self.label_in_drive = split_mtx_output(output)
         for drive_id in self.drive_ids:
             self.debug.print('- %s, %s ' % (id, self.drive_ids[drive_id]))
@@ -185,7 +185,12 @@ class MtxDB:
 
         ids = []
         for n in [0, 1]:
-            select_sql = "select label from ids where status is null and label like 'PAPR%d%s'" % (n+1, "%")
+            select_sql = """select label from ids 
+                where status is null and 
+                label like 'PAPR%d%s'
+                order by label
+            """ % (n+1, "%")
+
             self.cur.execute(select_sql)
 
             #print(self.cur.fetchone()[0])
