@@ -39,7 +39,8 @@ class Archive:
         self.queue_dir = self.ensure_dir('/papertape/queue/%s/' % (self.pid))
         self.catalog_name = "{0:s}/paper.{1:s}.list".format(self.queue_dir, self.pid)
         self.tape_ids_filename = "{0:s}/paper.{1:s}.tape_ids.list".format(self.queue_dir, self.pid)
-        self.catalog_list = []
+        self.catalog_list = []    ## working list of files to write
+        self.cumulative_list = [] ## cumulatice list of written files
 
         self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
 

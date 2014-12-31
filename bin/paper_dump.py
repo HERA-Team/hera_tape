@@ -65,20 +65,23 @@ class Dump:
 
                 ## files to tar on disk with catalog
                 self.files.queue_archive(self.queue_pass, file_list)
-                self.queue_size += list_size
-                self.queue_pass += 1
 
                 self.debug.print('catalog_list - %s' % self.files.catalog_list)
                 self.debug.print('list - %s' % file_list)
-                ## queue archive does the job of making the list
-                #self.files.catalog_list.extend([self.queue_pass, file_list])
+                ## queue archive does the job of making the working list we need to update the cumulative_list
+                self.files.cumulative_list.extend(self.catalog_list)
                 self.debug.print("q:%s l:%s t:%s" % (self.queue_size, list_size, self.tape_size))
+
+                self.queue_size += list_size
+                self.queue_pass += 1
+
             else:
                 self.debug.print('file list empty')
                 break
 
         if self.queue_size > 0:
-            self.files.gen_final_catalog(self.files.catalog_name, self.files.catalog_list)
+            self.debug.print('sending queued files to tar')
+            self.files.gen_final_catalog(self.files.catalog_name, self.files.cumulative_list)
             self.tar_archive(self.files.catalog_name)
         else:
             self.debug.print('Abort - no files found')
@@ -190,7 +193,7 @@ class Dump:
         ## tar files to tape
         self.tape.prep_tape(catalog_file)
         for  _pass in range(self.queue_pass):
-            self.debug.print('sending to tape', str(_pass))
+            self.debug.print('sending to tape file - %s' % str(_pass))
             try:
                 self.tape.write(_pass)
             except:
@@ -200,7 +203,7 @@ class Dump:
         self.tape.unload_tape_pair()
 
         ## write tape locations
-        self.debug.print('writing tape_indexes')
+        self.debug.print('writing tape_indexes - %s' % self.files.catalog_list)
         self.paperdb.write_tape_locations(self.files.catalog_list, ','.join(tape_label_ids))
         self.paperdb.status = 0
 
