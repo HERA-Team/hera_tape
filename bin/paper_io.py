@@ -68,12 +68,12 @@ class Archive:
         :param catalog: str
         :param file_list: list of [int, int, string]
         '''
-        self.debug.print(catalog)
+        self.debug.print('catalog_list - %s' % file_list)
         cfile = open(catalog, 'w')
         pass_int = 1
         for file in file_list:
             self.debug.print("%s - %s" % (catalog, file))
-            self.debug.print(file[0], pass_int, file[1])
+            self.debug.print("file_inf - %s, %s, %s" % (file[0], pass_int, file[1]))
             cfile.write('%s:%s:%s\n' % (file[0], pass_int, file[1]))
             pass_int += 1
 

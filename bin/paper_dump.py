@@ -6,7 +6,7 @@ be dumped to tape using this class.
 
 from paper_mtx import Changer, MtxDB
 from paper_io import Archive
-from paperdata import PaperDB
+from paper_db import PaperDB
 from paper_debug import Debug
 
 from random import randint
@@ -67,11 +67,21 @@ class Dump:
                 self.files.queue_archive(self.queue_pass, file_list)
                 self.queue_size += list_size
                 self.queue_pass += 1
-                self.files.catalog_list.extend([self.queue_pass, file_list])
-                self.debug.print("q:%s l:%s t:%s" % (self.queue_size, list_size, self.tape_size))
 
-        self.files.gen_final_catalog(self.files.catalog_name, self.files.catalog_list)
-        self.tar_archive(self.files.catalog_name)
+                self.debug.print('catalog_list - %s' % self.files.catalog_list)
+                self.debug.print('list - %s' % file_list)
+                ## queue archive does the job of making the list
+                #self.files.catalog_list.extend([self.queue_pass, file_list])
+                self.debug.print("q:%s l:%s t:%s" % (self.queue_size, list_size, self.tape_size))
+            else:
+                self.debug.print('file list empty')
+                break
+
+        if self.queue_size > 0:
+            self.files.gen_final_catalog(self.files.catalog_name, self.files.catalog_list)
+            self.tar_archive(self.files.catalog_name)
+        else:
+            self.debug.print('Abort - no files found')
 
     def test_build_archive(self, regex=False):
         """master method to loop through files to write data to tape"""
@@ -107,10 +117,11 @@ class Dump:
 
                 self.queue_size += list_size
                 self.queue_pass += 1
-                self.files.catalog_list.extend([self.queue_pass, file_list])
+                self.files.catalog_list.append([self.queue_pass, file_list])
                 self.debug.print("queue list: %s, len(catalog_list): %s" % (str(self.queue_pass), len(self.files.catalog_list)))
 
             else:
+                self.debug.print('file list empty')
                 break
 
         self.debug.print("complete:%s:%s:%s:%s" % (queue, regex, pid, claim))
@@ -183,12 +194,15 @@ class Dump:
             try:
                 self.tape.write(_pass)
             except:
+                self.debug.print('tape writing exception')
                 break
 
         self.tape.unload_tape_pair()
 
         ## write tape locations
+        self.debug.print('writing tape_indexes')
         self.paperdb.write_tape_locations(self.files.catalog_list, ','.join(tape_label_ids))
+        self.paperdb.status = 0
 
     def tar_archive_fast_single(self, catalog_file):
         "Archive files directly to tape using only a single drive to write 2 tapes"

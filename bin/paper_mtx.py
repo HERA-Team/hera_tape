@@ -128,6 +128,7 @@ class Changer:
     def load_tape(self, tape_id, tape_drive):
         """Load a tape into a free drive slot"""
         if self.tape_ids[tape_id]:
+            self.debug.print('Loading - %s' % tape_id)
             output = check_output(['mtx', 'load', str(self.tape_ids[tape_id]), str(tape_drive)])
             self.check_inventory()
 
