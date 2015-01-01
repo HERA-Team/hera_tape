@@ -69,7 +69,7 @@ class Dump:
                 self.debug.print('catalog_list - %s' % self.files.catalog_list)
                 self.debug.print('list - %s' % file_list)
                 ## queue archive does the job of making the working list we need to update the cumulative_list
-                self.files.cumulative_list.extend(self.catalog_list)
+                self.files.cumulative_list.extend(self.files.catalog_list)
                 self.debug.print("q:%s l:%s t:%s" % (self.queue_size, list_size, self.tape_size))
 
                 self.queue_size += list_size
@@ -80,11 +80,27 @@ class Dump:
                 break
 
         if self.queue_size > 0:
-            self.debug.print('sending queued files to tar')
+            self.debug.print('sending queued files to tar - %s, %s' % (len(self.files.cumulative_list), self.files.cumulative_list))
             self.files.gen_final_catalog(self.files.catalog_name, self.files.cumulative_list)
             self.tar_archive(self.files.catalog_name)
         else:
             self.debug.print('Abort - no files found')
+
+    def verify_tape(self, catalog_list, tape_id):
+        '''given a list of files and a tape_id check the integrity of the tape
+
+    1. tape write count - the number of files ("chunks") on tape 
+    2. tape catalog - file names, md5 hashes, and positional indexes are written 
+       to the first 32kb block of tape
+    4. tar catalog - paths are read from the catalog on each tar "chunk"
+    5. tar table - paths are read from the actual tar file containing data 
+    6. block md5sum - files are streamed to a hashing algorithm directly from 
+       tape but never written to disk
+    7. file md5sum - files are written to disk then an md5sum is calculated
+
+        '''
+
+        pass
 
     def test_build_archive(self, regex=False):
         """master method to loop through files to write data to tape"""
@@ -203,8 +219,8 @@ class Dump:
         self.tape.unload_tape_pair()
 
         ## write tape locations
-        self.debug.print('writing tape_indexes - %s' % self.files.catalog_list)
-        self.paperdb.write_tape_locations(self.files.catalog_list, ','.join(tape_label_ids))
+        self.debug.print('writing tape_indexes - %s' % self.files.cumulative_list)
+        self.paperdb.write_tape_locations(self.files.cumulative_list, ','.join(tape_label_ids))
         self.paperdb.status = 0
 
     def tar_archive_fast_single(self, catalog_file):

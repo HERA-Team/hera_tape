@@ -32,6 +32,7 @@ class PaperDB:
         self.cur = ''
         self.db_connect('init', credentials)
         self.file_list = []
+        self.file_md5_dict = {}
 
     def update_connection_time(self):
         "refresh database connection"
@@ -71,18 +72,18 @@ class PaperDB:
         """
 
         if regex:
-            ready_sql = """select raw_path, raw_file_size_mb from paperdata
+            ready_sql = """select raw_path, raw_file_size_mb, md5sum from paperdata
                 where raw_path is not null
                 and write_to_tape = 1 
                 and tape_index='NULL'
                 and raw_path like '%s'
             """ % regex
         elif pid:
-            ready_sql = """select raw_path, raw_file_size_mb from paperdata
+            ready_sql = """select raw_path, raw_file_size_mb, md5sum from paperdata
                 where tape_index = 1{0:s}
             """.format(pid)
         else:
-            ready_sql = """select raw_path, raw_file_size_mb from paperdata
+            ready_sql = """select raw_path, raw_file_size_mb, md5sum from paperdata
                 where raw_path is not null 
                 and write_to_tape = 1 
                 and tape_index='NULL'
@@ -103,6 +104,7 @@ class PaperDB:
             if total+file_size < size_limit:
                 self.debug.print('file:', file_info[0], debug_level=254)
                 self.file_list.append(file_info[0])
+                self.file_md5_dict[file_info[0]] = file_info[2]
                 total += file_size
 
         return self.file_list, total
