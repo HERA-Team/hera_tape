@@ -54,7 +54,11 @@ _t (){
     local _comment=${2}
 
     echo _t:$(_date):$_command${_comment:+:$_comment}
-    time python $_command
+    if [ -n "$_command" ]; then 
+        time python $_command
+    else
+        echo empty command: "'$_command'"
+    fi
     echo _t:$(_date)
 
     _logfile tty $_log_file
