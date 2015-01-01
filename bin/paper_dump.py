@@ -221,7 +221,7 @@ class Dump:
         ## write tape locations
         self.debug.print('writing tape_indexes - %s' % self.files.cumulative_list)
         self.paperdb.write_tape_locations(self.files.cumulative_list, ','.join(tape_label_ids))
-        self.tape.labeldb.date_ids(tape_label_ids)
+        self.labeldb.date_ids(tape_label_ids)
         self.paperdb.status = 0
 
     def tar_archive_fast_single(self, catalog_file):
