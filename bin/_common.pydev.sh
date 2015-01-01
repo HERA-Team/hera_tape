@@ -62,7 +62,7 @@ _t (){
     echo _t:$(_date)
 
     _logfile tty $_log_file
-    TLAST=$_command
+    export TLAST=$_command
 }
 _v () { vim ${1:-$last};last=${1-$last}; }
 _m () { echo using file: ${2:-$mlast}; echo "$1"| mysql --defaults-extra-file=/root/.my.${2:-$mlast}.cnf||ls /root/.my.*; mlast=${2:-$mlast}; }

@@ -86,23 +86,26 @@ class Archive:
             ## writ the actual file_list
             for file in file_list:
                 self.debug.print("%s - %s" % (catalog, file))
-                self.debug.print("file_inf - %s, %s, %s" % (file[0], pass_int, file[1]))
-                cfile.write('%s:%s:%s\n' % (file[0], pass_int, file[1]))
+                self.debug.print("file_inf - %s, %s, %s, %s" % (pass_int, file[0], file[1], file[2]), debug_level=251)
+
+                ## do we need pass_int?
+                cfile.write('%s:%s:%s:%s\n' % (pass_int, file[0], file[1], file[2]))
                 pass_int += 1
 
     def final_from_file(self, tape_ids=False):
         '''gen final catalog from file'''
         self.catalog_list = []
 
-        catalog_line = re.compile('([0-9]+):([0-9]+):(.*)')
+        catalog_line = re.compile('([0-9]+)([0-9]+):([0-9]+):(.*)')
         with open(self.catalog_name, 'r') as cfile:
             self.debug.print("opening_file", debug_level=128)
             for line in cfile:
                 if catalog_line.match(line):
                     catalog_info = catalog_line.match(line).groups()
            #         print(catalog_info[0], catalog_info[1], catalog_info[2])
-                    queue_pass = int(catalog_info[0]) + 1
-                    self.catalog_list.append([int(catalog_info[0]), int(catalog_info[1]), catalog_info[2]])
+                    file_on_tape_number = int(catalog_info[0])
+                    queue_pass = int(catalog_info[1]) + 1
+                    self.catalog_list.append([int(catalog_info[1]), int(catalog_info[2]), catalog_info[3]])
                     ## should be list of lists of files in tar files
 
         return queue_pass, self.catalog_list
