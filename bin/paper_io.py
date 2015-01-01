@@ -6,7 +6,7 @@
    Transfers are completed using scp
 """
 
-import os, hashlib, shutil, tarfile, re, collections
+import os, hashlib, shutil, tarfile, re, collections, datetime
 #from paper_paramiko import Transfer
 from paper_debug import Debug
 
@@ -70,13 +70,25 @@ class Archive:
         :param file_list: list of [int, int, string]
         '''
         self.debug.print('catalog_list - %s' % file_list)
-        cfile = open(catalog, 'w')
+
+        preamble_lines = [
+            "## Paper dump catalog: %s (%s)" % (self.pid, datetime.datetime.now().strftime('%Y%m%d-%H%M')), 
+            "## This tape contains files as listed below:",
+            "##"
+        ]
+
         pass_int = 1
-        for file in file_list:
-            self.debug.print("%s - %s" % (catalog, file))
-            self.debug.print("file_inf - %s, %s, %s" % (file[0], pass_int, file[1]))
-            cfile.write('%s:%s:%s\n' % (file[0], pass_int, file[1]))
-            pass_int += 1
+        
+        with open(catalog, 'w') as cfile:
+            ## write a preamble to describe the contents
+            cfile.write('\n'.join(preamble_lines))
+
+            ## writ the actual file_list
+            for file in file_list:
+                self.debug.print("%s - %s" % (catalog, file))
+                self.debug.print("file_inf - %s, %s, %s" % (file[0], pass_int, file[1]))
+                cfile.write('%s:%s:%s\n' % (file[0], pass_int, file[1]))
+                pass_int += 1
 
     def final_from_file(self, tape_ids=False):
         '''gen final catalog from file'''
