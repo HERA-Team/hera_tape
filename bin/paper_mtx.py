@@ -5,7 +5,7 @@
     Drives: access to mt functions and writing data to tape
 """
 
-import re, pymysql, time
+import re, pymysql, time, datetime
 from random import randint
 from subprocess import *
 from paper_debug import Debug
@@ -50,7 +50,7 @@ class Changer:
         self.label_in_drive = [] ## return label in given drive
 
         self.check_inventory()
-        self.tape_drives = Drives(drive_select=drive_select)
+        self.tape_drives = Drives(self.pid, drive_select=drive_select)
 
     def check_inventory(self):
         output = check_output(['mtx', 'status']).decode("utf-8")
@@ -76,7 +76,8 @@ class Changer:
                     self.debug.print('loading', str(id), str(drive))
                     self.load_tape(tape_id, drive)
 
-    def load_tape_drive(self, tape_id:str, drive=0) -> bool:
+    ## using type hinting PEP 3107 and Sphinx
+    def load_tape_drive(self, tape_id: str, drive=0) -> bool:
         '''load a given tape_id into a given drive=drive_id, unload if necessary.
         :type  tape_id: label of tape to load
         :param tape_id: label of tape to load'''
@@ -216,6 +217,12 @@ class MtxDB:
 
         self.connect.commit()
 
+    def date_ids(self, ids):
+        """write the date of our completed run to tape"""
+        date = datetime.datetime.now().strftime('%Y%m%d-%H%M')
+        for tape_id in ids:
+            date_query = 'update ids set date="%s" where label="%s"' % (date, tape_id)
+
     def write(self, src_directory):
         """take a path like /dev/shm/1003261778 and create a tar archive on two tapes"""
 
@@ -230,7 +237,9 @@ class MtxDB:
 class Drives:
     """class to write two tapes"""
 
-    def __init__(self, drive_select=2):
+    def __init__(self, pid, drive_select=2, debug=False, debug_threshold=128):
+        self.pid = pid
+        self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
         self.drive_select = drive_select
 
     def tar_files(self, files):
@@ -256,7 +265,7 @@ class Drives:
         at that index on the tape in /dev/nst$drive_index."""
 
         self.debug.print("getting md5 of file at %s in drive %s" % (tape_index, drive_int))
-        commands = [ ]
+        commands = []
         ## the index is stored like: [PAPR1001, PAPR2001]-0:1
         ## the first number gives the file on tape
         ## the second number gives the file on tar

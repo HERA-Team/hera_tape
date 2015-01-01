@@ -159,7 +159,7 @@ class Archive:
     def save_tape_ids(self, tape_ids):
         """open a file and write the tape ids in case writing to the db fails"""
 
-        self.debug.print('saving {0:s} to {1:s}'.format(tape_ids,self.tape_ids_filename))
+        self.debug.print('saving {0:s} to {1:s}'.format(tape_ids, self.tape_ids_filename))
         tape_id_file = open(self.tape_ids_filename, 'w')
         tape_id_file.write("[{0:s}]\n".format(tape_ids))
         tape_id_file.close()
