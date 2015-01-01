@@ -280,6 +280,3 @@ class Dump:
         self.paperdb.write_tape_locations(self.files.catalog_list, ','.join(tape_label_ids))
         self.paperdb.status = 0
 
-
-
-
