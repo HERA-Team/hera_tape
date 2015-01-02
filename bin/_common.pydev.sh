@@ -76,7 +76,7 @@ _comment () { sed -e 's/^/# /'; }
 _pi () {   ## inpsect fucntion source code (takes: _module, _class, _function)
     local _module=$1
     local _class=$2
-    local _function=$3
+    local _function=${3:-__init__}
     cat <<eop|sed -e 's/        //'|python|highlight -AS py
         import $_module, inspect
         print(''.join(inspect.getsourcelines($_module${_class:+.$_class}.$_function)[0]))
