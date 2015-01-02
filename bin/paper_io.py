@@ -53,14 +53,15 @@ class Archive:
 
     def gen_catalog(self, catalog, file_list, queue_pass):
         """create a catalog file"""
-        self.debug.print(catalog)
-        cfile = open(catalog, 'w')
-        pass_int = 1
-        self.catalog_list = []
-        for file in file_list:
-            self.catalog_list.append([queue_pass, pass_int, file])
-            cfile.write("%s:%s:%s\n" % (queue_pass, pass_int, file))
-            pass_int += 1
+        self.debug.print("intermediate catalog: %s" % catalog)
+        with open(catalog, 'w') as cfile: 
+            pass_int = 1
+            self.catalog_list = []
+            for file in file_list:
+                self.debug.print('catalog_list: %s %s %s' % (queue_pass, pass_int, file), debug_level=249)
+                self.catalog_list.append([queue_pass, pass_int, file])
+                cfile.write("%s:%s:%s\n" % (queue_pass, pass_int, file))
+                pass_int += 1
 
 
     def gen_final_catalog(self, catalog, file_list):
@@ -74,7 +75,7 @@ class Archive:
         preamble_lines = [
             "## Paper dump catalog: %s (%s)" % (self.pid, datetime.datetime.now().strftime('%Y%m%d-%H%M')), 
             "## This tape contains files as listed below:",
-            "##"
+            "##\n"
         ]
 
         pass_int = 1
@@ -86,7 +87,7 @@ class Archive:
             ## writ the actual file_list
             for file in file_list:
                 self.debug.print("%s - %s" % (catalog, file))
-                self.debug.print("file_inf - %s, %s, %s, %s" % (pass_int, file[0], file[1], file[2]), debug_level=251)
+                self.debug.print("file_inf - %s, %s, %s, %s" % (pass_int, file[0], file[1], file[2]), debug_level=249)
 
                 ## do we need pass_int?
                 cfile.write('%s:%s:%s:%s\n' % (pass_int, file[0], file[1], file[2]))

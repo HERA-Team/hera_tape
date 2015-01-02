@@ -171,13 +171,45 @@ class MtxDB:
 
     """
 
-    def __init__(self, _credentials, pid, debug=False):
+    def __init__(self, credentials, pid, debug=False, debug_threshold=255):
         """Initialize connection and collect list of tape_ids."""
 
         self.pid = pid
-        self.debug = Debug(self.pid, debug=debug)
-        self.connect = pymysql.connect(read_default_file=_credentials)
-        self.cur = self.connect.cursor()
+        self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
+
+        ## database variables
+        self.connection_timeout = 90
+        self.connection_time = 0
+        self.credentials = credentials
+        self.connect = ''
+        self.cur = ''
+        self.db_connect('init', credentials)
+
+    def update_connection_time(self):
+        "refresh database connection"
+        self.debug.print('updating connection_time')
+        self.connection_time = datetime.datetime.now()
+
+    def connection_time_delta(self):
+        "return connection age"
+        self.debug.print('connection_time:%s' % self.connection_time)
+        delta = datetime.datetime.now() - self.connection_time
+        return delta.total_seconds()
+
+    def db_connect(self, command=None, credentials=None):
+        "connect to the database or reconnect an old session"
+        self.debug.print('input:%s %s' % (command, credentials))
+        self.credentials = credentials if credentials != None else self.credentials
+        time_delta = self.connection_timeout + 1 if command == 'init' else self.connection_time_delta()
+
+        self.debug.print("time_delta:%s, timeout:%s" % (time_delta, self.connection_timeout))
+        if time_delta > self.connection_timeout:
+            self.debug.print("setting connection %s %s" % (credentials, self.connection_timeout))
+            self.connect = pymysql.connect(read_default_file=self.credentials, connect_timeout=self.connection_timeout)
+            self.cur = self.connect.cursor()
+
+        self.update_connection_time()
+        self.debug.print("connection_time:%s" % (self.connection_time))
 
     def get_capacity(self, tape_id):
         select_sql = "select capacity from ids where id='%s'" % (tape_id)
@@ -185,6 +217,7 @@ class MtxDB:
     def select_ids(self):
         """select lowest matching id pairs"""
 
+        self.db_connect()
         ids = []
         for n in [0, 1]:
             select_sql = """select label from ids 
@@ -201,6 +234,7 @@ class MtxDB:
 
     def insert_ids(self, ids):
         """Add new tape_ids to the mtxdb"""
+        self.db_connect()
         for label_id in ids:
             insert_sql = "insert into ids (label) values('%s')" % label_id
             print(insert_sql)
@@ -210,6 +244,7 @@ class MtxDB:
 
     def claim_ids(self, ids):
         """Mark files in the database that are "claimed" by a dump process."""
+        self.db_connect()
         for tape_id in ids:
             claim_query = 'update ids set status="%s" where label="%s"' % (self.pid, tape_id)
             self.debug.print(claim_query)
@@ -220,8 +255,13 @@ class MtxDB:
     def date_ids(self, ids):
         """write the date of our completed run to tape"""
         date = datetime.datetime.now().strftime('%Y%m%d-%H%M')
+        self.db_connect()
         for tape_id in ids:
-            date_query = 'update ids set date="%s" where label="%s"' % (date, tape_id)
+            self.debug.print('updating mtxdb: %s, %s' % (date, tape_id))
+            date_sql = 'update ids set date="%s" where label="%s"' % (date, tape_id)
+            self.cur.execute(date_sql)
+ 
+        self.connect.commit()
 
     def write(self, src_directory):
         """take a path like /dev/shm/1003261778 and create a tar archive on two tapes"""
@@ -231,6 +271,7 @@ class MtxDB:
 
     def update_unused_capacity(self, used=None):
         """Write out unused capacity to database."""
+        self.db_connect()
         pass
 
 

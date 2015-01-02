@@ -37,7 +37,7 @@ class Dump:
         self.paperdb = PaperDB(self.paper_creds, self.pid, debug=True, debug_threshold=debug_threshold)
 
         ## setup tape library
-        self.labeldb = MtxDB(self.mtx_creds, self.pid)
+        self.labeldb = MtxDB(self.mtx_creds, self.pid, debug=debug, debug_threshold=debug_threshold)
 
         ## setup file access
         self.files = Archive(self.pid, debug=debug, debug_threshold=debug_threshold)
@@ -89,12 +89,12 @@ class Dump:
     def verify_tape(self, catalog_list, tape_id):
         '''given a list of files and a tape_id check the integrity of the tape
 
-    1. tape write count - the number of files ("chunks") on tape 
-    2. tape catalog - file names, md5 hashes, and positional indexes are written 
+    1. tape write count - the number of files ("chunks") on tape
+    2. tape catalog - file names, md5 hashes, and positional indexes are written
        to the first 32kb block of tape
     4. tar catalog - paths are read from the catalog on each tar "chunk"
-    5. tar table - paths are read from the actual tar file containing data 
-    6. block md5sum - files are streamed to a hashing algorithm directly from 
+    5. tar table - paths are read from the actual tar file containing data
+    6. block md5sum - files are streamed to a hashing algorithm directly from
        tape but never written to disk
     7. file md5sum - files are written to disk then an md5sum is calculated
 
@@ -221,6 +221,7 @@ class Dump:
         ## write tape locations
         self.debug.print('writing tape_indexes - %s' % self.files.cumulative_list)
         self.paperdb.write_tape_locations(self.files.cumulative_list, ','.join(tape_label_ids))
+        self.debug.print('updating mtx.ids with date')
         self.labeldb.date_ids(tape_label_ids)
         self.paperdb.status = 0
 

@@ -31,6 +31,7 @@ class PaperDB:
         self.connect = ''
         self.cur = ''
         self.db_connect('init', credentials)
+
         self.file_list = []
         self.file_md5_dict = {}
 
@@ -61,7 +62,7 @@ class PaperDB:
         self.debug.print("connection_time:%s" % (self.connection_time))
 
     def get_new(self, size_limit, regex=False, pid=False):
-        """Retrieve a list of available files. 
+        """Retrieve a list of available files.
 
         Outputs files that are "write_to_tape"
         Optionally, limit search by file_path regex or pid in tape_index
@@ -90,6 +91,7 @@ class PaperDB:
                 group by raw_path order by obsnum;
             """
 
+        self.db_connect()
         self.cur.execute(ready_sql)
         self.update_connection_time()
 
@@ -154,13 +156,13 @@ class PaperDB:
         self.connect.commit()
 
     def check_tape_locations(self, catalog_list, tape_id):
-         """Take a dictionary of files and labels and confirm existence of files on tape.
+        """Take a dictionary of files and labels and confirm existence of files on tape.
 
-         :param catalog_list: dict
-         :param tape_id: str
-         """
+        :param catalog_list: dict
+        :param tape_id: str
+        """
 
-         pass
+        pass
 
 
 
