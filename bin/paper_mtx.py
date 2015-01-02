@@ -301,6 +301,17 @@ class Drives:
             commands.append('dd conv=sync,block of=/dev/nst%s if=%s bs=32k' % (drive_int, text_file))
         self.exec_commands(commands)
 
+    def dd_read(self, drive_int):
+        '''assuming a loaded tape, read off the first block from the tape and 
+        return it as a string'''
+ 
+        command = ['dd', 'conv=sync,block', 'if=/dev/nst%s' % drive_int, 'bs=32k', 'count=1']
+        self.debug.print('%s' % command)
+        output = check_output(command)
+
+        return output
+
+
     def md5sum_at_index(self, tape_index, drive_int=0):
         """given a tape_index and drive_int, return the md5sum of the file
         at that index on the tape in /dev/nst$drive_index."""

@@ -15,14 +15,14 @@ import os
 class Dump:
     "Coordinate a dump to tape based on deletable files in database"
 
-    def  __init__(self, debug=False, pid=None, drive_select=2, debug_threshold=255):
+    def  __init__(self, credentials, debug=False, pid=None, drive_select=2, debug_threshold=255):
         "initialize"
 
         self.pid = "%0.6d%0.3d" % (os.getpid(), randint(1, 999)) if pid == None else pid
         self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
 
         self.mtx_creds = '~/.my.mtx.cnf'
-        self.paper_creds = '~/.my.papertape.cnf'
+        self.paper_creds = credentials
 
         self.tape_ids = ''
 
