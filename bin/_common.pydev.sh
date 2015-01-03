@@ -73,6 +73,16 @@ _tf () { tar tf /dev/nst0 ; }
 
 _comment () { sed -e 's/^/# /'; }
 
+_pc () {    ## list classes in a module
+    local _module=$1
+    local _list=${_module:-$(ls paper_*.py)}
+    for _module in $_list; do
+        echo $_module:
+        _inspect="import ${_module%.py}, sys, inspect\nfor x in inspect.getmembers(${_module%.py}, inspect.isclass):\n  print('    ', x)"
+       echo -e "$_inspect"|python|grep ${_module%.py}; echo 
+    done
+}
+
 _pi () {   ## inpsect fucntion source code (takes: _module, _class, _function)
     local _module=$1
     local _class=$2

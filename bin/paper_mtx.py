@@ -36,6 +36,14 @@ def split_mtx_output(mtx_output):
 
     return drive_ids, tape_slot, label_in_drive
 
+def split_tape_catalog(tape_catalog):
+    """return pid, and file list"""
+    pid = ''
+    file_list = []
+    md5_dict = {}
+
+    return pid, file_list, md5_dict
+
 class Changer:
     'simple tape changer class'
 
@@ -310,7 +318,6 @@ class Drives:
         output = check_output(command)
 
         return output
-
 
     def md5sum_at_index(self, tape_index, drive_int=0):
         """given a tape_index and drive_int, return the md5sum of the file
