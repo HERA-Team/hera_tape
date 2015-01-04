@@ -16,10 +16,12 @@ Archival process:
        b. the list includes both the path of data parent diretory and a
           numerical index pointing to the location of every directory on tape
        c. the list also includes the md5sum of the data file in each directory
+          (visdata)
        d. the index is a colon separated string like: 
 
            item_index:tar_index:file_index:md_sum:dir_path(host:full_path)
-       or
+
+       e.g.:
            1:0:1:d41d8cd98f00b204e9800998ecf8427e:test:/testdata/testdir
 
        e. the catalog file includes a preamble describing the job details:
@@ -29,6 +31,7 @@ Archival process:
            ## directory_index:tape_index:file_index:data_md5:file_path
            item_index:tape_index:file_index:data_md5:dir_path(host:full_path)
            ...
+
         e.g.:
            ## Paper dump catalog: 011946366 (version: 20150103 on 20150101-2003)
            ## this tape contains files as listed below:
@@ -46,6 +49,7 @@ Archival process:
 
            paper.pid.tape_index.list
            paper.pid.tape_index.tar
+
        e.g.:
            paper.011946366.0.list
            paper.011946366.0.tar
@@ -76,7 +80,7 @@ Archival process:
 Integrity checking:
 
     Several aspects of integrity checking may be examined, either alone or in 
-combination, when determining if file integrity has been preserverd in the 
+combination, when determining if file integrity has been preserved during the 
 archive process.
 
     1. tape write count - the number of archives on each tape (tape_index)
