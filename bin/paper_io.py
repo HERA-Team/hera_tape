@@ -64,7 +64,7 @@ class Archive:
                 pass_int += 1
 
 
-    def gen_final_catalog(self, catalog, file_list):
+    def gen_final_catalog(self, catalog, file_list, md5_dict):
         '''create a catalog file in /papertape/queue/$pid/$pid.list
 
         :param catalog: str
@@ -84,32 +84,54 @@ class Archive:
             ## write a preamble to describe the contents
             cfile.write('\n'.join(preamble_lines))
 
-            ## writ the actual file_list
+            ## write the actual file_list
             for file in file_list:
                 self.debug.print("%s - %s" % (catalog, file))
-                self.debug.print("file_inf - %s, %s, %s, %s" % (pass_int, file[0], file[1], file[2]), debug_level=249)
+                self.debug.print("file_inf - %s, %s" % (pass_int, file), debug_level=249)
 
+                tar_index = file[0]
+                file_index = file[1]
+                file_path = file[2]
+                
                 ## do we need pass_int?
-                cfile.write('%s:%s:%s:%s\n' % (pass_int, file[0], file[1], file[2]))
+                catalog_line = [pass_int, tar_index, file_index, file_path]
+                output = ':'.join(str(x) for x in catalog_line)
+
+                cfile.write(output)
                 pass_int += 1
 
-    def final_from_file(self, tape_ids=False):
+    def final_from_file(self, catalog=None, tape_ids=False):
         '''gen final catalog from file'''
         self.catalog_list = []
 
-        catalog_line = re.compile('([0-9]+)([0-9]+):([0-9]+):(.*)')
+        header_line = re.compile('## Paper dump catalog: ([0-9]+)')
+        catalog_line = re.compile('([0-9]+):([0-9]+):([0-9]+):(.*)')
         with open(self.catalog_name, 'r') as cfile:
             self.debug.print("opening_file", debug_level=128)
             for line in cfile:
                 if catalog_line.match(line):
+                    ## split the line into groups
                     catalog_info = catalog_line.match(line).groups()
-           #         print(catalog_info[0], catalog_info[1], catalog_info[2])
+  
+                    ## the first number is mostly for human consumption
                     file_on_tape_number = int(catalog_info[0])
-                    queue_pass = int(catalog_info[1]) + 1
-                    self.catalog_list.append([int(catalog_info[1]), int(catalog_info[2]), catalog_info[3]])
-                    ## should be list of lists of files in tar files
 
-        return queue_pass, self.catalog_list
+                    ## if we add one...
+                    ## the second number tells us where to find the archive 
+                    queue_pass = int(catalog_info[1]) + 1
+
+                    ## the original catalog looks like the last three entries
+                    tar_index = int(catalog_info[1])
+                    file_index = int(catalog_info[2])
+                    file_path = catalog_info[3]
+                    catalog_list = [tar_index, file_index, file_path]
+
+                    self.catalog_list.append(catalog_list)
+
+                elif header_line.match(line):
+                    pid = header_line.match(line).groups()[0]
+
+        return pid, queue_pass, self.catalog_list
 
     def queue_archive(self, tape_id, file_list):
         """move the archive from /dev/shm to a tar file in the queue directory

@@ -81,7 +81,7 @@ class Dump:
 
         if self.queue_size > 0:
             self.debug.print('sending queued files to tar - %s, %s' % (len(self.files.cumulative_list), self.files.cumulative_list))
-            self.files.gen_final_catalog(self.files.catalog_name, self.files.cumulative_list)
+            self.files.gen_final_catalog(self.files.catalog_name, self.files.cumulative_list, self.paperdb.file_md5_dict)
             self.tar_archive(self.files.catalog_name)
         else:
             self.debug.print('Abort - no files found')
@@ -106,7 +106,7 @@ class Dump:
         """master method to loop through files to write data to tape"""
 
         self.batch_files(queue=True, regex=regex)
-        self.files.gen_final_catalog(self.files.catalog_name, self.files.catalog_list)
+        self.files.gen_final_catalog(self.files.catalog_name, self.files.catalog_list, self.paperdb.file_paper_dict)
 
     def test_shm_archive(self, shm_pid):
         '''send failed files stored in /papertape/shm/$shm_pid to tape
@@ -152,7 +152,7 @@ class Dump:
            send files to two tapes using a single drive."""
         if self.batch_files():
             self.debug.print('found %s files' % len(self.files.catalog_list))
-            self.files.gen_final_catalog(self.files.catalog_name, self.files.catalog_list)
+            self.files.gen_final_catalog(self.files.catalog_name, self.files.catalog_list, self.paperdb.file_md5_dict)
             self.tar_archive_fast_single(self.files.catalog_name)
         else:
             self.debug.print("no files batched")
