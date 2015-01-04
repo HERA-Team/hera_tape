@@ -82,7 +82,7 @@ class Archive:
         preamble_lines = "\n".join([
             "## Paper dump catalog:" + job_details,
             "## This tape contains files as listed below:",
-            "##\n"
+            "## item_index:tape_index:file_index:data_md5:dir_path(host:fullpath)\n"
         ])
 
         pass_int = 1

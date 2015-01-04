@@ -18,7 +18,7 @@ Archival process:
        c. the list also includes the md5sum of the data file in each directory
        d. the index is a colon separated string like: 
 
-           <directory_index>:<tar_index>:<file_index>:<md_sum>:<file_path>
+           item_index:tar_index:file_index:md_sum:dir_path(host:full_path)
        or
            1:0:1:d41d8cd98f00b204e9800998ecf8427e:test:/testdata/testdir
 
@@ -27,14 +27,15 @@ Archival process:
            ## Paper dump catalog: dump_pid (version: version on date)
            ## this tape contains files as listed below:
            ## directory_index:tape_index:file_index:data_md5:file_path
-           directory_index:tape_index:file_index:data_md5:file_path
+           item_index:tape_index:file_index:data_md5:dir_path(host:full_path)
            ...
         e.g.:
            ## Paper dump catalog: 011946366 (version: 20150103 on 20150101-2003)
            ## this tape contains files as listed below:
-           ##  directory_index:tape_index:file_index:data_md5:file_path
+           ## item_index:tape_index:file_index:data_md5:dir_path(host:full_path)
            1:0:1:d41d8cd98f00b204e9800998ecf8427e:test:/testdata/testdir
            2:0:2:d41d8cd98f00b204e9800998ecf8427e:test:/testdata/testdir2
+           3:1:1:d41d8cd98f00b204e9800998ecf8427e:test:/testdata/testdir3
            ...
 
     4. data is written to tape in multi-GB tar files (archives)

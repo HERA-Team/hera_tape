@@ -292,13 +292,33 @@ class MtxDB:
 
 
 class Drives:
-    """class to write two tapes"""
+    """class to manage low level access directly with tape (equivalient of mt level commands)"""
 
     def __init__(self, pid, drive_select=2, debug=False, debug_threshold=128):
         '''initialize debugging and pid'''
         self.pid = pid
         self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
         self.drive_select = drive_select
+
+    def count_files(self, drive_int):
+        'count the number of files on the current tape in the given drive'
+        drive = "/dev/nst%s" % drive_int
+        bash_to_count_files = """
+            _count_files_on_tape () {  ## count the number of files on tape
+                local _count=0; 
+                while :; do  
+                    mt -f /dev/nst0 fsf 1 ||break
+                    let _count+=1
+                done
+    
+                echo $_count
+            }
+ 
+            _count_files_on_tape
+        """
+        output = check_output(bash_to_count_files, shell=True).decode('utf8').split('\n')
+
+        return int(output[0])
 
     def tar_files(self, files):
         '''send files in a list to drive(s) with tar'''
@@ -327,7 +347,7 @@ class Drives:
 
         command = ['dd', 'conv=sync,block', 'if=/dev/nst%s' % drive_int, 'bs=32k', 'count=1']
         self.debug.print('%s' % command)
-        output = check_output(command)
+        output = check_output(command).decode('utf8').split('\n')
 
         return output
 
