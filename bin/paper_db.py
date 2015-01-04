@@ -13,7 +13,7 @@ from paper_debug import Debug
 class PaperDB:
     "Paper database contains information on file locations"
 
-    def __init__(self, credentials, pid, status=0, debug=False, debug_threshold=255):
+    def __init__(self, version, credentials, pid, status=0, debug=False, debug_threshold=255):
         """Initialize connection and collect list of files to dump.
         :type credentials: string
         :type pid: int
@@ -21,6 +21,8 @@ class PaperDB:
         :type debug: bool
         :type debug_threshold: int
         """
+
+        self.version = version
         self.pid = pid
         self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
 
@@ -133,7 +135,7 @@ class PaperDB:
         self.connect.commit()
         self.status = 0
 
-    def write_tape_locations(self, catalog_list, tape_id):
+    def write_tape_index(self, catalog_list, tape_id):
         """Take a dictionary of files and labels and update the database
 
         record the barcode of tape in the tape_index field, but not
@@ -147,8 +149,8 @@ class PaperDB:
 
         ## catalog list is set in paper_io.py: self.catalog_list.append([queue_pass, int, file])
         for catalog in catalog_list:
-            ## tape_index: [papr1001,papr2001]-132:3
-            tape_index = "[%s]-%s:%s" % (tape_id, catalog[0], catalog[1])
+            ## tape_index: 20150103[papr1001,papr2001]-132:3
+            tape_index = "%s[%s]-%s:%s" % (self.version, tape_id, catalog[0], catalog[1])
             raw_path = catalog[2]
             self.debug.print("writing tapelocation: %s for %s" % (tape_index, raw_path))
             self.cur.execute('update paperdata set tape_index="%s" where raw_path="%s"' % (tape_index, raw_path))

@@ -30,8 +30,9 @@ class LocalTransfer:
 class Archive:
     "Build file archives for tape dumps"
 
-    def __init__(self, pid, debug=False, debug_threshold=255, local_transfer=True):
+    def __init__(self, version, pid, debug=False, debug_threshold=255, local_transfer=True):
         """Record $PID"""
+        self.version = version
         self.pid = pid
         #self.transfer = LocalTransfer() if local_transfer else Transfer()
         self.transfer = LocalTransfer() if local_transfer else None
@@ -72,17 +73,23 @@ class Archive:
         '''
         self.debug.print('catalog_list - %s' % file_list)
 
-        preamble_lines = [
-            "## Paper dump catalog: %s (%s)" % (self.pid, datetime.datetime.now().strftime('%Y%m%d-%H%M')),
+        job_details = " ".join([ 
+            self.pid,  
+            "(version:", self.version
+            "on", datetime.datetime.now().strftime('%Y%m%d-%H%M') + ")"
+        ])
+       
+        preamble_lines = "\n".join([
+            "## Paper dump catalog:" + job_details,
             "## This tape contains files as listed below:",
             "##\n"
-        ]
+        ])
 
         pass_int = 1
 
         with open(catalog, 'w') as cfile:
             ## write a preamble to describe the contents
-            cfile.write('\n'.join(preamble_lines))
+            cfile.write(preamble_lines)
 
             ## write the actual file_list
             for file in file_list:

@@ -4,6 +4,8 @@
 be dumped to tape using this class.
 """
 
+__version__ = 20150103
+
 from paper_mtx import Changer, MtxDB
 from paper_io import Archive
 from paper_db import PaperDB
@@ -18,6 +20,7 @@ class Dump:
     def  __init__(self, credentials, debug=False, pid=None, drive_select=2, debug_threshold=255):
         "initialize"
 
+        self.version = __version__
         self.pid = "%0.6d%0.3d" % (os.getpid(), randint(1, 999)) if pid == None else pid
         self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
 
@@ -34,13 +37,13 @@ class Dump:
         #self.tape_size = 13000
 
         ## setup PaperDB connection
-        self.paperdb = PaperDB(self.paper_creds, self.pid, debug=True, debug_threshold=debug_threshold)
+        self.paperdb = PaperDB(self.version, self.paper_creds, self.pid, debug=True, debug_threshold=debug_threshold)
 
         ## setup tape library
-        self.labeldb = MtxDB(self.mtx_creds, self.pid, debug=debug, debug_threshold=debug_threshold)
+        self.labeldb = MtxDB(self.version, self.mtx_creds, self.pid, debug=debug, debug_threshold=debug_threshold)
 
         ## setup file access
-        self.files = Archive(self.pid, debug=debug, debug_threshold=debug_threshold)
+        self.files = Archive(self.version, self.pid, debug=debug, debug_threshold=debug_threshold)
 
         ## use the pid here to lock changer
         self.drive_select = drive_select
@@ -174,7 +177,7 @@ class Dump:
         self.queue_pass, catalog, md5_dict, pid = self.files.final_from_file()
         self.tape_ids = self.files.tape_ids_from_file()
         self.debug.print('write tape location', ','.join(self.tape_ids))
-        self.paperdb.write_tape_locations(self.files.catalog_list, ','.join(self.tape_ids))
+        self.paperdb.write_tape_index(self.files.catalog_list, ','.join(self.tape_ids))
         self.paperdb.status = 0
 
     def manual_to_tape(self, queue_pass, cumulative_list):
@@ -220,7 +223,7 @@ class Dump:
 
         ## write tape locations
         self.debug.print('writing tape_indexes - %s' % self.files.cumulative_list)
-        self.paperdb.write_tape_locations(self.files.cumulative_list, ','.join(tape_label_ids))
+        self.paperdb.write_tape_index(self.files.cumulative_list, ','.join(tape_label_ids))
         self.debug.print('updating mtx.ids with date')
         self.labeldb.date_ids(tape_label_ids)
         self.paperdb.status = 0
@@ -248,7 +251,7 @@ class Dump:
             self.tape.unload_tape_drive(label_id)
 
         self.debug.print('writing tape_indexes')
-        self.paperdb.write_tape_locations(self.files.catalog_list, ','.join(tape_label_ids))
+        self.paperdb.write_tape_index(self.files.catalog_list, ','.join(tape_label_ids))
         self.paperdb.status = 0
 
     def tar_archive_single(self, catalog_file):
@@ -278,6 +281,6 @@ class Dump:
             self.tape.unload_tape_drive(label_id)
 
         self.debug.print('write tape location',  )
-        self.paperdb.write_tape_locations(self.files.catalog_list, ','.join(tape_label_ids))
+        self.paperdb.write_tape_index(self.files.catalog_list, ','.join(tape_label_ids))
         self.paperdb.status = 0
 

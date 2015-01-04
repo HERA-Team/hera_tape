@@ -3,58 +3,87 @@ Description:
 	Raw data collected from Precision Array to Probe Epoch of Reionization
 (PAPER) is moving from disk to tape. Compressed versions of the data are being
 kept on disk for analysis. Files collected on disk are also catalogued in a
-mysql database (mysql@shredder:paperdata). This data is being transfered to
+mysql database (mysql@shredder:paperdata). This data is being transferred to
 tape for final archival storage.
 
 Archival process:
 
     1. LTO5 tapes are labeled according to the date of transfer to tape
 
-    2. md5 hashes are computed for each raw data file
+    2. md5 hashes are read from the database for each raw data file
 
-    3. a list of files and hashes is written to the first 32kb block on tape
-       a. the list includes both the path of data parent diretory and a
+    3. the catalog of files and hashes is written to the first 32kb block on tape
+       b. the list includes both the path of data parent diretory and a
           numerical index pointing to the location of every directory on tape
-       b. the list also includes the md5sum of the data file in each directory
+       c. the list also includes the md5sum of the data file in each directory
+       d. the index is a colon separated string like: 
 
-    4. data is written to tape in multi-GB tar file "chunks"
-       a. the contents of several data directories are written to a tar file
+           <directory_index>:<tar_index>:<file_index>:<md_sum>:<file_path>
+       or
+           1:0:1:d41d8cd98f00b204e9800998ecf8427e:test:/testdata/testdir
+
+       e. the catalog file includes a preamble describing the job details:
+
+           ## Paper dump catalog: dump_pid (version: version on date)
+           ## this tape contains files as listed below:
+           ## directory_index:tape_index:file_index:data_md5:file_path
+           directory_index:tape_index:file_index:data_md5:file_path
+           ...
+        e.g.:
+           ## Paper dump catalog: 011946366 (version: 20150103 on 20150101-2003)
+           ## this tape contains files as listed below:
+           ##  directory_index:tape_index:file_index:data_md5:file_path
+           1:0:1:d41d8cd98f00b204e9800998ecf8427e:test:/testdata/testdir
+           2:0:2:d41d8cd98f00b204e9800998ecf8427e:test:/testdata/testdir2
+           ...
+
+    4. data is written to tape in multi-GB tar files (archives)
+       a. the contents of several data directories are written to an archive
        b. the names of the data directories are written to a catalog file
-       c. the catalog file and tar file are appended to tape using tar
+       c. the catalog file and archive are appended to tape using tar
+       d. the catalog file and archive are named according to pid and index:
 
-	5. the lastfile on the tape is a tar archive of the scripts (bash and
+           paper.pid.tape_index.list
+           paper.pid.tape_index.tar
+       e.g.:
+           paper.011946366.0.list
+           paper.011946366.0.tar
+
+	5. the last file on the tape is a tar archive of the scripts (bash and
 	   python) that are used to print the barcoded labels, read/write archive
        status to the database, and write the files to tape
 
     6. all data is written to two tapes
 
-    7. a random file from each written tape is restored and checked for 
+    7. a random file from each written archive is restored and checked for 
        integrity
 
     8. the tape ids and numerical location index for each file is updated in the 
-       paperdata db
+       paperdata database
 
     9. after writing data to each tape, the tape write count is compared to the
-       number of tars "sent" to tape
+       number of archives "dumped" to tape
 
-    10. the tape catalog is checked to confirm all files are indexed
+    10. the tape catalog is checked to confirm all "dumped" files are indexed
     
-    11. a block md5sum is performed on one tape randomly selected from the 
-        taple catalog
+    11. a block md5sum is performed on one tape randomly selected from each 
+        archive
 
     10. tapes are to be stored on a shelf in DRL-4nxx
 
 
 Integrity checking:
 
-    Several types of integrity checking may be performed either alone or in 
-combination, when determining if files can be deleted.
+    Several aspects of integrity checking may be examined, either alone or in 
+combination, when determining if file integrity has been preserverd in the 
+archive process.
 
-    1. tape write count - the number of files ("chunks") on tape 
+    1. tape write count - the number of archives on each tape (tape_index)
     2. tape catalog - file names, md5 hashes, and positional indexes are written 
        to the first 32kb block of tape
-    4. tar catalog - paths are read from the catalog on each tar "chunk"
-    5. tar table - paths are read from the actual tar file containing data 
+    4. tar catalog - paths are read from the catalog list written with each
+       archive to tape
+    5. tar table - paths as read from the actual archive containing data 
     6. block md5sum - files are streamed to a hashing algorithm directly from 
        tape but never written to disk
     7. file md5sum - files are written to disk then an md5sum is calculated
@@ -88,4 +117,4 @@ Tape Lifespan: 30 years
 
 Data Owner: James Aguirre <jaguirre@sas.upenn.edu>
 Tape Operator: Dareus Conover <dconover@sas.upenn.edu>
-Review: dconover - last updated 20141228
+Review: dconover - last updated 20150103

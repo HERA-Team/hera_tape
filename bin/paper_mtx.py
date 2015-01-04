@@ -47,8 +47,9 @@ def split_tape_catalog(tape_catalog):
 class Changer:
     'simple tape changer class'
 
-    def __init__(self, pid, tape_size, debug=False, drive_select=2, debug_threshold=255):
+    def __init__(self, version, pid, tape_size, debug=False, drive_select=2, debug_threshold=255):
         '''init with debugging'''
+        self.version = version
         self.pid = pid
         self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
         self.tape_size = tape_size
