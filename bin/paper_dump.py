@@ -106,7 +106,7 @@ class Dump:
         """master method to loop through files to write data to tape"""
 
         self.batch_files(queue=True, regex=regex)
-        self.files.gen_final_catalog(self.files.catalog_name, self.files.catalog_list, self.paperdb.file_paper_dict)
+        self.files.gen_final_catalog(self.files.catalog_name, self.files.catalog_list, self.paperdb.file_md5_dict)
 
     def test_shm_archive(self, shm_pid):
         '''send failed files stored in /papertape/shm/$shm_pid to tape
@@ -160,7 +160,7 @@ class Dump:
     def manual_resume_to_tape(self):
         '''read in the cumulative list from file and send to tape'''
 
-        self.queue_pass, catalog = self.files.final_from_file()
+        self.queue_pass, catalog, md5_dict, pid = self.files.final_from_file()
         self.debug.print('pass: %s' % self.queue_pass)
         self.manual_to_tape(self.queue_pass, catalog)
 
@@ -171,7 +171,7 @@ class Dump:
         The dump must be initialized with the pid of the queued files.
         '''
 
-        self.queue_pass, catalog = self.files.final_from_file()
+        self.queue_pass, catalog, md5_dict, pid = self.files.final_from_file()
         self.tape_ids = self.files.tape_ids_from_file()
         self.debug.print('write tape location', ','.join(self.tape_ids))
         self.paperdb.write_tape_locations(self.files.catalog_list, ','.join(self.tape_ids))

@@ -48,12 +48,13 @@ class Changer:
     'simple tape changer class'
 
     def __init__(self, pid, tape_size, debug=False, drive_select=2, debug_threshold=255):
+        '''init with debugging'''
         self.pid = pid
         self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
         self.tape_size = tape_size
         self._tape_dev = '/dev/changer'
 
-        self.drive_ids = [] 
+        self.drive_ids = []
         self.tape_ids = []
         self.label_in_drive = [] ## return label in given drive
 
@@ -61,6 +62,7 @@ class Changer:
         self.tape_drives = Drives(self.pid, drive_select=drive_select)
 
     def check_inventory(self):
+        '''check the current inventory of the library with mtx'''
         output = check_output(['mtx', 'status']).decode("utf-8")
         self.debug.print(output, debug_level=251)
         self.drive_ids, self.tape_ids, self.label_in_drive = split_mtx_output(output)
@@ -68,12 +70,14 @@ class Changer:
             self.debug.print('- %s, %s ' % (id, self.drive_ids[drive_id]))
 
     def print_inventory(self):
+        '''print out the current tape library inventory'''
         for drive_id in self.drive_ids:
             print('drive: %s, %s' % (id, self.drive_ids[drive_id]))
         for drive_id in self.tape_ids:
             print('slot: %s, %s' % (id, self.tape_ids[drive_id]))
 
     def get_tape_slot(self, tape_id):
+        '''return the slot numver where the given tape is currently loaded'''
         return self.tape_ids[tape_id]
 
     def load_tape_pair(self, ids):
@@ -120,10 +124,12 @@ class Changer:
             self.debug.print('tape already empty', str(tape_int))
 
     def drives_empty(self):
+        'retun true if the drives are currently empty'
         self.check_inventory()
         return not len(self.drive_ids)
 
     def drives_loaded(self):
+        'return true if the drives are loaded'
         self.check_inventory()
         if len(self.drive_ids):
             return self.get_drive_tape_ids()
@@ -131,6 +137,7 @@ class Changer:
             return False
 
     def get_drive_tape_ids(self):
+        'get the tape_ids currently loaded in drives'
         self.check_inventory()
         return self.drive_ids
 
@@ -228,8 +235,8 @@ class MtxDB:
         self.db_connect()
         ids = []
         for n in [0, 1]:
-            select_sql = """select label from ids 
-                where status is null and 
+            select_sql = """select label from ids
+                where status is null and
                 label like 'PAPR%d%s'
                 order by label
             """ % (n+1, "%")
@@ -268,7 +275,7 @@ class MtxDB:
             self.debug.print('updating mtxdb: %s, %s' % (date, tape_id))
             date_sql = 'update ids set date="%s" where label="%s"' % (date, tape_id)
             self.cur.execute(date_sql)
- 
+
         self.connect.commit()
 
     def write(self, src_directory):
@@ -287,32 +294,36 @@ class Drives:
     """class to write two tapes"""
 
     def __init__(self, pid, drive_select=2, debug=False, debug_threshold=128):
+        '''initialize debugging and pid'''
         self.pid = pid
         self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
         self.drive_select = drive_select
 
     def tar_files(self, files):
+        '''send files in a list to drive(s) with tar'''
         commands = []
         for drive_int in range(self.drive_select):
             commands.append('tar cf /dev/nst%s  %s ' % (drive_int, ' '.join(files)))
         self.exec_commands(commands)
 
     def tar(self, file):
+        '''send the given file to a drive(s) with tar'''
         commands = []
         for drive_int in range(self.drive_select):
             commands.append('tar cf /dev/nst%s %s ' % (drive_int, file))
         self.exec_commands(commands)
 
     def dd(self, text_file):
+        '''write text contents to the first 32k block of a tape'''
         commands = []
         for drive_int in range(self.drive_select):
-            commands.append('dd conv=sync,block of=/dev/nst%s if=%s bs=32k' % (drive_int, text_file))
+            commands.append('dd conv=sync,block of=/dev/nst%s if=%s bs=32k count=1' % (drive_int, text_file))
         self.exec_commands(commands)
 
     def dd_read(self, drive_int):
-        '''assuming a loaded tape, read off the first block from the tape and 
+        '''assuming a loaded tape, read off the first block from the tape and
         return it as a string'''
- 
+
         command = ['dd', 'conv=sync,block', 'if=/dev/nst%s' % drive_int, 'bs=32k', 'count=1']
         self.debug.print('%s' % command)
         output = check_output(command)
@@ -330,7 +341,7 @@ class Drives:
         ## the second number gives the file on tar
         ## but the tar is inside another tar with the full file table
         ## to get at an indexed file you must do something like:
-        ## 
+        ##
         self.exec_commands(commands)
 
     def exec_commands(self, cmds):

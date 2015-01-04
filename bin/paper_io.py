@@ -54,7 +54,7 @@ class Archive:
     def gen_catalog(self, catalog, file_list, queue_pass):
         """create a catalog file"""
         self.debug.print("intermediate catalog: %s" % catalog)
-        with open(catalog, 'w') as cfile: 
+        with open(catalog, 'w') as cfile:
             pass_int = 1
             self.catalog_list = []
             for file in file_list:
@@ -73,13 +73,13 @@ class Archive:
         self.debug.print('catalog_list - %s' % file_list)
 
         preamble_lines = [
-            "## Paper dump catalog: %s (%s)" % (self.pid, datetime.datetime.now().strftime('%Y%m%d-%H%M')), 
+            "## Paper dump catalog: %s (%s)" % (self.pid, datetime.datetime.now().strftime('%Y%m%d-%H%M')),
             "## This tape contains files as listed below:",
             "##\n"
         ]
 
         pass_int = 1
-        
+
         with open(catalog, 'w') as cfile:
             ## write a preamble to describe the contents
             cfile.write('\n'.join(preamble_lines))
@@ -92,9 +92,10 @@ class Archive:
                 tar_index = file[0]
                 file_index = file[1]
                 file_path = file[2]
-                
+                data_md5 = md5_dict[file_path]
+
                 ## do we need pass_int?
-                catalog_line = [pass_int, tar_index, file_index, file_path]
+                catalog_line = [pass_int, tar_index, file_index, data_md5, file_path]
                 output = ':'.join(str(x) for x in catalog_line)
 
                 cfile.write(output)
@@ -103,35 +104,46 @@ class Archive:
     def final_from_file(self, catalog=None, tape_ids=False):
         '''gen final catalog from file'''
         self.catalog_list = []
+        md5_dict = {}
 
         header_line = re.compile('## Paper dump catalog: ([0-9]+)')
-        catalog_line = re.compile('([0-9]+):([0-9]+):([0-9]+):(.*)')
-        with open(self.catalog_name, 'r') as cfile:
-            self.debug.print("opening_file", debug_level=128)
-            for line in cfile:
-                if catalog_line.match(line):
-                    ## split the line into groups
-                    catalog_info = catalog_line.match(line).groups()
-  
-                    ## the first number is mostly for human consumption
-                    file_on_tape_number = int(catalog_info[0])
+        catalog_line = re.compile('([0-9]+):([0-9]+):([0-9]+):([a-f0-9]{32}):(.*)')
 
-                    ## if we add one...
-                    ## the second number tells us where to find the archive 
-                    queue_pass = int(catalog_info[1]) + 1
+        if catalog:
+            self.debug.print('reading from string')
+            catalog_lines = catalog
 
-                    ## the original catalog looks like the last three entries
-                    tar_index = int(catalog_info[1])
-                    file_index = int(catalog_info[2])
-                    file_path = catalog_info[3]
-                    catalog_list = [tar_index, file_index, file_path]
+        else:
+            ## dont read fro')m file
+            self.debug.print('reading from file')
+            with open(self.catalog_name, 'r') as file:
+                cotalog_lines = file.readlines()
 
-                    self.catalog_list.append(catalog_list)
+        for line in catalog_lines:
+            if catalog_line.match(line):
+                ## split the line into groups
+                catalog_info = catalog_line.match(line).groups()
 
-                elif header_line.match(line):
-                    pid = header_line.match(line).groups()[0]
+                ## the first number is mostly for human consumption
+                file_on_tape_number = int(catalog_info[0])
 
-        return pid, queue_pass, self.catalog_list
+                ## if we add one...
+                ## the second number tells us where to find the archive
+                queue_pass = int(catalog_info[1]) + 1
+
+                ## the original catalog looks like the last three entries
+                tar_index = int(catalog_info[1])
+                file_index = int(catalog_info[2])
+                file_path = catalog_info[4]
+                md5_dict[file_path] = catalog_info[3]
+                catalog_list = [tar_index, file_index, file_path]
+
+                self.catalog_list.append(catalog_list)
+
+            elif header_line.match(line):
+                pid = header_line.match(line).groups()[0]
+
+        return queue_pass, self.catalog_list, md5_dict, pid
 
     def queue_archive(self, tape_id, file_list):
         """move the archive from /dev/shm to a tar file in the queue directory
