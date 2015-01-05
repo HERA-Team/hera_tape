@@ -112,8 +112,9 @@ class Archive:
         '''gen final catalog from file'''
         self.catalog_list = []
         md5_dict = {}
+        pid=''
 
-        header_line = re.compile('## Paper dump catalog: ([0-9]+)')
+        header_line = re.compile('## Paper dump catalog: *([0-9]+)')
         catalog_line = re.compile('([0-9]+):([0-9]+):([0-9]+):([a-f0-9]{32}):(.*)')
 
         if catalog:
@@ -136,7 +137,7 @@ class Archive:
 
                 ## if we add one...
                 ## the second number tells us where to find the archive
-                queue_pass = int(catalog_info[1]) + 1
+                item_index = int(catalog_info[1]) + 1
 
                 ## the original catalog looks like the last three entries
                 tar_index = int(catalog_info[1])
@@ -148,9 +149,10 @@ class Archive:
                 self.catalog_list.append(catalog_list)
 
             elif header_line.match(line):
+                self.debug.print('found header line')
                 pid = header_line.match(line).groups()[0]
 
-        return queue_pass, self.catalog_list, md5_dict, pid
+        return item_index, self.catalog_list, md5_dict, pid
 
     def queue_archive(self, tape_id, file_list):
         """move the archive from /dev/shm to a tar file in the queue directory
