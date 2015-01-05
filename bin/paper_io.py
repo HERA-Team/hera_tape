@@ -75,8 +75,8 @@ class Archive:
 
         job_details = " ".join([ 
             self.pid,  
-            "(version:", self.version
-            "on", datetime.datetime.now().strftime('%Y%m%d-%H%M') + ")"
+            "(version:", str(self.version),
+            "on", datetime.datetime.now().strftime('%Y%m%d-%H%M') + ")",
         ])
        
         preamble_lines = "\n".join([
@@ -103,7 +103,7 @@ class Archive:
 
                 ## do we need pass_int?
                 catalog_line = [pass_int, tar_index, file_index, data_md5, file_path]
-                output = ':'.join(str(x) for x in catalog_line)
+                output = ':'.join(str(x) for x in catalog_line) + "\n"
 
                 cfile.write(output)
                 pass_int += 1

@@ -47,7 +47,7 @@ class Dump:
 
         ## use the pid here to lock changer
         self.drive_select = drive_select
-        self.tape = Changer(self.pid, self.tape_size, debug=True, drive_select=drive_select, debug_threshold=debug_threshold)
+        self.tape = Changer(self.version, self.pid, self.tape_size, debug=True, drive_select=drive_select, debug_threshold=debug_threshold)
 
         self.dump_list = []
         self.queue_pass = 0

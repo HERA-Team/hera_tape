@@ -64,7 +64,12 @@ Archival process:
        integrity
 
     8. the tape ids and numerical location index for each file is updated in the 
-       paperdata database
+       paperdata database with the version number of the archiving scripts:
+
+           version_id[tape_ids]-tape_index:file_index
+
+       e.g.:
+           20150103[PAPR1012,PAPR2012]-0:1
 
     9. after writing data to each tape, the tape write count is compared to the
        number of archives "dumped" to tape

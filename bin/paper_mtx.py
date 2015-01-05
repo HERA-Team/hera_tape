@@ -187,9 +187,10 @@ class MtxDB:
 
     """
 
-    def __init__(self, credentials, pid, debug=False, debug_threshold=255):
+    def __init__(self, version, credentials, pid, debug=False, debug_threshold=255):
         """Initialize connection and collect list of tape_ids."""
 
+        self.version = version
         self.pid = pid
         self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
 
@@ -373,8 +374,10 @@ class Drives:
 
         def done(process):
             return process.poll() is not None
-        def success(p):
+
+        def success(process):
             return process.returncode == 0
+
         def fail():
             return
 
