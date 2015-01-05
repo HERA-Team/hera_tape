@@ -252,6 +252,8 @@ class Dump:
 
         self.debug.print('writing tape_indexes')
         self.paperdb.write_tape_index(self.files.catalog_list, ','.join(tape_label_ids))
+        ## verify dumped files are on tape
+        self.dump_verify(tape_label_ids)
         self.paperdb.status = 0
 
     def tar_archive_single(self, catalog_file):
@@ -283,4 +285,35 @@ class Dump:
         self.debug.print('write tape location',  )
         self.paperdb.write_tape_index(self.files.catalog_list, ','.join(tape_label_ids))
         self.paperdb.status = 0
+
+    def tape_self_check(self, tape_ids):
+        'process to take a tape and run integrity check without reference to external database'
+
+         ## assume there is a problem
+         status = False
+
+         ## read tape_catalog as list
+         first_block = self.tape.read_tape_catalog(tape_id)
+
+         ## parse the catalog_list
+         ## build an file_md5_dict
+         item_index, catalog_list, md5_dict, pid = self.io.final_from_file(catalog=first_block)
+
+         ## last tape index is the first value of the last catalog entry
+         tape_index = catalog_list[-1][0]
+         ## count the number of files_on_tape
+         count = self.tape.count_files()
+
+         ## confirm that the largest tape_index in the tape_catalog matches files_on_tape
+         if count != tape_index:
+             self.debug.print('missing files on tape')
+
+         ## confirm that the md5sum from a random data_file in each archive matches file_md5_dict entry
+         ## for each tape_index, select a random file_index and run block md5sum on the data file
+         return status, item_index, self.catalog_list, md5_dict, pid
+
+                                                                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                                                    
+    def dump_verify(self):
+        'take an existing tape run and verify that the tape contents match'
 

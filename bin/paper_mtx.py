@@ -157,6 +157,25 @@ class Changer:
             output = check_output(command)
             self.check_inventory()
 
+    def rewind_tape(self, tape_id):
+        'rewind the tape in the given drive'
+ 
+        status = False
+        
+        try: 
+            if self.drive_ids[tape_id]:
+                self.debug.print('rewinding tape %s' % tape_id)
+                output = check_output('mt -f /dev/nst%s rewi' % (self.drive_ids[tape_id][0]), shell=True)
+                status = True
+
+        except CalledProcessError:
+            self.debug.print('rewind error')
+
+        except KeyError:
+            self.debug.print('tape (%s) not loaded: %s' % (tape_id, self.drive_ids))
+             
+        return status
+        
     def write(self, queue_pass):
         """write data to tape"""
         ## tar dir to two drives
@@ -174,6 +193,14 @@ class Changer:
         self.tape_drives.dd(catalog_file)
         ## write source code
         #self.tape_drives.tar('/root/git/papertape')
+
+    def read_tape_catalog(self, tape_id):
+        'read and return first block of tape'
+
+        self.rewind_tape(tape_id)
+        drive_int = self.drive_ids[tape_id][0]
+
+        return self.tape_drives.dd_read(drive_int)
 
 class MtxDB:
     """db to handle record of label ids
@@ -263,7 +290,10 @@ class MtxDB:
         """Mark files in the database that are "claimed" by a dump process."""
         self.db_connect()
         for tape_id in ids:
-            claim_query = 'update ids set status="%s" where label="%s"' % (self.pid, tape_id)
+            claim_query = '''update ids 
+                set status="%s", description="Paper dump version:%s" 
+                where label="%s"''' % (self.pid, self.version, tape_id)
+
             self.debug.print(claim_query)
             self.cur.execute(claim_query)
 
@@ -350,21 +380,37 @@ class Drives:
         self.debug.print('%s' % command)
         output = check_output(command).decode('utf8').split('\n')
 
-        return output
+        return output[:-1]
 
     def md5sum_at_index(self, tape_index, drive_int=0):
         """given a tape_index and drive_int, return the md5sum of the file
         at that index on the tape in /dev/nst$drive_index."""
 
         self.debug.print("getting md5 of file at %s in drive %s" % (tape_index, drive_int))
-        commands = []
         ## the index is stored like: [PAPR1001, PAPR2001]-0:1
         ## the first number gives the file on tape
         ## the second number gives the file on tar
         ## but the tar is inside another tar with the full file table
         ## to get at an indexed file you must do something like:
         ##
-        self.exec_commands(commands)
+        ## _block_md5_file_on_tape () {
+        ## 
+        ##     local _job_id=${1:-030390297}
+        ##     local _file_number=${2:-1}
+        ##     local _test_path=${3:-data-path}
+        ##     local _tape_dev=${4:-0}
+        ## 
+        ##     local _tar_number=$(($_file_number-1))
+        ##     local _archive_tar=paper.$_job_pid.$_tar_number.tar
+        ##     local _test_file=$_test_path/visdata
+        ## 
+        ##     ## extract the archive tar, then extract the file to stdout, then run md5 on stdin
+        ##     mt -f /dev/nst$tape_dev fsf $_file_number && 
+        ##         tar xOf /dev/nst$tape_dev $_archive_tar|
+        ##         tar xOf - $_test_file|
+        ##         md5sum|awk '{print $1}'
+        ## }
+
 
     def exec_commands(self, cmds):
         ''' Exec commands in parallel in multiple process
