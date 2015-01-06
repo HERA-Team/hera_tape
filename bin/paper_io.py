@@ -124,7 +124,7 @@ class Archive:
             ## dont read fro')m file
             self.debug.print('reading from file')
             with open(self.catalog_name, 'r') as file:
-                cotalog_lines = file.readlines()
+                catalog_lines = file.readlines()
 
         for line in catalog_lines:
             if catalog_line.match(line):
