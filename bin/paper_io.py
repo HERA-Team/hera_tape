@@ -113,7 +113,7 @@ class Archive:
         self.catalog_list = []
         md5_dict = {}
 
-        header_line = re.compile('## Paper dump catalog: ([0-9]+)')
+        header_line = re.compile('## Paper dump catalog:([0-9]+)')
         catalog_line = re.compile('([0-9]+):([0-9]+):([0-9]+):([a-f0-9]{32}):(.*)')
 
         if catalog:
