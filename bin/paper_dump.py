@@ -103,24 +103,13 @@ class Dump:
 
         '''
 
+        self.debug.print("Verifying Catalog: %s\tUsing ID: %s" % (catalog_list, tape_id))
+
         pass
 
     def verify_tapes(self, catalog_list, tape_ids):
-        '''given a list of files and a tape_id check the integrity of the tape
-
-    1. tape write count - the number of files ("chunks") on tape
-    2. tape catalog - file names, md5 hashes, and positional indexes are written
-       to the first 32kb block of tape
-    4. tar catalog - paths are read from the catalog on each tar "chunk"
-    5. tar table - paths are read from the actual tar file containing data
-    6. block md5sum - files are streamed to a hashing algorithm directly from
-       tape but never written to disk
-    7. file md5sum - files are written to disk then an md5sum is calculated
-
-        '''
-
         for id in tape_ids:
-            self.debug.print("Verifying Catalog: %s\tUsing ID: %s" % (catalog_list, id))
+            verify_tape(catalog_list, id)
 
         pass
 
@@ -271,7 +260,11 @@ class Dump:
 
         self.debug.print('writing tape_indexes')
         self.paperdb.write_tape_index(self.files.catalog_list, ','.join(tape_label_ids))
-        ## TODO: self.verify_tapes(catalog_file,tape_label_ids)
+
+        ## Verify tapes
+        for label_id in tape_label_ids:
+            self.verify_tape(catalog_file,tape_label_ids)
+
         self.paperdb.status = 0
 
     def tar_archive_single(self, catalog_file):

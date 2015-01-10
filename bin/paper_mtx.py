@@ -101,6 +101,10 @@ class Changer:
                 status = True
                 break
 
+            ## [TODO] Also, return if the drive already contains the tape we want.
+            ## elif get_drive_tape_ids()[drive] == tape_id:
+            ##     return True
+
             ## if the drive is full attempt to unload, then retry
             else:
                 self.debug.print('unable to load, drive filled', str(self.label_in_drive), str(drive), debug_level=128)
