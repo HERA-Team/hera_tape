@@ -49,7 +49,7 @@ class Debug:
         del parentframe
         return ".".join(name)
 
-    def print(self, *messages, debug_level=0):
+    def print(self, *messages, debug_level=0 ):
         """Print arguments as debug message if the message debug_level
         is < than the instance debug_threshold.
         :type  *messages: str
