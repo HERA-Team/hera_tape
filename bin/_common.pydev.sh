@@ -30,6 +30,7 @@ _logfile () {    ## open, close, or kill the logfile
 export LOG_DIR=/root/git/papertape.shredder/bin/log TERM=ansi
 #alias pylint='pylint --rcfile=~/.pylint.d/pylintrc'
 
+_pgrep () { grep "$*" paper_*.py; }
 _highlight () { highlight -A $1; }
 _pylint () { /root/.pyenv/shims/pylint --rcfile=~/.pylint.d/pylintrc $1; }
 
