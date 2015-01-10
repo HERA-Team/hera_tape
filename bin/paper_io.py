@@ -1,7 +1,7 @@
 """Handle file IO
 
-   This module assumes theres a file node, that mounts the data to be dumped in
-   a single directory where subdirs correspond to host:directory paths.
+   This module assumes there is a file node, that mounts the data to be dumped in
+   a single directory where sub-dirs correspond to host:directory paths.
 
    Transfers are completed using scp
 """
@@ -10,25 +10,29 @@ import os, hashlib, shutil, tarfile, re, collections, datetime
 #from paper_paramiko import Transfer
 from paper_debug import Debug
 
+
+def get(src_dir, local_path='/dev/null', recursive=True):
+    """Get the given file"""
+    shutil.copytree(src_dir, local_path)
+
+
 class LocalScp:
-    "special class to redefine scp when transfers are only local"
+    """special class to redefine scp when transfers are only local"""
     def __init__(self):
         pass
 
     ## self.transfer.scp.get("/papertape/" + file, local_path=transfer_path, recursive=True)
-    def get(self, src_dir, local_path='/dev/null', recursive=True):
-        """Get the given file"""
-        shutil.copytree(src_dir, local_path)
+
 
 class LocalTransfer:
-    "special class to implement local scp"
+    """special class to implement local scp"""
 
     def __init__(self):
         self.scp = LocalScp()
         pass
 
 class Archive:
-    "Build file archives for tape dumps"
+    """Build file archives for tape dumps"""
 
     def __init__(self, version, pid, debug=False, debug_threshold=255, local_transfer=True):
         """Record $PID"""
@@ -36,8 +40,8 @@ class Archive:
         self.pid = pid
         #self.transfer = LocalTransfer() if local_transfer else Transfer()
         self.transfer = LocalTransfer() if local_transfer else None
-        self.archive_dir = self.ensure_dir('/papertape/shm/%s/' % (self.pid))
-        self.queue_dir = self.ensure_dir('/papertape/queue/%s/' % (self.pid))
+        self.archive_dir = self.ensure_dir('/papertape/shm/%s/' % self.pid)
+        self.queue_dir = self.ensure_dir('/papertape/queue/%s/' % self.pid)
         self.catalog_name = "{0:s}/paper.{1:s}.list".format(self.queue_dir, self.pid)
         self.tape_ids_filename = "{0:s}/paper.{1:s}.tape_ids.list".format(self.queue_dir, self.pid)
         self.catalog_list = []    ## working list of files to write
@@ -50,7 +54,7 @@ class Archive:
         for file in file_list:
             transfer_path = '%s/%s' % (self.archive_dir, file)
             self.debug.print("build_archive - %s" % file)
-            self.transfer.scp.get("/papertape/" + file, local_path=transfer_path, recursive=True)
+            get("/papertape/" + file, local_path=transfer_path, recursive=True)
 
     def gen_catalog(self, catalog, file_list, queue_pass):
         """create a catalog file"""
@@ -66,11 +70,11 @@ class Archive:
 
 
     def gen_final_catalog(self, catalog, file_list, md5_dict):
-        '''create a catalog file in /papertape/queue/$pid/$pid.list
+        """create a catalog file in /papertape/queue/$pid/$pid.list
 
         :param catalog: str
         :param file_list: list of [int, int, string]
-        '''
+        """
         self.debug.print('catalog_list - %s' % file_list)
 
         job_details = " ".join([ 
@@ -109,10 +113,11 @@ class Archive:
                 pass_int += 1
 
     def final_from_file(self, catalog=None, tape_ids=False):
-        '''gen final catalog from file'''
+        """gen final catalog from file"""
         self.catalog_list = []
         md5_dict = {}
         pid=''
+        item_index=0
 
         header_line = re.compile('## Paper dump catalog: *([0-9]+)')
         catalog_line = re.compile('([0-9]+):([0-9]+):([0-9]+):([a-f0-9]{32}):(.*)')
@@ -122,7 +127,7 @@ class Archive:
             catalog_lines = catalog
 
         else:
-            ## dont read fro')m file
+            ## read from file
             self.debug.print('reading from file')
             with open(self.catalog_name, 'r') as file:
                 cotalog_lines = file.readlines()
@@ -174,7 +179,7 @@ class Archive:
 
 
     def tar_fast_archive(self, tape_id, file_list):
-        "send tar of file chunks directly to tape."
+        """send tar of file chunks directly to tape."""
         arcname = "%s.%s.%s" % ('paper', self.pid, tape_id)
         tar_name = "%s/%s.tar" % (self.queue_dir, arcname)
         catalog_name = "%s/%s.list" %(self.queue_dir, arcname)
@@ -204,10 +209,10 @@ class Archive:
         return dir_path
 
     def md5(self, directory_prefix, file_path):
-        "return an md5sum for a file"
+        """return an md5sum for a file"""
         full_path = '%s/%s' % (directory_prefix, file_path)
         hasher = hashlib.md5()
-        with open(u'{0:s}.md5sum'.format(full_path), 'w') as hash_file:
+        with open('{0:s}.md5sum'.format(full_path), 'w') as hash_file:
             with open(full_path, 'rb') as open_file:
                 buffer = open_file.read()
                 hasher.update(buffer)

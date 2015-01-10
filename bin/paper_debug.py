@@ -1,8 +1,8 @@
-"Basic debug logging and exit functions"
+"""Basic debug logging and exit functions"""
 import datetime, inspect, sys
 
 class Debug:
-    "Debug class"
+    """Debug class"""
 
     def __init__(self, pid, debug = False, debug_threshold=256):
         """ Initialize with a pid if debug is set to True
@@ -19,10 +19,10 @@ class Debug:
 
     def caller_name(self, skip=2):
         """Get a name of a caller in the format module.class.method
-        
+
            `skip` specifies how many levels of stack to skip while getting caller
            name. skip=1 means "who calls me", skip=2 "who calls my caller" etc.
-           
+
            An empty string is returned if skipped levels exceed stack height
         """
         stack = inspect.stack()
@@ -62,10 +62,7 @@ class Debug:
             date = datetime.datetime.now().strftime('%Y%m%d-%H%M')
             output = " ".join(messages)
 
-            call_info = inspect.stack()[1]
-            #caller = call_info[1] if call_info[3] == '<module>' else call_info[3]
-
-            #_message = ":".join(["debug", date, self.pid, caller, output])
+            ##_message = ":".join(["debug", date, self.pid, caller, output])
             _message = ":".join(["debug", date, self.pid, self.caller_name(), output])
             print(_message, flush=True)
 

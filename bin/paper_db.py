@@ -11,7 +11,7 @@ from datetime import datetime
 from paper_debug import Debug
 
 class PaperDB:
-    "Paper database contains information on file locations"
+    """Paper database contains information on file locations"""
 
     def __init__(self, version, credentials, pid, status=0, debug=False, debug_threshold=255):
         """Initialize connection and collect list of files to dump.
@@ -38,20 +38,20 @@ class PaperDB:
         self.file_md5_dict = {}
 
     def update_connection_time(self):
-        "refresh database connection"
+        """refresh database connection time"""
         self.debug.print('updating connection_time')
         self.connection_time = datetime.now()
 
     def connection_time_delta(self):
-        "return connection age"
+        """return connection age"""
         self.debug.print('connection_time:%s' % self.connection_time)
         delta = datetime.now() - self.connection_time
         return delta.total_seconds()
 
     def db_connect(self, command=None, credentials=None):
-        "connect to the database or reconnect an old session"
+        """connect to the database or reconnect an old session"""
         self.debug.print('input:%s %s' % (command, credentials))
-        self.credentials = credentials if credentials != None else self.credentials
+        self.credentials = credentials if credentials is not None else self.credentials
         time_delta = self.connection_timeout + 1 if command == 'init' else self.connection_time_delta()
 
         self.debug.print("time_delta:%s, timeout:%s" % (time_delta, self.connection_timeout))
@@ -61,7 +61,7 @@ class PaperDB:
             self.cur = self.connect.cursor()
 
         self.update_connection_time()
-        self.debug.print("connection_time:%s" % (self.connection_time))
+        self.debug.print("connection_time:%s" % self.connection_time)
 
     def get_new(self, size_limit, regex=False, pid=False):
         """Retrieve a list of available files.
