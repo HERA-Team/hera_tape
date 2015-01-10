@@ -85,7 +85,11 @@ class Dump:
         if self.queue_size > 0:
             self.debug.print('sending queued files to tar - %s, %s' % (len(self.files.cumulative_list), self.files.cumulative_list))
             self.files.gen_final_catalog(self.files.catalog_name, self.files.cumulative_list, self.paperdb.file_md5_dict)
-            self.tar_archive(self.files.catalog_name)
+            if self.drive_select == 2:
+                self.tar_archive(self.files.catalog_name)
+            else:
+                self.tar_archive_single(self.files.catalog_name)
+
         else:
             self.debug.print('Abort - no files found')
 
@@ -102,14 +106,6 @@ class Dump:
     7. file md5sum - files are written to disk then an md5sum is calculated
 
         """
-
-        self.debug.print("Verifying Catalog: %s\tUsing ID: %s" % (catalog_list, tape_id))
-
-        pass
-
-    def verify_tapes(self, catalog_list, tape_ids):
-        for id in tape_ids:
-            verify_tape(catalog_list, id)
 
         pass
 
@@ -219,10 +215,10 @@ class Dump:
 
         ## tar files to tape
         self.tape.prep_tape(catalog_file)
-        for  _pass in range(self.queue_pass):
-            self.debug.print('sending to tape file - %s' % str(_pass))
+        for tar_index in range(self.queue_pass):
+            self.debug.print('sending to tape file - %s' % str(tar_index))
             try:
-                self.tape.write(_pass)
+                self.tape.write(tar_index)
             except:
                 self.debug.print('tape writing exception')
                 break
@@ -260,11 +256,8 @@ class Dump:
 
         self.debug.print('writing tape_indexes')
         self.paperdb.write_tape_index(self.files.catalog_list, ','.join(tape_label_ids))
-
-        ## Verify tapes
-        for label_id in tape_label_ids:
-            self.verify_tape(catalog_file,tape_label_ids)
-
+        ## verify dumped files are on tape
+        self.dump_verify(tape_label_ids)
         self.paperdb.status = 0
 
     def tar_archive_single(self, catalog_file):
@@ -283,10 +276,10 @@ class Dump:
             self.debug.print('prep tape', debug_level=128)
             self.tape.prep_tape(catalog_file)
 
-            for _pass in range(self.queue_pass):
-                self.debug.print('sending tar to single drive', str(_pass), debug_level=225)
+            for tar_index in range(self.queue_pass):
+                self.debug.print('sending tar to single drive', str(tar_index), debug_level=225)
                 try:
-                    self.tape.write(_pass)
+                    self.tape.write(tar_index)
                 except:
                     break
 
@@ -294,7 +287,8 @@ class Dump:
             self.tape.unload_tape_drive(label_id)
 
         self.debug.print('write tape location',  )
-        self.paperdb.write_tape_index(self.files.catalog_list, ','.join(tape_label_ids))
+        self.paperdb.write_tape_index(self.files.cumulative_list, ','.join(tape_label_ids))
+        self.labeldb.date_ids(tape_label_ids)
         self.paperdb.status = 0
 
     def tape_self_check(self, tape_ids):

@@ -81,13 +81,15 @@ class Changer:
         """return the slot numver where the given tape is currently loaded"""
         return self.tape_ids[tape_id]
 
-    def load_tape_pair(self, ids):
+    def load_tape_pair(self, tape_ids):
         """load the next available tape pair"""
         if self.drives_empty():
-            if len(ids) == 2:
-                for drive, tape_id in enumerate(ids):
+            if len(tape_ids) == 2:
+                for drive, tape_id in enumerate(tape_ids):
                     self.debug.print('loading', str(id), str(drive))
                     self.load_tape(tape_id, drive)
+            else:
+                self.debug.print('failed to load tape pair: %s' % tape_ids)
 
     ## using type hinting PEP 3107 and Sphinx
     def load_tape_drive(self, tape_id: str, drive=0) -> bool:
