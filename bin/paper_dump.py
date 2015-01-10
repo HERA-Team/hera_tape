@@ -103,6 +103,14 @@ class Dump:
 
         """
 
+        self.debug.print("Verifying Catalog: %s\tUsing ID: %s" % (catalog_list, tape_id))
+
+        pass
+
+    def verify_tapes(self, catalog_list, tape_ids):
+        for id in tape_ids:
+            verify_tape(catalog_list, id)
+
         pass
 
     def test_build_archive(self, regex=False):
@@ -252,8 +260,11 @@ class Dump:
 
         self.debug.print('writing tape_indexes')
         self.paperdb.write_tape_index(self.files.catalog_list, ','.join(tape_label_ids))
-        ## verify dumped files are on tape
-        self.dump_verify(tape_label_ids)
+
+        ## Verify tapes
+        for label_id in tape_label_ids:
+            self.verify_tape(catalog_file,tape_label_ids)
+
         self.paperdb.status = 0
 
     def tar_archive_single(self, catalog_file):

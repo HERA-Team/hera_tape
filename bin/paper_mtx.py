@@ -68,7 +68,7 @@ class Changer:
         self.debug.print(output, debug_level=251)
         self.drive_ids, self.tape_ids, self.label_in_drive = split_mtx_output(output)
         for drive_id in self.drive_ids:
-            self.debug.print('- %s, %s ' % (id, self.drive_ids[drive_id]))
+            self.debug.print('- %s, %s num_tapes: %d' % (id, self.drive_ids[drive_id], len(self.tape_ids)))
 
     def print_inventory(self):
         """print out the current tape library inventory"""
@@ -102,6 +102,10 @@ class Changer:
                 self.load_tape(tape_id, drive)
                 status = True
                 break
+
+            ## [TODO] Also, return if the drive already contains the tape we want.
+            ## elif get_drive_tape_ids()[drive] == tape_id:
+            ##     return True
 
             ## if the drive is full attempt to unload, then retry
             else:
@@ -388,6 +392,21 @@ class Drives:
         at that index on the tape in /dev/nst$drive_index."""
 
         self.debug.print("getting md5 of file at %s in drive %s" % (tape_index, drive_int))
+        bash_to_go_to_file = """
+            _count_files_on_tape () {  ## count the number of files on tape
+                local _count=0; 
+                while :; do  
+                    mt -f /dev/nst0 fsf 1 ||break
+                    let _count+=1
+                done
+    
+                echo $_count
+            }
+ 
+            _count_files_on_tape
+        """
+
+        commands = []
         ## the index is stored like: [PAPR1001, PAPR2001]-0:1
         ## the first number gives the file on tape
         ## the second number gives the file on tar
