@@ -1,6 +1,6 @@
 """Dump files to tape
 
-    The paperdata files located on disk and catalogued in te papaerdata db can
+    The paperdata files located on disk and catalogued in te paperdata db can
 be dumped to tape using this class.
 """
 
@@ -15,13 +15,13 @@ from random import randint
 import os
 
 class Dump:
-    "Coordinate a dump to tape based on deletable files in database"
+    """Coordinate a dump to tape based on deletable files in database"""
 
     def  __init__(self, credentials, debug=False, pid=None, drive_select=2, debug_threshold=255):
-        "initialize"
+        """initialize"""
 
         self.version = __version__
-        self.pid = "%0.6d%0.3d" % (os.getpid(), randint(1, 999)) if pid == None else pid
+        self.pid = "%0.6d%0.3d" % (os.getpid(), randint(1, 999)) if pid is None else pid
         self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
 
         self.mtx_creds = '~/.my.mtx.cnf'
@@ -90,7 +90,7 @@ class Dump:
             self.debug.print('Abort - no files found')
 
     def verify_tape(self, catalog_list, tape_id):
-        '''given a list of files and a tape_id check the integrity of the tape
+        """given a list of files and a tape_id check the integrity of the tape
 
     1. tape write count - the number of files ("chunks") on tape
     2. tape catalog - file names, md5 hashes, and positional indexes are written
@@ -101,7 +101,7 @@ class Dump:
        tape but never written to disk
     7. file md5sum - files are written to disk then an md5sum is calculated
 
-        '''
+        """
 
         pass
 
@@ -112,12 +112,12 @@ class Dump:
         self.files.gen_final_catalog(self.files.catalog_name, self.files.catalog_list, self.paperdb.file_md5_dict)
 
     def test_shm_archive(self, shm_pid):
-        '''send failed files stored in /papertape/shm/$shm_pid to tape
+        """send failed files stored in /papertape/shm/$shm_pid to tape
 
         useful when build_archive is invoked without queue_archive
 
         :param shm_pid: str
-        '''
+        """
         self.batch_files(pid=shm_pid, claim=False)
         for file_info in self.files.catalog_list:
             print(file_info)
@@ -129,7 +129,7 @@ class Dump:
 
             ## get a list of files smaller than our batch size
             file_list, list_size = self.get_list(self.batch_size_mb, regex=regex, pid=pid, claim=claim)
-            self.debug.print("list_size %s" % (list_size))
+            self.debug.print("list_size %s" % list_size)
 
             if file_list:
                 ## copy files to b5, gen catalog file
@@ -161,18 +161,18 @@ class Dump:
             self.debug.print("no files batched")
 
     def manual_resume_to_tape(self):
-        '''read in the cumulative list from file and send to tape'''
+        """read in the cumulative list from file and send to tape"""
 
         self.queue_pass, catalog, md5_dict, pid = self.files.final_from_file()
         self.debug.print('pass: %s' % self.queue_pass)
         self.manual_to_tape(self.queue_pass, catalog)
 
     def manual_write_tape_location(self):
-        '''on a tape dump that fails after writing to tape, but before writing
+        """on a tape dump that fails after writing to tape, but before writing
         locations to tape, use this to resume writing locations to tape.
 
         The dump must be initialized with the pid of the queued files.
-        '''
+        """
 
         self.queue_pass, catalog, md5_dict, pid = self.files.final_from_file()
         self.tape_ids = self.files.tape_ids_from_file()
@@ -190,7 +190,7 @@ class Dump:
         self.debug.print("manual to tape complete")
 
     def get_list(self, limit=7500, regex=False, pid=False, claim=True):
-        "get a list less than limit size"
+        """get a list less than limit size"""
 
         ## get a 7.5 gb list of files to transfer
         self.dump_list, list_size = self.paperdb.get_new(limit, regex=regex, pid=pid)
@@ -200,7 +200,7 @@ class Dump:
         return self.dump_list, list_size
 
     def tar_archive(self, catalog_file):
-        "send archives to tape drive pair using tar"
+        """send archives to tape drive pair using tar"""
 
         ## select ids
         tape_label_ids = self.labeldb.select_ids()
@@ -229,7 +229,7 @@ class Dump:
         self.paperdb.status = 0
 
     def tar_archive_fast_single(self, catalog_file):
-        "Archive files directly to tape using only a single drive to write 2 tapes"
+        """Archive files directly to tape using only a single drive to write 2 tapes"""
 
         ## select ids
         tape_label_ids = self.labeldb.select_ids()
@@ -257,7 +257,7 @@ class Dump:
         self.paperdb.status = 0
 
     def tar_archive_single(self, catalog_file):
-        "send archives to single tape drive using tar"
+        """send archives to single tape drive using tar"""
 
         ## select ids
         tape_label_ids = self.labeldb.select_ids()
@@ -287,33 +287,33 @@ class Dump:
         self.paperdb.status = 0
 
     def tape_self_check(self, tape_ids):
-        'process to take a tape and run integrity check without reference to external database'
+        """process to take a tape and run integrity check without reference to external database"""
 
-         ## assume there is a problem
-         status = False
+        ## assume there is a problem
+        status = False
 
-         ## read tape_catalog as list
-         first_block = self.tape.read_tape_catalog(tape_id)
+        ## read tape_catalog as list
+        first_block = self.tape.read_tape_catalog(tape_id)
 
-         ## parse the catalog_list
-         ## build an file_md5_dict
-         item_index, catalog_list, md5_dict, pid = self.io.final_from_file(catalog=first_block)
+        ## parse the catalog_list
+        ## build an file_md5_dict
+        item_index, catalog_list, md5_dict, pid = self.io.final_from_file(catalog=first_block)
 
-         ## last tape index is the first value of the last catalog entry
-         tape_index = catalog_list[-1][0]
-         ## count the number of files_on_tape
-         count = self.tape.count_files()
+        ## last tape index is the first value of the last catalog entry
+        tape_index = catalog_list[-1][0]
+        ## count the number of files_on_tape
+        count = self.tape.count_files()
 
-         ## confirm that the largest tape_index in the tape_catalog matches files_on_tape
-         if count != tape_index:
+        ## confirm that the largest tape_index in the tape_catalog matches files_on_tape
+        if count != tape_index:
              self.debug.print('missing files on tape')
 
-         ## confirm that the md5sum from a random data_file in each archive matches file_md5_dict entry
-         ## for each tape_index, select a random file_index and run block md5sum on the data file
-         return status, item_index, self.catalog_list, md5_dict, pid
+        ## confirm that the md5sum from a random data_file in each archive matches file_md5_dict entry
+        ## for each tape_index, select a random file_index and run block md5sum on the data file
+        return status, item_index, self.catalog_list, md5_dict, pid
 
                                                                                                                                                                                                                                                                     
                                                                                                                                                                                                                                                                     
-    def dump_verify(self):
-        'take an existing tape run and verify that the tape contents match'
+    def dump_verify(self, tape_label_ids):
+        """take an existing tape run and verify that the tape contents match"""
 
