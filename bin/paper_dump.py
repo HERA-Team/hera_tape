@@ -85,7 +85,11 @@ class Dump:
         if self.queue_size > 0:
             self.debug.print('sending queued files to tar - %s, %s' % (len(self.files.cumulative_list), self.files.cumulative_list))
             self.files.gen_final_catalog(self.files.catalog_name, self.files.cumulative_list, self.paperdb.file_md5_dict)
-            self.tar_archive(self.files.catalog_name)
+            if self.drive_select == 2:
+                self.tar_archive(self.files.catalog_name)
+            else:
+                self.tar_archive_single(self.files.catalog_name)
+
         else:
             self.debug.print('Abort - no files found')
 
@@ -272,10 +276,10 @@ class Dump:
             self.debug.print('prep tape', debug_level=128)
             self.tape.prep_tape(catalog_file)
 
-            for _pass in range(self.queue_pass):
-                self.debug.print('sending tar to single drive', str(_pass), debug_level=225)
+            for tar_index in range(self.queue_pass):
+                self.debug.print('sending tar to single drive', str(tar_index), debug_level=225)
                 try:
-                    self.tape.write(_pass)
+                    self.tape.write(tar_index)
                 except:
                     break
 
@@ -283,7 +287,8 @@ class Dump:
             self.tape.unload_tape_drive(label_id)
 
         self.debug.print('write tape location',  )
-        self.paperdb.write_tape_index(self.files.catalog_list, ','.join(tape_label_ids))
+        self.paperdb.write_tape_index(self.files.cumulative_list, ','.join(tape_label_ids))
+        self.labeldb.date_ids(tape_label_ids)
         self.paperdb.status = 0
 
     def tape_self_check(self, tape_ids):
