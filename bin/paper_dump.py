@@ -305,7 +305,7 @@ class Dump:
 
         ## parse the catalog_list
         ## build an file_md5_dict
-        item_index, catalog_list, md5_dict, pid = self.io.final_from_file(catalog=first_block)
+        item_index, catalog_list, md5_dict, pid = self.files.final_from_file(catalog=first_block)
 
         ## last tape index is the first value of the last catalog entry
         tape_index = catalog_list[-1][0]
