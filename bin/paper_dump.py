@@ -310,13 +310,13 @@ class Dump:
         ## last tape index is the first value of the last catalog entry
         tape_index = catalog_list[-1][0]
         ## count the number of files_on_tape
-        count = self.tape.count_files()
+        count = self.tape.count_files(tape_id)
 
         ## confirm that the largest tape_index in the tape_catalog matches files_on_tape
         if count != tape_index:
-             self.debug.print('missing files on tape')
+             self.debug.print('missing files on tape %s' % count)
 
-        self.debug.print('tape_index matches catalog entries')
+        self.debug.print('tape_index matches catalog entries: %s' % tape_index)
         ## confirm that the md5sum from a random data_file in each archive matches file_md5_dict entry
         ## for each tape_index, select a random file_index and run block md5sum on the data file
         return status, item_index, self.catalog_list, md5_dict, pid
