@@ -280,6 +280,7 @@ class Dump:
                 self.debug.print('sending tar to single drive', str(tar_index), debug_level=225)
                 try:
                     self.tape.write(tar_index)
+                    self.tape_self_check(tape_label_ids)
                 except:
                     break
 

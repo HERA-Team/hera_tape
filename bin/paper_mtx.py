@@ -394,19 +394,6 @@ class Drives:
         at that index on the tape in /dev/nst$drive_index."""
 
         self.debug.print("getting md5 of file at %s in drive %s" % (tape_index, drive_int))
-        bash_to_go_to_file = """
-            _count_files_on_tape () {  ## count the number of files on tape
-                local _count=0; 
-                while :; do  
-                    mt -f /dev/nst0 fsf 1 ||break
-                    let _count+=1
-                done
-    
-                echo $_count
-            }
- 
-            _count_files_on_tape
-        """
 
         commands = []
         ## the index is stored like: [PAPR1001, PAPR2001]-0:1
@@ -415,24 +402,30 @@ class Drives:
         ## but the tar is inside another tar with the full file table
         ## to get at an indexed file you must do something like:
         ##
-        ## _block_md5_file_on_tape () {
-        ## 
-        ##     local _job_id=${1:-030390297}
-        ##     local _file_number=${2:-1}
-        ##     local _test_path=${3:-data-path}
-        ##     local _tape_dev=${4:-0}
-        ## 
-        ##     local _tar_number=$(($_file_number-1))
-        ##     local _archive_tar=paper.$_job_pid.$_tar_number.tar
-        ##     local _test_file=$_test_path/visdata
-        ## 
-        ##     ## extract the archive tar, then extract the file to stdout, then run md5 on stdin
-        ##     mt -f /dev/nst$tape_dev fsf $_file_number && 
-        ##         tar xOf /dev/nst$tape_dev $_archive_tar|
-        ##         tar xOf - $_test_file|
-        ##         md5sum|awk '{print $1}'
-        ## }
+        bash_to_md5_selected_file = """
+            _block_md5_file_on_tape () {
 
+                local _job_id=${1:-030390297}
+                local _file_number=${2:-1}
+                local _test_path=${3:-data-path}
+                local _tape_dev=${4:-0}
+
+                local _tar_number=$(($_file_number-1))
+                local _archive_tar=paper.$_job_pid.$_tar_number.tar
+                local _test_file=$_test_path/visdata
+
+                ## extract the archive tar, then extract the file to stdout, then run md5 on stdin
+                mt -f /dev/nst$tape_dev fsf $_file_number &&
+                tar xOf /dev/nst$tape_dev $_archive_tar|
+                tar xOf - $_test_file|
+                md5sum|awk '{print $1}'
+            }
+
+            _block_md5_file_on_tape %s %s %s %s
+        """ % (job_pid, tape_index, test_path, drive_int)
+
+        output = check_output(bash_to_md5_selected_file, shell=True).decode('utf8').split('\n')
+        return output[0]
 
     def exec_commands(self, cmds):
         """ Exec commands in parallel in multiple process
