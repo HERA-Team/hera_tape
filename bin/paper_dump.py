@@ -285,7 +285,7 @@ class Dump:
                     break
 
             ## verify dumped files are on tape
-            self.dump_verify(tape_label_ids)
+            self.tape_self_check(tape_label_ids)
             self.debug.print('unloading drive', label_id, debug_level=128)
             self.tape.unload_tape_drive(label_id)
 
