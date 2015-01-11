@@ -27,7 +27,8 @@ _logfile () {    ## open, close, or kill the logfile
 }
 
 
-export WORK_DIR=/root/git/papertape.dconover/bin LOG_DIR=$WORK_DIR/log TERM=ansi
+export WORK_DIR=/root/git/papertape.dconover/bin 
+export LOG_DIR=$WORK_DIR/log TERM=ansi
 #alias pylint='pylint --rcfile=~/.pylint.d/pylintrc'
 
 _pgrep () { grep "$*" paper_*.py; }
