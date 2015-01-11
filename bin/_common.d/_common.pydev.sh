@@ -27,7 +27,7 @@ _logfile () {    ## open, close, or kill the logfile
 }
 
 
-export LOG_DIR=/root/git/papertape.shredder/bin/log TERM=ansi
+export WORK_DIR=/root/git/papertape.dconover/bin LOG_DIR=$WORK_DIR/log TERM=ansi
 #alias pylint='pylint --rcfile=~/.pylint.d/pylintrc'
 
 _pgrep () { grep "$*" paper_*.py; }
@@ -49,7 +49,7 @@ _t (){
     echo opening $_log_file
     _logfile open $_log_file
     [ -f "/root/git/papertape.shredder/bin/x.log" ] && rm x.log
-    ln -s $_log_file /root/git/papertape.shredder/bin/x.log
+    ln -s $_log_file $WORK_DIR/x.log
 
     local _command=${1:-$TLAST}
     local _comment=${2}
