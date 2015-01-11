@@ -285,7 +285,7 @@ class Dump:
                     break
 
             ## verify dumped files are on tape
-            self.tape_self_check(tape_label_ids)
+            self.tape_self_check(label_id)
             self.debug.print('unloading drive', label_id, debug_level=128)
             self.tape.unload_tape_drive(label_id)
 
@@ -294,7 +294,7 @@ class Dump:
         self.labeldb.date_ids(tape_label_ids)
         self.paperdb.status = 0
 
-    def tape_self_check(self, tape_ids):
+    def tape_self_check(self, tape_id):
         """process to take a tape and run integrity check without reference to external database"""
 
         ## assume there is a problem
@@ -325,4 +325,3 @@ class Dump:
                                                                                                                                                                                                                                                                     
     def dump_verify(self, tape_label_ids):
         """take an existing tape run and verify that the tape contents match"""
-
