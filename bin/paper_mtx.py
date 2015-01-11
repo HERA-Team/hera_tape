@@ -209,6 +209,13 @@ class Changer:
 
         return self.tape_drives.dd_read(drive_int)
 
+    def count_files(self, tape_id):
+        """count files of the given tape"""
+        self.rewind_tape(tape_id)
+        drive_int = self.drive_ids[tape_id][0]
+
+        return self.tape_drives.count_files(drive_int)
+
 class MtxDB:
     """db to handle record of label ids
 
