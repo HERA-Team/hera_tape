@@ -308,7 +308,7 @@ class Dump:
 
         ## parse the catalog_list
         ## build an file_md5_dict
-        item_index, catalog_list, md5_dict, pid = self.files.final_from_file(catalog=first_block)
+        item_index, catalog_list, md5_dict, tape_pid = self.files.final_from_file(catalog=first_block)
 
         ## last tape index = (first value of the last catalog entry)
         tape_index = catalog_list[-1][0] + 1
@@ -317,15 +317,16 @@ class Dump:
         ## count the number of files_on_tape
         #count = self.tape.count_files(tape_id)
 
-        for archive_index in range()
+        status, reference = self.tape.tape_archive_md5(tape_id, tape_pid, catalog_list, md5_dict):
+        if not status:
+            self.debug.print("tape failed md5 inspection at index: %s" % reference)
 
+        ## tape_archive_md5 provides this functionality
         ## confirm that the largest tape_index in the tape_catalog matches files_on_tape
-        if count != tape_index:
-             self.debug.print('missing files on tape %s' % count)
+        #if count != tape_index:
+        #     self.debug.print('missing files on tape %s' % count)
 
-        self.debug.print('tape_index matches catalog entries: %s' % tape_index)
-        ## confirm that the md5sum from a random data_file in each archive matches file_md5_dict entry
-        ## for each tape_index, select a random file_index and run block md5sum on the data file
+        #self.debug.print('tape_index matches catalog entries: %s' % tape_index)
         return status, item_index, catalog_list, md5_dict, pid
 
                                                                                                                                                                                                                                                                     

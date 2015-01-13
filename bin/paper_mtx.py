@@ -225,6 +225,9 @@ class Changer:
 
         ## default to True
         status = True
+        reference = None
+
+        ## load a tape or rewind the existing tape
         self.load_tape_drive(tape_id)
 
         ## for every tar advance the tape
@@ -242,9 +245,10 @@ class Changer:
             if md5sum is not md5_dict[directory_path]:
                 self.debug.print('mdsum does not match: %s, %s' % (md5sum, md5_dict[directory_path]))
                 status = False
+                reference = ":"join(archive_index, directory_path)
                 break
 
-        return status
+        return status, reference
 
 
 class MtxDB:
@@ -463,6 +467,9 @@ class Drives:
         """ % (job_pid, tape_index, directory_path, drive_int)
 
         output = check_output(bash_to_md5_selected_file, shell=True).decode('utf8').split('\n')
+        ## we should check the output
+        self.debug.print('output: %s' % output[0], debug_level=250)
+
         return output[0]
 
     def exec_commands(self, cmds):
