@@ -28,6 +28,7 @@ def split_mtx_output(mtx_output):
             drive_info = drive_line.match(line).groups()
             ## dict of storage_slots by tape_id
             drive_ids[drive_info[2]] = drive_info[0:2]
+            ## dict of tape_ids by drive_int
             label_in_drive[drive_info[0]] = drive_info[2]
 
         elif storage_line.match(line):
@@ -95,7 +96,7 @@ class Changer:
 
     ## using type hinting PEP 3107 and Sphinx
     def load_tape_drive(self, tape_id: str, drive=0) -> bool:
-        """load a given tape_id into a given drive=drive_id, unload if necessary.
+        """load a given tape_id into a given drive=drive_int, unload if necessary.
         :type  tape_id: label of tape to load
         :param tape_id: label of tape to load"""
         status = False
@@ -109,7 +110,7 @@ class Changer:
 
             ## return if the drive already contains the tape we want
             ## just rewind
-            elif self.get_drive_tape_ids()[drive] == tape_id:
+            elif self.label_in_drive[drive] == tape_id:
                 ## if we call this function we probably need a rewind
                 self.rewind_tape(tape_id)
                 status = True
@@ -136,10 +137,15 @@ class Changer:
         else:
             self.debug.print('tape already empty', str(tape_int))
 
-    def drives_empty(self):
+    def drives_empty(self, drive_int=None):
         """retun true if the drives are currently empty"""
         self.check_inventory()
-        return not len(self.drive_ids)
+
+        if drive_int:
+            return False if drive_int in self.label_in_drive else True
+        else:
+            return not len(self.drive_ids)
+
 
     def drives_loaded(self):
         """return true if the drives are loaded"""
