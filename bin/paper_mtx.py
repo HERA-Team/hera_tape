@@ -10,6 +10,7 @@ from random import randint
 from subprocess import *
 from paper_debug import Debug
 
+from collections import OrderedDict
 
 def split_mtx_output(mtx_output):
     """Return dictionaries of tape_ids in drives and slots."""
@@ -218,10 +219,17 @@ class Changer:
 
         return self.tape_drives.count_files(drive_int)
 
-    def tape_block_md5(self, tape_id, catalog_list, md5_dict):
+    def tape_archive_md5(self, tape_id, catalog_list, md5_dict):
         """loop through each archive on tape and check a random file md5 from each"""
 
         self.load_tape_drive(tape_id)
+
+        ## for every tar advance the tape
+        ## select a random path from the tape
+        ## run md5sum_at_index(tape_index, drive_int=0)
+        for tar_index in OrderedDict([item[1] for item in catalog_list]):
+            pass
+
 
 class MtxDB:
     """db to handle record of label ids
