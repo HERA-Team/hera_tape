@@ -112,7 +112,7 @@ class Changer:
 
             ## return if the drive already contains the tape we want
             ## just rewind
-            elif self.label_in_drive[drive] == tape_id:
+            elif self.label_in_drive[str(drive)] == tape_id:
                 ## if we call this function we probably need a rewind
                 self.rewind_tape(tape_id)
                 status = True
