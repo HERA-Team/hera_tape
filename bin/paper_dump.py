@@ -280,12 +280,16 @@ class Dump:
                 self.debug.print('sending tar to single drive', str(tar_index), debug_level=225)
                 try:
                     self.tape.write(tar_index)
-                    self.tape_self_check(tape_label_ids)
                 except:
+                    self.debug.print('tape write fail')
                     break
 
             ## verify dumped files are on tape
-            self.tape_self_check(label_id)
+            status, item_index, catalog_list, md5_dict, pid = self.tape_self_check(label_id)
+            if not status:
+                self.debug.print('tape_self_check fail')
+                break
+
             self.debug.print('unloading drive', label_id, debug_level=128)
             self.tape.unload_tape_drive(label_id)
 
