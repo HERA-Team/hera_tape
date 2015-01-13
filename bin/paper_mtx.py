@@ -254,7 +254,7 @@ class Changer:
             ## time through each archive and test one directory_path/visdata md5sum
             self.debug.print('checking md5sum')
             md5sum = self.tape_drives.md5sum_at_index(job_pid, tape_index, directory_path, drive_int=0)
-            if md5sum is not md5_dict[directory_path]:
+            if md5sum != md5_dict[directory_path]:
                 self.debug.print('mdsum does not match: %s, %s' % (md5sum, md5_dict[directory_path]))
                 status = False
                 reference = ":".join([str(tape_index), directory_path])
