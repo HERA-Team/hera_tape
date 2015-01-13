@@ -5,12 +5,13 @@
     Drives: access to mt functions and writing data to tape
 """
 
-import re, pymysql, time, datetime
+import re, pymysql, time, datetime, random
 from random import randint
 from subprocess import *
 from paper_debug import Debug
 
-from collections import OrderedDict
+from collections import defaultdict
+
 
 def split_mtx_output(mtx_output):
     """Return dictionaries of tape_ids in drives and slots."""
@@ -219,16 +220,31 @@ class Changer:
 
         return self.tape_drives.count_files(drive_int)
 
-    def tape_archive_md5(self, tape_id, catalog_list, md5_dict):
+    def tape_archive_md5(self, tape_id, job_pid, catalog_list, md5_dict):
         """loop through each archive on tape and check a random file md5 from each"""
 
+        ## default to True
+        status = True
         self.load_tape_drive(tape_id)
 
         ## for every tar advance the tape
         ## select a random path from the tape
         ## run md5sum_at_index(tape_index, drive_int=0)
-        for tar_index in OrderedDict([item[1] for item in catalog_list]):
-            pass
+        archive_dict = defaultdict(list)
+        for item in catalog_list:
+            archive_dict[item[0]].append(item[-1])
+
+        for archive_index in archive_dict
+            directory_path = random.choice(archive_dict[archive_index])
+            ## starting at the beginning of the tape we can advance one at a
+            ## time through each archive and test one directory_path/visdata md5sum
+            md5sum = self.tape_drives.md5sum_at_index(job_pid, 1, directory_path, drive_int=0)
+            if md5sum is not md5_dict[directory_path]:
+                self.debug.print('mdsum does not match: %s, %s' % (md5sum, md5_dict[directory_path]))
+                status = False
+                break
+
+        return status
 
 
 class MtxDB:
@@ -411,7 +427,7 @@ class Drives:
 
         return output[:-1]
 
-    def md5sum_at_index(self, tape_index, drive_int=0):
+    def md5sum_at_index(self, job_pid, tape_index, directory_path, drive_int=0):
         """given a tape_index and drive_int, return the md5sum of the file
         at that index on the tape in /dev/nst$drive_index."""
 
@@ -444,7 +460,7 @@ class Drives:
             }
 
             _block_md5_file_on_tape %s %s %s %s
-        """ % (job_pid, tape_index, test_path, drive_int)
+        """ % (job_pid, tape_index, directory_path, drive_int)
 
         output = check_output(bash_to_md5_selected_file, shell=True).decode('utf8').split('\n')
         return output[0]
