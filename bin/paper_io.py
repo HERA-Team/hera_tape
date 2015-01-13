@@ -119,6 +119,9 @@ class Archive:
         pid=''
         item_index=0
 
+        ## catalog includes a human readable preamble with dump info
+        ## and numbered lines of items like:
+        ## "item_index:tape_index:archive_index:visdata_md5sum:directory_path"
         header_line = re.compile('## Paper dump catalog:([0-9]+)')
         catalog_line = re.compile('([0-9]+):([0-9]+):([0-9]+):([a-f0-9]{32}):(.*)')
 

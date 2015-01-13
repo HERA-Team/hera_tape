@@ -125,7 +125,7 @@ class PaperDB:
         self.status = 1
 
     def unclaim_files(self, status_type, file_list):
-        """Release claimed files"""
+        """Release claimed files from database"""
         self.db_connect()
         for file in file_list:
             update_sql = "update paperdata set tape_index='' where raw_path='%s' and tape_index='%s%s'" % (file, status_type, self.pid)
