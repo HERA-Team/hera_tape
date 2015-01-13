@@ -248,15 +248,15 @@ class Changer:
         for item in catalog_list:
             archive_dict[item[0]].append(item[-1])
 
-        for archive_index in archive_dict:
-            directory_path = random.choice(archive_dict[archive_index])
+        for tape_index in archive_dict:
+            directory_path = random.choice(archive_dict[tape_index])
             ## starting at the beginning of the tape we can advance one at a
             ## time through each archive and test one directory_path/visdata md5sum
-            md5sum = self.tape_drives.md5sum_at_index(job_pid, archive_index, directory_path, drive_int=0)
+            md5sum = self.tape_drives.md5sum_at_index(job_pid, tape_index, directory_path, drive_int=0)
             if md5sum is not md5_dict[directory_path]:
                 self.debug.print('mdsum does not match: %s, %s' % (md5sum, md5_dict[directory_path]))
                 status = False
-                reference = ":".join([archive_index, directory_path])
+                reference = ":".join([str(tape_index), directory_path])
                 break
 
         return status, reference
