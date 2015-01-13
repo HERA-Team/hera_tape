@@ -245,7 +245,7 @@ class Changer:
             if md5sum is not md5_dict[directory_path]:
                 self.debug.print('mdsum does not match: %s, %s' % (md5sum, md5_dict[directory_path]))
                 status = False
-                reference = ":"join(archive_index, directory_path)
+                reference = ":".join([archive_index, directory_path])
                 break
 
         return status, reference
