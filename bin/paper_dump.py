@@ -331,7 +331,7 @@ class Dump:
         #     self.debug.print('missing files on tape %s' % count)
 
         #self.debug.print('tape_index matches catalog entries: %s' % tape_index)
-        return status, item_index, catalog_list, md5_dict, pid
+        return status, item_index, catalog_list, md5_dict, tape_pid
 
                                                                                                                                                                                                                                                                     
                                                                                                                                                                                                                                                                     
