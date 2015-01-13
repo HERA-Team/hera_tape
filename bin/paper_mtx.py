@@ -477,9 +477,13 @@ class Drives:
             _block_md5_file_on_tape %s %s %s %s
         """ % (job_pid, tape_index, directory_path, drive_int)
 
-        output = check_output(bash_to_md5_selected_file, shell=True).decode('utf8').split('\n')
-        ## we should check the output
-        self.debug.print('output: %s' % output[0], debug_level=250)
+        try:
+            output = check_output(bash_to_md5_selected_file, shell=True).decode('utf8').split('\n')
+            ## we should check the output
+            self.debug.print('output: %s' % output[0], debug_level=250)
+
+        except CalledProcessError as return_info:
+            self.debug.print('return_info: %s' % return_info)
 
         return output[0]
 
