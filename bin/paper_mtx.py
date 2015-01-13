@@ -480,6 +480,7 @@ class Drives:
 
 
         try:
+            ## check output
             self.debug.print(bash_to_md5_selected_file)
             output = check_output(bash_to_md5_selected_file, shell=True).decode('utf8').split('\n')
             ## we should check the output
