@@ -321,7 +321,7 @@ class Dump:
         ## count the number of files_on_tape
         #count = self.tape.count_files(tape_id)
 
-        status, reference = self.tape.tape_archive_md5(tape_id, tape_pid, catalog_list, md5_dict):
+        status, reference = self.tape.tape_archive_md5(tape_id, tape_pid, catalog_list, md5_dict)
         if not status:
             self.debug.print("tape failed md5 inspection at index: %s" % reference)
 
