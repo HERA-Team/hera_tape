@@ -86,6 +86,7 @@ class Changer:
 
     def load_tape_pair(self, tape_ids):
         """load the next available tape pair"""
+        self.deug.print('checking drives')
         if self.drives_empty():
             if len(tape_ids) == 2:
                 for drive, tape_id in enumerate(tape_ids):
