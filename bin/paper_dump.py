@@ -300,6 +300,9 @@ class Dump:
         ## assume there is a problem
         status = False
 
+        ## load the tape if necessary
+        self.tape.load_tape_drive(tape_id)
+
         ## read tape_catalog as list
         first_block = self.tape.read_tape_catalog(tape_id)
 
@@ -307,10 +310,14 @@ class Dump:
         ## build an file_md5_dict
         item_index, catalog_list, md5_dict, pid = self.files.final_from_file(catalog=first_block)
 
-        ## last tape index is the first value of the last catalog entry
-        tape_index = catalog_list[-1][0]
+        ## last tape index = (first value of the last catalog entry)
+        tape_index = catalog_list[-1][0] + 1
+
+        ## technically we don't need this if we step through every archive with block_md5
         ## count the number of files_on_tape
-        count = self.tape.count_files(tape_id)
+        #count = self.tape.count_files(tape_id)
+
+        for archive_index in range()
 
         ## confirm that the largest tape_index in the tape_catalog matches files_on_tape
         if count != tape_index:

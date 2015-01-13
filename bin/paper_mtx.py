@@ -105,9 +105,11 @@ class Changer:
                 status = True
                 break
 
-            ## [TODO] Also, return if the drive already contains the tape we want.
-            ## elif get_drive_tape_ids()[drive] == tape_id:
-            ##     return True
+            ## return if the drive already contains the tape we want.
+            elif get_drive_tape_ids()[drive] == tape_id:
+                ## if we call this function we probably need a rewind
+                self.rewind_tape(tape_id)
+                status = True
 
             ## if the drive is full attempt to unload, then retry
             else:
@@ -215,6 +217,11 @@ class Changer:
         drive_int = self.drive_ids[tape_id][0]
 
         return self.tape_drives.count_files(drive_int)
+
+    def tape_block_md5(self, tape_id, catalog_list, md5_dict):
+        """loop through each archive on tape and check a random file md5 from each"""
+
+        self.load_tape_drive(tape_id)
 
 class MtxDB:
     """db to handle record of label ids
