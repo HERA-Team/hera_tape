@@ -468,8 +468,8 @@ class Drives:
                 local _test_file=$_test_path/visdata
 
                 ## extract the archive tar, then extract the file to stdout, then run md5 on stdin
-                mt -f /dev/nst$tape_dev fsf $_file_number &&
-                tar xOf /dev/nst$tape_dev $_archive_tar|
+                mt -f /dev/nst$_tape_dev fsf $_file_number &&
+                tar xOf /dev/nst$_tape_dev $_archive_tar|
                 tar xOf - $_test_file|
                 md5sum|awk '{print $1}'
             }
@@ -484,6 +484,7 @@ class Drives:
 
         except CalledProcessError as return_info:
             self.debug.print('return_info: %s' % return_info)
+            return False
 
         return output[0]
 
