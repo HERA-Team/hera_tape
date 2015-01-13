@@ -63,7 +63,7 @@ class Changer:
         self.label_in_drive = [] ## return label in given drive
 
         self.check_inventory()
-        self.tape_drives = Drives(self.pid, drive_select=drive_select)
+        self.tape_drives = Drives(self.pid, drive_select=drive_select, debug=debug, debug_threshold=debug_threshold)
 
     def check_inventory(self):
         """check the current inventory of the library with mtx"""
@@ -252,6 +252,7 @@ class Changer:
             directory_path = random.choice(archive_dict[tape_index])
             ## starting at the beginning of the tape we can advance one at a
             ## time through each archive and test one directory_path/visdata md5sum
+            self.debug.print('checking md5sum')
             md5sum = self.tape_drives.md5sum_at_index(job_pid, tape_index, directory_path, drive_int=0)
             if md5sum is not md5_dict[directory_path]:
                 self.debug.print('mdsum does not match: %s, %s' % (md5sum, md5_dict[directory_path]))
@@ -478,10 +479,10 @@ class Drives:
             _block_md5_file_on_tape %s %s %s %s
         """ % (job_pid, tape_index, directory_path, drive_int)
 
+        self.debug.print(bash_to_md5_selected_file)
 
         try:
             ## check output
-            self.debug.print(bash_to_md5_selected_file)
             output = check_output(bash_to_md5_selected_file, shell=True).decode('utf8').split('\n')
             ## we should check the output
             self.debug.print('output: %s' % output[0], debug_level=250)
