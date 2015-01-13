@@ -102,7 +102,7 @@ class Changer:
         status = False
 
         for attempt in range(3):
-            if self.drives_empty():
+            if self.drives_empty(drive_int=drive):
                 self.debug.print('loading', str(tape_id), str(drive), debug_level=128)
                 self.load_tape(tape_id, drive)
                 status = True
@@ -142,6 +142,7 @@ class Changer:
         self.check_inventory()
 
         if drive_int:
+            self.debug.print('called with drive_int: %s' % self.label_in_drive)
             return False if drive_int in self.label_in_drive else True
         else:
             return not len(self.drive_ids)
