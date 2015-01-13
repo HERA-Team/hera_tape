@@ -237,7 +237,7 @@ class Changer:
         for item in catalog_list:
             archive_dict[item[0]].append(item[-1])
 
-        for archive_index in archive_dict
+        for archive_index in archive_dict:
             directory_path = random.choice(archive_dict[archive_index])
             ## starting at the beginning of the tape we can advance one at a
             ## time through each archive and test one directory_path/visdata md5sum
