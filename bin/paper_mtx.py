@@ -102,6 +102,7 @@ class Changer:
         :param tape_id: label of tape to load"""
         status = False
 
+        self.debug.print('check then load')
         for attempt in range(3):
             if self.drives_empty(drive_int=drive):
                 self.debug.print('loading', str(tape_id), str(drive), debug_level=128)
@@ -146,7 +147,7 @@ class Changer:
             self.debug.print('called with drive_int: %s' % self.label_in_drive)
             return False if drive_int in self.label_in_drive else True
         else:
-            self.debug.print('basic check')
+            self.debug.print('basic check drive labels: %s' % self.label_in_drive)
             return not len(self.drive_ids)
 
 
