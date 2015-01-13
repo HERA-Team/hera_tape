@@ -478,7 +478,9 @@ class Drives:
             _block_md5_file_on_tape %s %s %s %s
         """ % (job_pid, tape_index, directory_path, drive_int)
 
+
         try:
+            self.debug.print(bash_to_md5_selected_file)
             output = check_output(bash_to_md5_selected_file, shell=True).decode('utf8').split('\n')
             ## we should check the output
             self.debug.print('output: %s' % output[0], debug_level=250)
