@@ -252,7 +252,7 @@ class Changer:
             directory_path = random.choice(archive_dict[archive_index])
             ## starting at the beginning of the tape we can advance one at a
             ## time through each archive and test one directory_path/visdata md5sum
-            md5sum = self.tape_drives.md5sum_at_index(job_pid, 1, directory_path, drive_int=0)
+            md5sum = self.tape_drives.md5sum_at_index(job_pid, archive_index, directory_path, drive_int=0)
             if md5sum is not md5_dict[directory_path]:
                 self.debug.print('mdsum does not match: %s, %s' % (md5sum, md5_dict[directory_path]))
                 status = False
@@ -458,20 +458,21 @@ class Drives:
         bash_to_md5_selected_file = """
             _block_md5_file_on_tape () {
 
-                local _job_id=${1:-030390297}
-                local _file_number=${2:-1}
+                local _fsf=1
+                local _job_pid=${1:-030390297}
+                local _tape_index=${2:-1}
                 local _test_path=${3:-data-path}
                 local _tape_dev=${4:-0}
 
-                local _tar_number=$(($_file_number-1))
+                local _tar_number=$_tape_index
                 local _archive_tar=paper.$_job_pid.$_tar_number.tar
                 local _test_file=$_test_path/visdata
 
                 ## extract the archive tar, then extract the file to stdout, then run md5 on stdin
-                mt -f /dev/nst$_tape_dev fsf $_file_number &&
-                tar xOf /dev/nst$_tape_dev $_archive_tar|
-                tar xOf - $_test_file|
-                md5sum|awk '{print $1}'
+                mt -f /dev/nst$_tape_dev fsf $_fsf &&
+                    tar xOf /dev/nst$_tape_dev $_archive_tar|
+                        tar xOf - $_test_file|
+                            md5sum|awk '{print $1}'
             }
 
             _block_md5_file_on_tape %s %s %s %s
