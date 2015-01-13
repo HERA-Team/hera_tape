@@ -145,6 +145,7 @@ class Changer:
             self.debug.print('called with drive_int: %s' % self.label_in_drive)
             return False if drive_int in self.label_in_drive else True
         else:
+            self.debug.print('basic check')
             return not len(self.drive_ids)
 
 
