@@ -471,7 +471,7 @@ class Drives:
                 ## extract the archive tar, then extract the file to stdout, then run md5 on stdin
                 mt -f /dev/nst$_tape_dev fsf $_fsf &&
                     tar xOf /dev/nst$_tape_dev $_archive_tar|
-                        tar xOf - $_test_file|
+                        tar xOf - paper.$_job_pid.$_tape_index/$_test_file|
                             md5sum|awk '{print $1}'
             }
 

@@ -293,7 +293,7 @@ class Dump:
             self.debug.print('unloading drive', label_id, debug_level=128)
             self.tape.unload_tape_drive(label_id)
 
-        self.debug.print('write tape location',  )
+        self.debug.print('write tape location')
         self.paperdb.write_tape_index(self.files.cumulative_list, ','.join(tape_label_ids))
         self.labeldb.date_ids(tape_label_ids)
         self.paperdb.status = 0
