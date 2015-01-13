@@ -108,7 +108,7 @@ class Changer:
                 break
 
             ## return if the drive already contains the tape we want.
-            elif get_drive_tape_ids()[drive] == tape_id:
+            elif self.get_drive_tape_ids()[drive] == tape_id:
                 ## if we call this function we probably need a rewind
                 self.rewind_tape(tape_id)
                 status = True
