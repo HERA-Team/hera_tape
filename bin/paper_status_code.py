@@ -9,4 +9,10 @@ class StatusCode(Enum):
     OK      = 0
     WARNING = 1
     ERROR   = 2
+    db_connect = 3
+    file_missing = 4
+    md5_mismatch = 5
+    truncated_tape = 6
+    db_credentials = 7
+    
     UNKNOWN = 9999
