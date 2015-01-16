@@ -6,7 +6,7 @@
    Transfers are completed using scp
 """
 
-import os, hashlib, shutil, tarfile, re, collections, datetime
+import os, hashlib, shutil, tarfile, re, datetime
 #from paper_paramiko import Transfer
 from paper_debug import Debug
 
@@ -45,7 +45,7 @@ class Archive:
         self.catalog_name = "{0:s}/paper.{1:s}.list".format(self.queue_dir, self.pid)
         self.tape_ids_filename = "{0:s}/paper.{1:s}.tape_ids.list".format(self.queue_dir, self.pid)
         self.catalog_list = []    ## working list of files to write
-        self.cumulative_list = [] ## cumulatice list of written files
+        self.tape_list = [] ## cumulative list of written files
 
         self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
 
@@ -56,26 +56,26 @@ class Archive:
             self.debug.print("build_archive - %s" % file)
             get("/papertape/" + file, local_path=transfer_path, recursive=True)
 
-    def gen_catalog(self, catalog, file_list, queue_pass):
+    def gen_catalog(self, catalog, file_list, tape_index):
         """create a catalog file"""
         self.debug.print("intermediate catalog: %s" % catalog)
         with open(catalog, 'w') as cfile:
-            pass_int = 1
+            tape_index = 1
             self.catalog_list = []
             for file in file_list:
-                self.debug.print('catalog_list: %s %s %s' % (queue_pass, pass_int, file), debug_level=249)
-                self.catalog_list.append([queue_pass, pass_int, file])
-                cfile.write("%s:%s:%s\n" % (queue_pass, pass_int, file))
-                pass_int += 1
+                self.debug.print('catalog_list: %s %s %s' % (tape_index, tape_index, file), debug_level=249)
+                self.catalog_list.append([tape_index, tape_index, file])
+                cfile.write("%s:%s:%s\n" % (tape_index, tape_index, file))
+                tape_index += 1
 
 
-    def gen_final_catalog(self, catalog, file_list, md5_dict):
+    def gen_final_catalog(self, tape_catalog_file, tape_list, md5_dict):
         """create a catalog file in /papertape/queue/$pid/$pid.list
 
-        :param catalog: str
-        :param file_list: list of [int, int, string]
+        :param tape_catalog_file: str
+        :param tape_list: list of [int, int, string]
         """
-        self.debug.print('catalog_list - %s' % file_list)
+        self.debug.print('catalog_list - %s' % tape_list)
 
         job_details = " ".join([ 
             self.pid,  
@@ -86,31 +86,37 @@ class Archive:
         preamble_lines = "\n".join([
             "## Paper dump catalog:" + job_details,
             "## This tape contains files as listed below:",
-            "## item_index:tape_index:file_index:data_md5:dir_path(host:fullpath)\n"
+            "## item_index:tape_index:archive_index:data_md5:dir_path(host:fullpath)\n"
         ])
 
-        pass_int = 1
+        item_index = 1
 
-        with open(catalog, 'w') as cfile:
+        with open(tape_catalog_file, 'w') as cfile:
             ## write a preamble to describe the contents
             cfile.write(preamble_lines)
 
-            ## write the actual file_list
-            for file in file_list:
-                self.debug.print("%s - %s" % (catalog, file))
-                self.debug.print("file_inf - %s, %s" % (pass_int, file), debug_level=249)
+            ## write the actual tape_list
+            for file_path in tape_list:
+                self.debug.print("%s - %s" % (tape_catalog_file, file_path))
+                self.debug.print("file_inf - %s, %s" % (item_index, file_path), debug_level=249)
 
-                tar_index = file[0]
-                file_index = file[1]
-                file_path = file[2]
+                ## which archive on tape has the file_path
+                tape_index = file_path[0]
+                ## where on the archive is the file_path
+                archive_index = file_path[1]
+                ## what is the file_path
+                file_path = file_path[2]
+                ## what is the md5sum of the file_path/visdata_file
                 data_md5 = md5_dict[file_path]
 
-                ## do we need pass_int?
-                catalog_line = [pass_int, tar_index, file_index, data_md5, file_path]
+                ## We don't need the item_index; it is a convenience to the user
+                ## when reading the catalog
+                catalog_line = [item_index, tape_index, archive_index, data_md5, file_path]
                 output = ':'.join(str(x) for x in catalog_line) + "\n"
 
+                ## write the tape_catalog to a file
                 cfile.write(output)
-                pass_int += 1
+                item_index += 1
 
     def final_from_file(self, catalog=None, tape_ids=False):
         """gen final catalog from file"""
