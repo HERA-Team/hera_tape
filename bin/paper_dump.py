@@ -136,7 +136,8 @@ class Dump:
                 except:
                     self.debug.print('tape write fail')
                     break
-
+            if not self.dump_verify(label_id, self.files.tape_list):
+                self.debug.print('Fail: dump_verify')
             self.debug.print('unloading drive', label_id, debug_level=128)
             self.tape.unload_tape_drive(label_id)
 
@@ -145,6 +146,32 @@ class Dump:
         self.paperdb.write_tape_index(self.files.tape_list, ','.join(tape_label_ids))
         self.labeldb.date_ids(tape_label_ids)
         self.paperdb.status = 0
+
+    def dump_verify(self, tape_id, tape_list):
+        """take the tape_id and run a self check,
+        then confirm the tape_list matches"""
+
+        ## run a tape_self_check
+        status, item_index, catalog_list, md5_dict, tape_pid = self.tape_self_check(tape_id)
+
+        ## take output from tape_self_check and compare against current dump
+        if status:
+            if self.item_index != int(item_index):
+                self.debug.print("%s mismatch: %s, %s" % ("item_count", self.item_index, item_index ))
+
+            if self.files.tape_list != catalog_list:
+                self.debug.print("%s mismatch: %s, %s" % ("catalog", self.catalog_list, catalog_list ))
+
+            if self.paperdb.file_md5_dict != md5_dict:
+                self.debug.print("%s mismatch: %s, %s" % ("md5_dict", self.pid, tape_pid ))
+
+            if self.pid != str(tape_pid):
+                self.debug.print("%s mismatch: %s, %s" % ("pid", self.pid, tape_pid ))
+        else:
+            self.debug.print('Fail: tape_self_check status: %s' % status)
+
+        return status
+
 
     def tape_self_check(self, tape_id):
         """process to take a tape and run integrity check without reference to external database"""
