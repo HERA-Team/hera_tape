@@ -92,9 +92,11 @@ class Dump:
             self.files.gen_final_catalog(self.files.catalog_name, self.files.tape_list, self.paperdb.file_md5_dict)
             if self.drive_select == 2:
                 ## use two tape drives to write data at the same time
+                self.debug.print('using two drives')
                 self.tar_archive(self.files.catalog_name)
             else:
                 ## use one drive to write to two tapes serially
+                self.debug.print('using one drive')
                 self.tar_archive_single(self.files.catalog_name)
 
         else:
