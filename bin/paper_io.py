@@ -46,7 +46,7 @@ class Archive:
         self.tape_ids_filename = "{0:s}/paper.{1:s}.tape_ids.list".format(self.queue_dir, self.pid)
         self.catalog_list = []    ## working list of files to write
         self.tape_list = [] ## cumulative list of written files
-        self.item_index = 0 ## number of file paths on tape
+        self.item_index = 0 ## number of file path index
 
         self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
 
