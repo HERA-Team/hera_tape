@@ -238,6 +238,7 @@ class Changer:
         status = True
         reference = None
 
+        self.debug.print('loading tape: %s' % tape_id)
         ## load a tape or rewind the existing tape
         self.load_tape_drive(tape_id)
 
@@ -245,14 +246,16 @@ class Changer:
         ## select a random path from the tape
         ## run md5sum_at_index(tape_index, drive_int=0)
         archive_dict = defaultdict(list)
+
         for item in catalog_list:
+            self.debug.print('item to check: %s' % item)
             archive_dict[item[0]].append(item[-1])
 
         for tape_index in archive_dict:
             directory_path = random.choice(archive_dict[tape_index])
             ## starting at the beginning of the tape we can advance one at a
             ## time through each archive and test one directory_path/visdata md5sum
-            self.debug.print('checking md5sum')
+            self.debug.print('checking md5sum for %s' % directory_path)
             md5sum = self.tape_drives.md5sum_at_index(job_pid, tape_index, directory_path, drive_int=0)
             if md5sum != md5_dict[directory_path]:
                 self.debug.print('mdsum does not match: %s, %s' % (md5sum, md5_dict[directory_path]))

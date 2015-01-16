@@ -92,9 +92,11 @@ class Dump:
             self.files.gen_final_catalog(self.files.catalog_name, self.files.tape_list, self.paperdb.file_md5_dict)
             if self.drive_select == 2:
                 ## use two tape drives to write data at the same time
+                self.debug.print('using two drives')
                 self.tar_archive(self.files.catalog_name)
             else:
                 ## use one drive to write to two tapes serially
+                self.debug.print('using one drive')
                 self.tar_archive_single(self.files.catalog_name)
 
         else:
@@ -156,15 +158,20 @@ class Dump:
 
         ## take output from tape_self_check and compare against current dump
         if status:
+
+            self.debug.print('confirming %s' % "item_index")
             if self.files.item_index != int(item_index):
                 self.debug.print("%s mismatch: %s, %s" % ("item_count", self.files.item_index, item_index ))
 
+            self.debug.print('confirming %s' % "catalog")
             if self.files.tape_list != catalog_list:
                 self.debug.print("%s mismatch: %s, %s" % ("catalog", self.files.tape_list, catalog_list ))
 
+            self.debug.print('confirming %s' % "md5_dict")
             if self.paperdb.file_md5_dict != md5_dict:
                 self.debug.print("%s mismatch: %s, %s" % ("md5_dict", self.pid, tape_pid ))
 
+            self.debug.print('confirming %s' % "pid")
             if self.pid != str(tape_pid):
                 self.debug.print("%s mismatch: %s, %s" % ("pid", self.pid, tape_pid ))
         else:
@@ -183,6 +190,7 @@ class Dump:
         self.tape.load_tape_drive(tape_id)
 
         ## read tape_catalog as list
+        self.debug.print('read catalog from tape: %s' % tape_id)
         first_block = self.tape.read_tape_catalog(tape_id)
 
         ## parse the catalog_list
@@ -192,20 +200,10 @@ class Dump:
         ## last tape index = (first value of the last catalog entry)
         tape_index = catalog_list[-1][0] + 1
 
-        ## technically we don't need this if we step through every archive with block_md5
-        ## count the number of files_on_tape
-        #count = self.tape.count_files(tape_id)
-
         status, reference = self.tape.tape_archive_md5(tape_id, tape_pid, catalog_list, md5_dict)
         if not status:
             self.debug.print("tape failed md5 inspection at index: %s" % reference)
 
-        ## tape_archive_md5 provides this functionality
-        ## confirm that the largest tape_index in the tape_catalog matches files_on_tape
-        #if count != tape_index:
-        #     self.debug.print('missing files on tape %s' % count)
-
-        #self.debug.print('tape_index matches catalog entries: %s' % tape_index)
         return status, item_index, catalog_list, md5_dict, tape_pid
 
 
