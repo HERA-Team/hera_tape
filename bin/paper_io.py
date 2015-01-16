@@ -57,17 +57,17 @@ class Archive:
             self.debug.print("build_archive - %s" % file)
             get("/papertape/" + file, local_path=transfer_path, recursive=True)
 
-    def gen_catalog(self, catalog, file_list, tape_index):
+    def gen_catalog(self, archive_catalog_file, file_list, tape_index):
         """create a catalog file"""
-        self.debug.print("intermediate catalog: %s" % catalog)
-        with open(catalog, 'w') as cfile:
-            tape_index = 1
+        self.debug.print("intermediate catalog: %s" % archive_catalog_file)
+        with open(archive_catalog_file, 'w') as cfile:
+            archive_index = 1
             self.catalog_list = []
             for file in file_list:
-                self.debug.print('catalog_list: %s %s %s' % (tape_index, tape_index, file), debug_level=249)
-                self.catalog_list.append([tape_index, tape_index, file])
-                cfile.write("%s:%s:%s\n" % (tape_index, tape_index, file))
-                tape_index += 1
+                self.debug.print('catalog_list: %s %s %s' % (tape_index, archive_index, file), debug_level=249)
+                self.catalog_list.append([tape_index, archive_index, file])
+                cfile.write("%s:%s:%s\n" % (tape_index, archive_index, file))
+                archive_index += 1
 
 
     def gen_final_catalog(self, tape_catalog_file, tape_list, md5_dict):

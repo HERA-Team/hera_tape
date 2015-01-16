@@ -247,6 +247,7 @@ class Changer:
         ## run md5sum_at_index(tape_index, drive_int=0)
         archive_dict = defaultdict(list)
 
+        ## build an md
         for item in catalog_list:
             self.debug.print('item to check: %s' % item)
             archive_dict[item[0]].append(item[-1])
