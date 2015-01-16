@@ -247,7 +247,7 @@ class Changer:
         ## run md5sum_at_index(tape_index, drive_int=0)
         archive_dict = defaultdict(list)
 
-        ## build an md
+        ## build a dictionary of archives
         for item in catalog_list:
             self.debug.print('item to check: %s' % item)
             archive_dict[item[0]].append(item[-1])
@@ -263,6 +263,8 @@ class Changer:
                 status = False
                 reference = ":".join([str(tape_index), directory_path])
                 break
+            else:
+                self.debug.print('md5 match: %s|%s' % (%s, %s))
 
         return status, reference
 
@@ -483,7 +485,7 @@ class Drives:
             _block_md5_file_on_tape %s %s %s %s
         """ % (job_pid, tape_index, directory_path, drive_int)
 
-        self.debug.print(bash_to_md5_selected_file)
+        self.debug.print(bash_to_md5_selected_file, debug_level=252)
 
         try:
             ## check output
