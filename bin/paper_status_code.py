@@ -14,5 +14,6 @@ class StatusCode(Enum):
     md5_mismatch = 5
     truncated_tape = 6
     db_credentials = 7
-    
+    taoe_self_check = 8
+
     UNKNOWN = 9999
