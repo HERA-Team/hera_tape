@@ -156,11 +156,11 @@ class Dump:
 
         ## take output from tape_self_check and compare against current dump
         if status:
-            if self.item_index != int(item_index):
-                self.debug.print("%s mismatch: %s, %s" % ("item_count", self.item_index, item_index ))
+            if self.files.item_index != int(item_index):
+                self.debug.print("%s mismatch: %s, %s" % ("item_count", self.files.item_index, item_index ))
 
             if self.files.tape_list != catalog_list:
-                self.debug.print("%s mismatch: %s, %s" % ("catalog", self.catalog_list, catalog_list ))
+                self.debug.print("%s mismatch: %s, %s" % ("catalog", self.files.tape_list, catalog_list ))
 
             if self.paperdb.file_md5_dict != md5_dict:
                 self.debug.print("%s mismatch: %s, %s" % ("md5_dict", self.pid, tape_pid ))
