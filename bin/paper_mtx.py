@@ -5,8 +5,7 @@
     Drives: access to mt functions and writing data to tape
 """
 
-import re, pymysql, time, datetime, random
-from random import randint
+import re, pymysql, datetime, random
 from subprocess import *
 from paper_debug import Debug
 
@@ -68,10 +67,10 @@ class Changer:
     def check_inventory(self):
         """check the current inventory of the library with mtx"""
         output = check_output(['mtx', 'status']).decode("utf-8")
-        self.debug.print(output, debug_level=251)
+        self.debug.output(output, debug_level=251)
         self.drive_ids, self.tape_ids, self.label_in_drive = split_mtx_output(output)
         for drive_id in self.drive_ids:
-            self.debug.print('- %s, %s num_tapes: %d' % (id, self.drive_ids[drive_id], len(self.tape_ids)))
+            self.debug.output('- %s, %s num_tapes: %d' % (id, self.drive_ids[drive_id], len(self.tape_ids)))
 
     def print_inventory(self):
         """print out the current tape library inventory"""
@@ -86,26 +85,27 @@ class Changer:
 
     def load_tape_pair(self, tape_ids):
         """load the next available tape pair"""
-        self.deug.print('checking drives')
+        self.debug.output('checking drives')
         if self.drives_empty():
             if len(tape_ids) == 2:
                 for drive, tape_id in enumerate(tape_ids):
-                    self.debug.print('loading', str(id), str(drive))
+                    self.debug.output('loading', str(id), str(drive))
                     self.load_tape(tape_id, drive)
             else:
-                self.debug.print('failed to load tape pair: %s' % tape_ids)
+                self.debug.output('failed to load tape pair: %s' % tape_ids)
 
-    ## using type hinting PEP 3107 and Sphinx
-    def load_tape_drive(self, tape_id: str, drive=0) -> bool:
+    ## using type hinting with Sphinx
+    ## pycharms doesn't seem to like PEP 3107 style type hinting
+    def load_tape_drive(self, tape_id, drive=0):
         """load a given tape_id into a given drive=drive_int, unload if necessary.
         :type  tape_id: label of tape to load
         :param tape_id: label of tape to load"""
         status = False
 
-        self.debug.print('check then load')
+        self.debug.output('check then load')
         for attempt in range(3):
             if self.drives_empty(drive_int=drive):
-                self.debug.print('loading', str(tape_id), str(drive), debug_level=128)
+                self.debug.output('loading', str(tape_id), str(drive), debug_level=128)
                 self.load_tape(tape_id, drive)
                 status = True
                 break
@@ -119,7 +119,7 @@ class Changer:
 
             ## if the drive is full attempt to unload, then retry
             else:
-                self.debug.print('unable to load, drive filled', str(self.label_in_drive), str(drive), debug_level=128)
+                self.debug.output('unable to load, drive filled', str(self.label_in_drive), str(drive), debug_level=128)
                 self.unload_tape_drive(self.label_in_drive[str(drive)])
 
         return status
@@ -128,28 +128,29 @@ class Changer:
         """unload the tapes in the current drives"""
         if not self.drives_empty():
             for tape_id in self.drive_ids:
-                self.debug.print('unloading', tape_id)
+                self.debug.output('unloading', tape_id)
                 self.unload_tape(tape_id)
 
     def unload_tape_drive(self, tape_int):
         """unload the tapes in the current drives"""
         if not self.drives_empty():
-            self.debug.print('unloading', str(tape_int))
+            self.debug.output('unloading', str(tape_int))
             self.unload_tape(tape_int)
         else:
-            self.debug.print('tape already empty', str(tape_int))
+            self.debug.output('tape already empty', str(tape_int))
 
     def drives_empty(self, drive_int=None):
         """retun true if the drives are currently empty"""
         self.check_inventory()
 
         if drive_int:
-            self.debug.print('called with drive_int: %s' % self.label_in_drive)
+            self.debug.output('called with drive_int: %s' % self.label_in_drive)
             return False if drive_int in self.label_in_drive else True
         else:
-            self.debug.print('basic check drive labels: %s' % self.label_in_drive)
+            self.debug.output('basic check drive labels: %s' % self.label_in_drive)
             return not len(self.drive_ids)
 
+    @property
     def drives_loaded(self):
         """return true if the drives are loaded"""
         self.check_inventory()
@@ -166,7 +167,7 @@ class Changer:
     def load_tape(self, tape_id, tape_drive):
         """Load a tape into a free drive slot"""
         if self.tape_ids[tape_id]:
-            self.debug.print('Loading - %s' % tape_id)
+            self.debug.output('Loading - %s' % tape_id)
             output = check_output(['mtx', 'load', str(self.tape_ids[tape_id]), str(tape_drive)])
             self.check_inventory()
 
@@ -174,7 +175,7 @@ class Changer:
         """Unload a tape from a drive and put in the original slot"""
         if self.drive_ids[tape_id]:
             command = ['mtx', 'unload', self.drive_ids[tape_id][1], self.drive_ids[tape_id][0]]
-            self.debug.print('%s' % command)
+            self.debug.output('%s' % command)
             output = check_output(command)
             self.check_inventory()
 
@@ -185,15 +186,15 @@ class Changer:
         
         try: 
             if self.drive_ids[tape_id]:
-                self.debug.print('rewinding tape %s' % tape_id)
+                self.debug.output('rewinding tape %s' % tape_id)
                 output = check_output('mt -f /dev/nst%s rewi' % (self.drive_ids[tape_id][0]), shell=True)
                 status = True
 
         except CalledProcessError:
-            self.debug.print('rewind error')
+            self.debug.output('rewind error')
 
         except KeyError:
-            self.debug.print('tape (%s) not loaded: %s' % (tape_id, self.drive_ids))
+            self.debug.output('tape (%s) not loaded: %s' % (tape_id, self.drive_ids))
              
         return status
         
@@ -204,13 +205,13 @@ class Changer:
         tar_name = "/papertape/queue/%s/%s.tar" % (self.pid, arcname)
         catalog_name = "/papertape/queue/%s/%s.list" % (self.pid, arcname)
 
-        self.debug.print("writing", catalog_name, tar_name)
+        self.debug.output("writing", catalog_name, tar_name)
         self.tape_drives.tar_files([catalog_name, tar_name])
 
     def prep_tape(self, catalog_file):
         """write the catalog to tape. write all of our source code to the first file"""
         ## write catalog
-        self.debug.print("writing catalog to tape", catalog_file)
+        self.debug.output("writing catalog to tape", catalog_file)
         self.tape_drives.dd(catalog_file)
         ## write source code
         #self.tape_drives.tar('/root/git/papertape')
@@ -237,7 +238,7 @@ class Changer:
         status = True
         reference = None
 
-        self.debug.print('loading tape: %s' % tape_id)
+        self.debug.output('loading tape: %s' % tape_id)
         ## load a tape or rewind the existing tape
         self.load_tape_drive(tape_id)
 
@@ -248,22 +249,22 @@ class Changer:
 
         ## build a dictionary of archives
         for item in catalog_list:
-            self.debug.print('item to check: %s' % item)
+            self.debug.output('item to check: %s' % item)
             archive_dict[item[0]].append(item[-1])
 
         for tape_index in archive_dict:
             directory_path = random.choice(archive_dict[tape_index])
             ## starting at the beginning of the tape we can advance one at a
             ## time through each archive and test one directory_path/visdata md5sum
-            self.debug.print('checking md5sum for %s' % directory_path)
+            self.debug.output('checking md5sum for %s' % directory_path)
             md5sum = self.tape_drives.md5sum_at_index(job_pid, tape_index, directory_path, drive_int=0)
             if md5sum != md5_dict[directory_path]:
-                self.debug.print('mdsum does not match: %s, %s' % (md5sum, md5_dict[directory_path]))
+                self.debug.output('mdsum does not match: %s, %s' % (md5sum, md5_dict[directory_path]))
                 status = False
                 reference = ":".join([str(tape_index), directory_path])
                 break
             else:
-                self.debug.print('md5 match: %s|%s' % (md5sum, md5_dict[directory_path]))
+                self.debug.output('md5 match: %s|%s' % (md5sum, md5_dict[directory_path]))
 
         return status, reference
 
@@ -297,29 +298,29 @@ class MtxDB:
 
     def update_connection_time(self):
         """refresh database connection"""
-        self.debug.print('updating connection_time')
+        self.debug.output('updating connection_time')
         self.connection_time = datetime.datetime.now()
 
     def connection_time_delta(self):
         """return connection age"""
-        self.debug.print('connection_time:%s' % self.connection_time)
+        self.debug.output('connection_time:%s' % self.connection_time)
         delta = datetime.datetime.now() - self.connection_time
         return delta.total_seconds()
 
     def db_connect(self, command=None, credentials=None):
         """connect to the database or reconnect an old session"""
-        self.debug.print('input:%s %s' % (command, credentials))
+        self.debug.output('input:%s %s' % (command, credentials))
         self.credentials = credentials if credentials is not None else self.credentials
         time_delta = self.connection_timeout + 1 if command == 'init' else self.connection_time_delta()
 
-        self.debug.print("time_delta:%s, timeout:%s" % (time_delta, self.connection_timeout))
+        self.debug.output("time_delta:%s, timeout:%s" % (time_delta, self.connection_timeout))
         if time_delta > self.connection_timeout:
-            self.debug.print("setting connection %s %s" % (credentials, self.connection_timeout))
+            self.debug.output("setting connection %s %s" % (credentials, self.connection_timeout))
             self.connect = pymysql.connect(read_default_file=self.credentials, connect_timeout=self.connection_timeout)
             self.cur = self.connect.cursor()
 
         self.update_connection_time()
-        self.debug.print("connection_time:%s" % self.connection_time)
+        self.debug.output("connection_time:%s" % self.connection_time)
 
     def get_capacity(self, tape_id):
         select_sql = "select capacity from ids where id='%s'" % tape_id
@@ -360,7 +361,7 @@ class MtxDB:
                 set status="%s", description="Paper dump version:%s" 
                 where label="%s"''' % (self.pid, self.version, tape_id)
 
-            self.debug.print(claim_query)
+            self.debug.output(claim_query)
             self.cur.execute(claim_query)
 
         self.connect.commit()
@@ -370,7 +371,7 @@ class MtxDB:
         date = datetime.datetime.now().strftime('%Y%m%d-%H%M')
         self.db_connect()
         for tape_id in ids:
-            self.debug.print('updating mtxdb: %s, %s' % (date, tape_id))
+            self.debug.output('updating mtxdb: %s, %s' % (date, tape_id))
             date_sql = 'update ids set date="%s" where label="%s"' % (date, tape_id)
             self.cur.execute(date_sql)
 
@@ -395,7 +396,7 @@ class Drives:
         """initialize debugging and pid"""
         self.pid = pid
         self.debug = Debug(pid, debug=debug, debug_threshold=debug_threshold)
-        self.debug.print('set debug')
+        self.debug.output('set debug')
         self.drive_select = drive_select
 
     def count_files(self, drive_int):
@@ -444,7 +445,7 @@ class Drives:
         return it as a string"""
 
         command = ['dd', 'conv=sync,block', 'if=/dev/nst%s' % drive_int, 'bs=32k', 'count=1']
-        self.debug.print('%s' % command)
+        self.debug.output('%s' % command)
         output = check_output(command).decode('utf8').split('\n')
 
         return output[:-1]
@@ -453,7 +454,7 @@ class Drives:
         """given a tape_index and drive_int, return the md5sum of the file
         at that index on the tape in /dev/nst$drive_index."""
 
-        self.debug.print("getting md5 of file at %s in drive %s" % (tape_index, drive_int))
+        self.debug.output("getting md5 of file at %s in drive %s" % (tape_index, drive_int))
 
         commands = []
         ## the index is stored like: [PAPR1001, PAPR2001]-0:1
@@ -485,17 +486,17 @@ class Drives:
             _block_md5_file_on_tape %s %s %s %s
         """ % (job_pid, tape_index, directory_path, drive_int)
 
-        #self.debug.print(bash_to_md5_selected_file, debug_level=252)
-        self.debug.print("reading %s" % directory_path)
+        #self.debug.output(bash_to_md5_selected_file, debug_level=252)
+        self.debug.output("reading %s" % directory_path)
 
         try:
             ## check output
             output = check_output(bash_to_md5_selected_file, shell=True).decode('utf8').split('\n')
             ## we should check the output
-            self.debug.print('output: %s' % output[0], debug_level=250)
+            self.debug.output('output: %s' % output[0], debug_level=250)
 
         except CalledProcessError as return_info:
-            self.debug.print('return_info: %s' % return_info)
+            self.debug.output('return_info: %s' % return_info)
             return False
 
         return output[0]

@@ -54,17 +54,17 @@ class Archive:
         """Copy files to /dev/shm/$PID, create md5sum data for all files"""
         for file in file_list:
             transfer_path = '%s/%s' % (self.archive_dir, file)
-            self.debug.print("build_archive - %s" % file)
+            self.debug.output("build_archive - %s" % file)
             get("/papertape/" + file, local_path=transfer_path, recursive=True)
 
     def gen_catalog(self, archive_catalog_file, file_list, tape_index):
         """create a catalog file"""
-        self.debug.print("intermediate catalog: %s" % archive_catalog_file)
+        self.debug.output("intermediate catalog: %s" % archive_catalog_file)
         with open(archive_catalog_file, 'w') as cfile:
             archive_index = 1
             self.catalog_list = []
             for file in file_list:
-                self.debug.print('catalog_list: %s %s %s' % (tape_index, archive_index, file), debug_level=249)
+                self.debug.output('catalog_list: %s %s %s' % (tape_index, archive_index, file), debug_level=249)
                 self.catalog_list.append([tape_index, archive_index, file])
                 cfile.write("%s:%s:%s\n" % (tape_index, archive_index, file))
                 archive_index += 1
@@ -76,7 +76,7 @@ class Archive:
         :param tape_catalog_file: str
         :param tape_list: list of [int, int, string]
         """
-        self.debug.print('catalog_list - %s' % tape_list)
+        self.debug.output('catalog_list - %s' % tape_list)
 
         job_details = " ".join([ 
             self.pid,  
@@ -98,8 +98,8 @@ class Archive:
 
             ## write the actual tape_list
             for file_path in tape_list:
-                self.debug.print("%s - %s" % (tape_catalog_file, file_path))
-                self.debug.print("file_inf - %s, %s" % (self.item_index, file_path), debug_level=249)
+                self.debug.output("%s - %s" % (tape_catalog_file, file_path))
+                self.debug.output("file_inf - %s, %s" % (self.item_index, file_path), debug_level=249)
 
                 ## which archive on tape has the file_path
                 tape_index = file_path[0]
@@ -135,12 +135,12 @@ class Archive:
         catalog_line = re.compile('([0-9]+):([0-9]+):([0-9]+):([a-f0-9]{32}):(.*)')
 
         if catalog:
-            self.debug.print('reading from string')
+            self.debug.output('reading from string')
             catalog_lines = catalog
 
         else:
             ## read from file
-            self.debug.print('reading from file')
+            self.debug.output('reading from file')
             with open(self.catalog_name, 'r') as file:
                 catalog_lines = file.readlines()
 
@@ -163,7 +163,7 @@ class Archive:
                 self.catalog_list.append(catalog_list)
 
             elif header_line.match(line):
-                self.debug.print('found header line')
+                self.debug.output('found header line')
                 pid = header_line.match(line).groups()[0]
 
         return item_index, self.catalog_list, md5_dict, pid
@@ -232,7 +232,7 @@ class Archive:
     def save_tape_ids(self, tape_ids):
         """open a file and write the tape ids in case writing to the db fails"""
 
-        self.debug.print('saving {0:s} to {1:s}'.format(tape_ids, self.tape_ids_filename))
+        self.debug.output('saving {0:s} to {1:s}'.format(tape_ids, self.tape_ids_filename))
         tape_id_file = open(self.tape_ids_filename, 'w')
         tape_id_file.write("[{0:s}]\n".format(tape_ids))
         tape_id_file.close()
@@ -243,11 +243,11 @@ class Archive:
 
         tape_ids = ''
         tape_id_line = re.compile("\[(.*)\]")
-        self.debug.print('{0:s}'.format(self.tape_ids_filename), debug_level=128)
+        self.debug.output('{0:s}'.format(self.tape_ids_filename), debug_level=128)
         with open(self.tape_ids_filename, 'r') as tape_id_file:
-            self.debug.print("opening_file", debug_level=128)
+            self.debug.output("opening_file", debug_level=128)
             for line in tape_id_file:
-                self.debug.print('{0:s}'.format(line), debug_level=240)
+                self.debug.output('{0:s}'.format(line), debug_level=240)
                 if tape_id_line.match(line):
                     tape_info = tape_id_line.match(line).groups()
                     tape_ids = tape_info[0]

@@ -17,7 +17,6 @@ class Transfer:
         self.ssh.load_system_host_keys()
 
         self.ssh.connect(host, key_filename=key_file)
-
         self.scp = SCPClient(self.ssh.get_transport())
 
 

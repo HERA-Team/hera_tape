@@ -39,29 +39,29 @@ class PaperDB:
 
     def update_connection_time(self):
         """refresh database connection time"""
-        self.debug.print('updating connection_time')
+        self.debug.output('updating connection_time')
         self.connection_time = datetime.now()
 
     def connection_time_delta(self):
         """return connection age"""
-        self.debug.print('connection_time:%s' % self.connection_time)
+        self.debug.output('connection_time:%s' % self.connection_time)
         delta = datetime.now() - self.connection_time
         return delta.total_seconds()
 
     def db_connect(self, command=None, credentials=None):
         """connect to the database or reconnect an old session"""
-        self.debug.print('input:%s %s' % (command, credentials))
+        self.debug.output('input:%s %s' % (command, credentials))
         self.credentials = credentials if credentials is not None else self.credentials
         time_delta = self.connection_timeout + 1 if command == 'init' else self.connection_time_delta()
 
-        self.debug.print("time_delta:%s, timeout:%s" % (time_delta, self.connection_timeout))
+        self.debug.output("time_delta:%s, timeout:%s" % (time_delta, self.connection_timeout))
         if time_delta > self.connection_timeout:
-            self.debug.print("setting connection %s %s" % (credentials, self.connection_timeout))
+            self.debug.output("setting connection %s %s" % (credentials, self.connection_timeout))
             self.connect = pymysql.connect(read_default_file=self.credentials, connect_timeout=self.connection_timeout)
             self.cur = self.connect.cursor()
 
         self.update_connection_time()
-        self.debug.print("connection_time:%s" % self.connection_time)
+        self.debug.output("connection_time:%s" % self.connection_time)
 
     def get_new(self, size_limit, regex=False, pid=False):
         """Retrieve a list of available files.
@@ -101,12 +101,12 @@ class PaperDB:
         total = 0
 
         for file_info in self.cur.fetchall():
-            self.debug.print('found file - %s' % file_info[0], debug_level=254)
+            self.debug.output('found file - %s' % file_info[0], debug_level=254)
             file_size = float(file_info[1])
             if file_size > size_limit:
-                self.debug.print('file_size (%s) larger than size limit(%s) - %s' % (file_size, size_limit, file_info[0]), debug_level=254)
+                self.debug.output('file_size (%s) larger than size limit(%s) - %s' % (file_size, size_limit, file_info[0]), debug_level=254)
             if total+file_size < size_limit:
-                self.debug.print('file:', file_info[0], debug_level=254)
+                self.debug.output('file:', file_info[0], debug_level=254)
                 self.file_list.append(file_info[0])
                 self.file_md5_dict[file_info[0]] = file_info[2]
                 total += file_size
@@ -118,7 +118,7 @@ class PaperDB:
         self.db_connect()
         for file in file_list:
             update_sql = "update paperdata set tape_index='%s%s' where raw_path='%s'" % (status_type, self.pid, file)
-            self.debug.print('claim_files - %s' % update_sql)
+            self.debug.output('claim_files - %s' % update_sql)
             self.cur.execute(update_sql)
 
         self.connect.commit()
@@ -129,7 +129,7 @@ class PaperDB:
         self.db_connect()
         for file in file_list:
             update_sql = "update paperdata set tape_index='' where raw_path='%s' and tape_index='%s%s'" % (file, status_type, self.pid)
-            self.debug.print("unclaim_files - %s" % update_sql)
+            self.debug.output("unclaim_files - %s" % update_sql)
             self.cur.execute(update_sql)
 
         self.connect.commit()
@@ -144,7 +144,7 @@ class PaperDB:
         :param tape_id: str
         """
 
-        self.debug.print("catalog_list contains %s files, and with ids: %s" % (len(catalog_list), tape_id))
+        self.debug.output("catalog_list contains %s files, and with ids: %s" % (len(catalog_list), tape_id))
         self.db_connect()
 
         ## catalog list is set in paper_io.py: self.catalog_list.append([queue_pass, int, file])
@@ -152,7 +152,7 @@ class PaperDB:
             ## tape_index: 20150103[papr1001,papr2001]-132:3
             tape_index = "%s[%s]-%s:%s" % (self.version, tape_id, catalog[0], catalog[1])
             raw_path = catalog[2]
-            self.debug.print("writing tapelocation: %s for %s" % (tape_index, raw_path))
+            self.debug.output("writing tapelocation: %s for %s" % (tape_index, raw_path))
             self.cur.execute('update paperdata set tape_index="%s" where raw_path="%s"' % (tape_index, raw_path))
 
         self.connect.commit()
