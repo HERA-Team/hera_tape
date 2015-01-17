@@ -150,7 +150,6 @@ class Changer:
             self.debug.print('basic check drive labels: %s' % self.label_in_drive)
             return not len(self.drive_ids)
 
-
     def drives_loaded(self):
         """return true if the drives are loaded"""
         self.check_inventory()
