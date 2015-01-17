@@ -119,6 +119,8 @@ class Archive:
                 cfile.write(output)
                 self.item_index += 1
 
+            self.item_index -= 1
+
     def final_from_file(self, catalog=None, tape_ids=False):
         """gen final catalog from file"""
         self.catalog_list = []
