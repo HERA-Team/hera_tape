@@ -99,7 +99,7 @@ class Archive:
             ## write the actual tape_list
             for file_path in tape_list:
                 self.debug.print("%s - %s" % (tape_catalog_file, file_path))
-                self.debug.print("file_inf - %s, %s" % (item_index, file_path), debug_level=249)
+                self.debug.print("file_inf - %s, %s" % (self.item_index, file_path), debug_level=249)
 
                 ## which archive on tape has the file_path
                 tape_index = file_path[0]
