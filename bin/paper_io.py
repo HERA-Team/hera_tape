@@ -112,7 +112,7 @@ class Archive:
 
                 ## We don't need the item_index; it is a convenience to the user
                 ## when reading the catalog
-                catalog_line = [item_index, tape_index, archive_index, data_md5, file_path]
+                catalog_line = [self.item_index, tape_index, archive_index, data_md5, file_path]
                 output = ':'.join(str(x) for x in catalog_line) + "\n"
 
                 ## write the tape_catalog to a file
