@@ -264,7 +264,7 @@ class Changer:
                 reference = ":".join([str(tape_index), directory_path])
                 break
             else:
-                self.debug.print('md5 match: %s|%s' % (%s, %s))
+                self.debug.print('md5 match: %s|%s' % (md5sum, md5_dict[directory_path]))
 
         return status, reference
 
@@ -395,7 +395,8 @@ class Drives:
     def __init__(self, pid, drive_select=2, debug=False, debug_threshold=128):
         """initialize debugging and pid"""
         self.pid = pid
-        self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
+        self.debug = Debug(pid, debug=debug, debug_threshold=debug_threshold)
+        self.debug.print('set debug')
         self.drive_select = drive_select
 
     def count_files(self, drive_int):
@@ -485,7 +486,8 @@ class Drives:
             _block_md5_file_on_tape %s %s %s %s
         """ % (job_pid, tape_index, directory_path, drive_int)
 
-        self.debug.print(bash_to_md5_selected_file, debug_level=252)
+        #self.debug.print(bash_to_md5_selected_file, debug_level=252)
+        self.debug.print("reading %s" % directory_path)
 
         try:
             ## check output
