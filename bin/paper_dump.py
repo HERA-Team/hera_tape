@@ -197,8 +197,8 @@ class Dump:
         ## build an file_md5_dict
         item_index, catalog_list, md5_dict, tape_pid = self.files.final_from_file(catalog=first_block)
 
-        ## last tape index = (first value of the last catalog entry)
-        tape_index = catalog_list[-1][0] + 1
+        ## last item_index = (first value of the last catalog entry)
+        #item_index = catalog_list[-1][0] + 1
 
         status, reference = self.tape.tape_archive_md5(tape_id, tape_pid, catalog_list, md5_dict)
         if not status:
