@@ -34,7 +34,7 @@ class Debug:
         name = []
         module = inspect.getmodule(parentframe)
         # `modname` can be None when frame is executed directly in console
-        # TODO(techtonik): consider using __main__
+        # consider using __main__
         if module:
             name.append(module.__name__)
         # detect classname
