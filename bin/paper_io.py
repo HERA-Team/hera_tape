@@ -90,7 +90,7 @@ class Archive:
             "## item_index:tape_index:archive_index:data_md5:dir_path(host:fullpath)\n"
         ])
 
-        item_index = 1
+        self.item_index = 1
 
         with open(tape_catalog_file, 'w') as cfile:
             ## write a preamble to describe the contents
@@ -117,7 +117,7 @@ class Archive:
 
                 ## write the tape_catalog to a file
                 cfile.write(output)
-                item_index += 1
+                self.item_index += 1
 
     def final_from_file(self, catalog=None, tape_ids=False):
         """gen final catalog from file"""
