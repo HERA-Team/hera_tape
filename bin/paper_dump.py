@@ -326,7 +326,7 @@ class Dump:
         self.paperdb.write_tape_index(self.files.catalog_list, ','.join(self.tape_ids))
         self.paperdb.status = 0
 
-   def manual_resume_to_tape(self):
+    def manual_resume_to_tape(self):
         """read in the cumulative list from file and send to tape"""
 
         self.tape_index, catalog, md5_dict, pid = self.files.final_from_file()
