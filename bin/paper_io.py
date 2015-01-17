@@ -153,8 +153,8 @@ class Archive:
                 ## the original catalog looks like the last three entries
                 tape_index = int(catalog_info[1])
                 archive_index = int(catalog_info[2])
-                md5_dict[file_path] = catalog_info[3]
                 file_path = catalog_info[4]
+                md5_dict[file_path] = catalog_info[3]
 
                 catalog_list = [tape_index, archive_index, file_path]
 
