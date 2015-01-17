@@ -148,18 +148,15 @@ class Archive:
                 catalog_info = catalog_line.match(line).groups()
 
                 ## the first number is mostly for human consumption
-                file_on_tape_number = int(catalog_info[0])
-
-                ## if we add one...
-                ## the second number tells us where to find the archive
-                item_index = int(catalog_info[1]) + 1
+                item_index = int(catalog_info[0])
 
                 ## the original catalog looks like the last three entries
-                tar_index = int(catalog_info[1])
-                file_index = int(catalog_info[2])
-                file_path = catalog_info[4]
+                tape_index = int(catalog_info[1])
+                archive_index = int(catalog_info[2])
                 md5_dict[file_path] = catalog_info[3]
-                catalog_list = [tar_index, file_index, file_path]
+                file_path = catalog_info[4]
+
+                catalog_list = [tape_index, archive_index, file_path]
 
                 self.catalog_list.append(catalog_list)
 
