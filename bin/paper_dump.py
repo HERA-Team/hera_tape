@@ -138,8 +138,12 @@ class Dump:
                 except:
                     self.debug.print('tape write fail')
                     break
+
             if not self.dump_verify(label_id, self.files.tape_list):
+                ## TODO(dconover): real exit from further processing
                 self.debug.print('Fail: dump_verify')
+                break
+
             self.debug.print('unloading drive', label_id, debug_level=128)
             self.tape.unload_tape_drive(label_id)
 
@@ -147,6 +151,9 @@ class Dump:
         self.files.save_tape_ids(','.join(tape_label_ids))
         self.paperdb.write_tape_index(self.files.tape_list, ','.join(tape_label_ids))
         self.labeldb.date_ids(tape_label_ids)
+
+        ## TODO(dconover): cleanup queued files via self.files.status
+        ## TODO(dconover): use the output status to cleanup claimed files in the db
         self.paperdb.status = 0
 
     def dump_verify(self, tape_id, tape_list):
@@ -258,26 +265,15 @@ class Dump:
             self.tape.prep_tape(catalog_file)
 
             ## testing 201401123
-            for _pass in range(self.tape_index):
-                self.debug.print('sending tar to single drive:', label_id, str(_pass))
-                self.tape.write(_pass)
+            for index_int in range(self.tape_index):
+                self.debug.print('sending tar to single drive:', label_id, str(index_int))
+                self.tape.write(index_int)
 
             self.tape.unload_tape_drive(label_id)
 
         self.debug.print('writing tape_indexes')
         self.paperdb.write_tape_index(self.files.catalog_list, ','.join(tape_label_ids))
         self.paperdb.status = 0
-
-    def test_shm_archive(self, shm_pid):
-        """send failed files stored in /papertape/shm/$shm_pid to tape
-
-        useful when build_archive is invoked without queue_archive
-
-        :param shm_pid: str
-        """
-        self.batch_files(pid=shm_pid, claim=False)
-        for file_info in self.files.catalog_list:
-            print(file_info)
 
     def batch_files(self, queue=False, regex=False, pid=False, claim=True):
         """populate self.catalog_list; transfer files to shm"""
@@ -317,13 +313,6 @@ class Dump:
         else:
             self.debug.print("no files batched")
 
-    def manual_resume_to_tape(self):
-        """read in the cumulative list from file and send to tape"""
-
-        self.tape_index, catalog, md5_dict, pid = self.files.final_from_file()
-        self.debug.print('pass: %s' % self.tape_index)
-        self.manual_to_tape(self.tape_index, catalog)
-
     def manual_write_tape_location(self):
         """on a tape dump that fails after writing to tape, but before writing
         locations to tape, use this to resume writing locations to tape.
@@ -336,6 +325,13 @@ class Dump:
         self.debug.print('write tape location', ','.join(self.tape_ids))
         self.paperdb.write_tape_index(self.files.catalog_list, ','.join(self.tape_ids))
         self.paperdb.status = 0
+
+   def manual_resume_to_tape(self):
+        """read in the cumulative list from file and send to tape"""
+
+        self.tape_index, catalog, md5_dict, pid = self.files.final_from_file()
+        self.debug.print('pass: %s' % self.tape_index)
+        self.manual_to_tape(self.tape_index, catalog)
 
     def manual_to_tape(self, tape_index, cumulative_list):
         """if the dump is interrupted, run the files to tape for the current_pid.
