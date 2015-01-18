@@ -285,7 +285,7 @@ class MtxDB:
     id        mediumint(9)    NO      PRI     NULL    auto_increment
     label     char(8) YES             NULL
     date      int(11) YES             NULL
-    status    int(11) YES             NULL
+    paperdb_state    int(11) YES             NULL
     capacity  int(11) YES             NULL
 
     """
@@ -306,6 +306,16 @@ class MtxDB:
         self.db_connect('init', credentials)
 
         self.mtxdb_state = 0 ## current dump state
+
+    def __setattr__(self, attr_name, attr_value):
+        """debug.output() when a state variable is updated"""
+        class_name = self.__class__.__name__.lower
+
+        ## we always use the lowercase of the class_name in the state variable
+        if attr_name == '{}_state'.format(class_name):
+            ## debug whenever we update the state variable
+            self.debug.output("updating: {} with {}={}".format(class_name, attr_name, attr_value))
+        super(self.__class__, self).__setattr__(attr_name, attr_value)
 
     def update_connection_time(self):
         """refresh database connection"""
@@ -343,7 +353,7 @@ class MtxDB:
         ids = []
         for n in [0, 1]:
             select_sql = """select label from ids
-                where status is null and
+                where paperdb_state is null and
                 label like 'PAPR%d%s'
                 order by label
             """ % (n+1, "%")
@@ -369,7 +379,7 @@ class MtxDB:
         self.db_connect()
         for tape_id in ids:
             claim_query = '''update ids 
-                set status="%s", description="Paper dump version:%s" 
+                set paperdb_state="%s", description="Paper dump version:%s"
                 where label="%s"''' % (self.pid, self.version, tape_id)
 
             self.debug.output(claim_query)
@@ -412,7 +422,6 @@ class Drives:
         """initialize debugging and pid"""
         self.pid = pid
         self.debug = Debug(pid, debug=debug, debug_threshold=debug_threshold)
-        self.debug.output('set debug')
         self.drive_select = drive_select
 
         ## I don't think we need to keep state here since we lock at the changer

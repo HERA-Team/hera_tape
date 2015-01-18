@@ -7,8 +7,9 @@ are written to tape.
 """
 
 import pymysql
-from datetime import datetime
+from datetime import datetime, timedelta
 from paper_debug import Debug
+from enum import Enum, unique
 
 class PaperDB:
     """Paper database contains information on file locations"""
@@ -26,9 +27,10 @@ class PaperDB:
         self.pid = pid
         self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
 
-        self.status = status
+        self.paperdb_states = PaperDBStates
+        self.paperdb_state = status
         self.connection_timeout = 90
-        self.connection_time = datetime.timedelta()
+        self.connection_time = timedelta()
         self.credentials = credentials
         self.connect = ''
         self.cur = ''
@@ -132,7 +134,7 @@ class PaperDB:
             self.cur.execute(update_sql)
 
         self.connect.commit()
-        self.status = 1
+        self.paperdb_state = self.paperdb_states.claim
 
     def unclaim_files(self, status_type, file_list):
         """Release claimed files from database"""
@@ -143,7 +145,7 @@ class PaperDB:
             self.cur.execute(update_sql)
 
         self.connect.commit()
-        self.status = 0
+        self.paperdb_state = self.paperdb_states.initialize
 
     def write_tape_index(self, catalog_list, tape_id):
         """Take a dictionary of files and labels and update the database
@@ -177,13 +179,40 @@ class PaperDB:
         pass
 
 
+    def close_db(self):
+        """depeding on state clean-up file claims"""
+
+        self.db_connect()
+        #self.cur.execute(ready_sql)
+        self.update_connection_time()
+
+        ## close database connections
+        self.cur.close()
+        self.connect.close()
+
 
     def __del__(self):
         """close out the connection and set the final state in the database"""
         ## TODO(dconover): depending on self.paperdb_state update paperdata
         ## can self.status_type be replaced with self.paperdb_state?
-        ## TODO(dconover): implement self.status_type; update status="{}{}".format(self.status_type, self.pid)
+        ## TODO(dconover): implement self.status_type; update paperdb_state="{}{}".format(self.status_type, self.pid)
         ## TODO(dconover): close database; implement self.db_close()
+        #self.close_db()
         pass
+
+@unique
+class PaperDBStates(Enum):
+    """ list of database specific dump states
+
+    This is not to be confused with error codes, which tell the program what
+    went wrong. Rather, these states track what clean-up actions should be
+    performed, when the object is closed.
+    """
+
+    initialize     = 0 ## no file cleanup;                                 action: always close db
+    claim          = 1 ## files claimed;                                   action: unclaim files
+    claim_queue    = 2 ## claimed files queued;                            action: ignore (?)
+    claim_write    = 3 ## claimed files written to tape, but not verified; action: ignore (?)
+    claim_complete = 4 ## claimed files written and verified;              action: finalize claimed files
 
 

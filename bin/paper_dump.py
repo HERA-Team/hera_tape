@@ -26,6 +26,7 @@ class Dump:
         self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
 
         self.mtx_creds = '~/.my.mtx.cnf'
+        self.debug.output(credentials)
         self.paper_creds = credentials
 
         self.tape_ids = ''
@@ -148,6 +149,8 @@ class Dump:
                 self.debug.output('Fail: dump_verify')
                 break
 
+
+
             self.debug.output('unloading drive', label_id, debug_level=128)
             self.tape.unload_tape_drive(label_id)
 
@@ -161,7 +164,7 @@ class Dump:
 
         ## TODO(dconover): signal cleanup of queued files via self.files.archive_state
         ## TODO(dconover): use self.db.paperdb_state to initiate cleanup of claimed files in the db
-        self.paperdb.status = 0
+        self.paperdb.paperdb_state = 0
 
     def dump_verify(self, tape_id):
         """take the tape_id and run a self check,
@@ -191,7 +194,7 @@ class Dump:
             if self.pid != str(tape_pid):
                 self.debug.output("%s mismatch: %s, %s" % ("pid", self.pid, tape_pid ))
         else:
-            self.debug.output('Fail: tape_self_check status: %s' % status)
+            self.debug.output('Fail: tape_self_check paperdb_state: %s' % status)
 
         return status
 
@@ -256,7 +259,7 @@ class Dump:
         self.paperdb.write_tape_index(self.files.tape_list, ','.join(tape_label_ids))
         self.debug.output('updating mtx.ids with date')
         self.labeldb.date_ids(tape_label_ids)
-        self.paperdb.status = 0
+        self.paperdb.paperdb_state = 0
 
     def tar_archive_fast_single(self, catalog_file):
         """Archive files directly to tape using only a single drive to write 2 tapes"""
@@ -270,10 +273,10 @@ class Dump:
             self.debug.output('printing to label_id: %s' % label_id)
             self.tape.load_tape_drive(label_id)
 
-            ## tar files to tape
+            ## prepare the first block of the tape with the current tape_catalog
             self.tape.prep_tape(catalog_file)
 
-            ## testing 201401123
+            ## for each archive, append it to the tape
             for index_int in range(self.tape_index):
                 self.debug.output('sending tar to single drive:', label_id, str(index_int))
                 self.tape.write(index_int)
@@ -282,7 +285,7 @@ class Dump:
 
         self.debug.output('writing tape_indexes')
         self.paperdb.write_tape_index(self.files.catalog_list, ','.join(tape_label_ids))
-        self.paperdb.status = 0
+        self.paperdb.paperdb_state = 0
 
     def batch_files(self, queue=False, regex=False, pid=False, claim=True):
         """populate self.catalog_list; transfer files to shm"""
@@ -334,7 +337,7 @@ class Dump:
         self.tape_ids = self.files.tape_ids_from_file()
         self.debug.output('write tape location', ','.join(self.tape_ids))
         self.paperdb.write_tape_index(self.files.catalog_list, ','.join(self.tape_ids))
-        self.paperdb.status = 0
+        self.paperdb.paperdb_state = 0
 
     def manual_resume_to_tape(self):
         """read in the cumulative list from file and send to tape"""
@@ -357,3 +360,5 @@ class Dump:
         """
         ### orderly close of archive objects
         pass
+
+
