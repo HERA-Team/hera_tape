@@ -6,7 +6,7 @@ class Debug:
 
     def __init__(self, pid, debug = False, debug_threshold=256):
         """ Initialize with a pid if debug is set to True
-        :type  pid: int
+        :type  pid: basestring
         :param pid: unique identifier of the process tree
         :type  debug: bool
         :param debug: whether or not to enable debugging, defaults to False

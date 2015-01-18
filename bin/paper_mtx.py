@@ -64,6 +64,9 @@ class Changer:
         self.check_inventory()
         self.tape_drives = Drives(self.pid, drive_select=drive_select, debug=debug, debug_threshold=debug_threshold)
 
+        ## TODO(dconover): implement a lock on the changer to prevent overlapping requests
+        self.changer_state = 0
+
     def check_inventory(self):
         """check the current inventory of the library with mtx"""
         output = check_output(['mtx', 'status']).decode("utf-8")
@@ -232,7 +235,9 @@ class Changer:
         return self.tape_drives.count_files(drive_int)
 
     def tape_archive_md5(self, tape_id, job_pid, catalog_list, md5_dict):
-        """loop through each archive on tape and check a random file md5 from each"""
+        """loop through each archive on tape and check a random file md5 from each
+
+        :rtype : bool"""
 
         ## default to True
         status = True
@@ -268,6 +273,10 @@ class Changer:
 
         return status, reference
 
+    def __del__(self):
+        """cleanup"""
+        ## TODO(dconover): implement changer locking; remove lock
+        pass
 
 class MtxDB:
     """db to handle record of label ids
@@ -290,11 +299,13 @@ class MtxDB:
 
         ## database variables
         self.connection_timeout = 90
-        self.connection_time = 0
+        self.connection_time = datetime.timedelta()
         self.credentials = credentials
         self.connect = ''
         self.cur = ''
         self.db_connect('init', credentials)
+
+        self.mtxdb_state = 0 ## current dump state
 
     def update_connection_time(self):
         """refresh database connection"""
@@ -388,6 +399,11 @@ class MtxDB:
         self.db_connect()
         pass
 
+    def __del__(self):
+        """cleanup mtxdb state
+        """
+        ## TODO(dconover): dependent on self.mtx_state: claim/unclaim tapes; close mtxdb
+        pass
 
 class Drives:
     """class to manage low level access directly with tape (equivalient of mt level commands)"""
@@ -399,6 +415,11 @@ class Drives:
         self.debug.output('set debug')
         self.drive_select = drive_select
 
+        ## I don't think we need to keep state here since we lock at the changer
+        ## class and only call through the changer class
+        # self.drive_state = 0
+
+    ## This method is deprecated
     def count_files(self, drive_int):
         """count the number of files on the current tape in the given drive"""
         drive = "/dev/nst%s" % drive_int

@@ -16,7 +16,7 @@ class PaperDB:
     def __init__(self, version, credentials, pid, status=0, debug=False, debug_threshold=255):
         """Initialize connection and collect list of files to dump.
         :type credentials: string
-        :type pid: int
+        :type pid: basestring
         :type status: int
         :type debug: bool
         :type debug_threshold: int
@@ -28,7 +28,7 @@ class PaperDB:
 
         self.status = status
         self.connection_timeout = 90
-        self.connection_time = 0
+        self.connection_time = datetime.timedelta()
         self.credentials = credentials
         self.connect = ''
         self.cur = ''
@@ -167,5 +167,13 @@ class PaperDB:
         pass
 
 
+
+    def __del__(self):
+        """close out the connection and set the final state in the database"""
+        ## TODO(dconover): depending on self.paperdb_state update paperdata
+        ## can self.status_type be replaced with self.paperdb_state?
+        ## TODO(dconover): implement self.status_type; update status="{}{}".format(self.status_type, self.pid)
+        ## TODO(dconover): close database; implement self.db_close()
+        pass
 
 
