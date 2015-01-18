@@ -23,9 +23,9 @@ class PaperDB:
         :type debug_threshold: int
         """
 
+        self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
         self.version = version
         self.pid = pid
-        self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
 
         self.paperdb_states = PaperDBStates
         self.paperdb_state = status
