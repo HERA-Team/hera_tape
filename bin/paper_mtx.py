@@ -5,7 +5,7 @@
     Drives: access to mt functions and writing data to tape
 """
 
-import re, pymysql, datetime, random
+import re, pymysql, datetime, random, time
 from subprocess import *
 from paper_debug import Debug
 
