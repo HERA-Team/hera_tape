@@ -35,7 +35,15 @@ class Archive:
     """Build file archives for tape dumps"""
 
     def __init__(self, version, pid, debug=False, debug_threshold=255, local_transfer=True):
-        """Record $PID"""
+        """Archive file and tar management
+
+        :type version: int
+        :type pid: basestring
+        :type local_transfer: bool
+        :type debug_threshold: int
+        :type debug: bool
+        :type self: object
+        """
         self.version = version
         self.pid = pid
         #self.transfer = LocalTransfer() if local_transfer else Transfer()
@@ -47,6 +55,7 @@ class Archive:
         self.catalog_list = []    ## working list of files to write
         self.tape_list = [] ## cumulative list of written files
         self.item_index = 0 ## number of file path index
+        self.archive_state = 0 ## current dump state
 
         self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
 
@@ -76,7 +85,7 @@ class Archive:
         :param tape_catalog_file: str
         :param tape_list: list of [int, int, string]
         """
-        self.debug.output('catalog_list - %s' % tape_list)
+        self.debug.output('tap_list - %s' % tape_list)
 
         job_details = " ".join([ 
             self.pid,  
@@ -181,7 +190,7 @@ class Archive:
         self.tar_archive(self.archive_dir, arcname, tar_name)
 
         ## make room for additional transfers
-        self.clear_dir(file_list)
+        self.remove_dir_list(file_list)
 
         ## make the catalog
         self.gen_catalog(catalog_name, file_list, tape_id)
@@ -199,8 +208,11 @@ class Archive:
         ## make the catalog
         self.gen_catalog(catalog_name, file_list, tape_id)
 
-    def clear_dir(self, file_list):
-        """remove the given diretory tree"""
+    def remove_dir_list(self, file_list):
+        """remove the given diretory tree
+        :param file_list: list of files
+        :type  file_list: list
+        """
         for dir_path in file_list:
             shutil.rmtree('%s/%s' % (self.archive_dir, dir_path))
 
@@ -211,7 +223,10 @@ class Archive:
         archive_file.close()
 
     def ensure_dir(self, file_path):
-        """make sure the directory exists creating it if necessary"""
+        """make sure the directory exists creating it if necessary
+        :param file_path: path to make if it doesn't already exist
+        :type file_path: str
+        """
         dir_path = os.path.dirname(file_path)
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
@@ -221,7 +236,7 @@ class Archive:
         """return an md5sum for a file"""
         full_path = '%s/%s' % (directory_prefix, file_path)
         hasher = hashlib.md5()
-        with open('{0:s}.md5sum'.format(full_path), 'w') as hash_file:
+        with open('{}.md5sum'.format(full_path), 'w') as hash_file:
             with open(full_path, 'rb') as open_file:
                 buffer = open_file.read()
                 hasher.update(buffer)
@@ -255,7 +270,10 @@ class Archive:
         id_list = tape_ids.split(",")
         return id_list
 
-
+    def __del__(self):
+        """cleanup archive files"""
+        ## TODO(dconover): depending on self.archive_state, remove queued files
+        pass
 
 
 

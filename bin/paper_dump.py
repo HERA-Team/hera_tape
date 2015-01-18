@@ -1,9 +1,10 @@
 """Dump files to tape
 
-    The paperdata files located on disk and catalogued in te paperdata db can
+    The paperdata files located on disk and catalogued in the paperdata db can
 be dumped to tape using this class.
 """
 
+__author__ = 'dconover@sas.upenn.edu'
 __version__ = 20150103
 
 from paper_mtx import Changer, MtxDB
@@ -12,7 +13,7 @@ from paper_db import PaperDB
 from paper_debug import Debug
 
 from random import randint
-import os
+from os import getpid
 
 class Dump:
     """Coordinate a dump to tape based on deletable files in database"""
@@ -21,7 +22,7 @@ class Dump:
         """initialize"""
 
         self.version = __version__
-        self.pid = "%0.6d%0.3d" % (os.getpid(), randint(1, 999)) if pid is None else pid
+        self.pid = "%0.6d%0.3d" % (getpid(), randint(1, 999)) if pid is None else pid
         self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
 
         self.mtx_creds = '~/.my.mtx.cnf'
@@ -52,6 +53,7 @@ class Dump:
         self.dump_list = []
         self.tape_index = 0
         self.tape_used_size = 0 ## each dump process should write one tape worth of data
+        self.dump_state = 0
 
     def archive_to_tape(self):
         """master method to loop through files to write data to tape"""
@@ -103,6 +105,7 @@ class Dump:
             ## no files found
             self.debug.output('Abort - no files found')
 
+    ## TODO(dconover): move to PaperDB; refactor get_new
     def get_list(self, limit=7500, regex=False, pid=False, claim=True):
         """get a list less than limit size"""
 
@@ -110,6 +113,7 @@ class Dump:
         self.dump_list, list_size = self.paperdb.get_new(limit, regex=regex, pid=pid)
 
         ## claim the files so other jobs can request different files
+        ## TODO(dconover): claim files as part of get_new
         if self.dump_list and claim:
             self.debug.output(str(list_size))
             self.paperdb.claim_files(1, self.dump_list)
@@ -135,11 +139,11 @@ class Dump:
                 self.debug.output('sending tar to single drive', str(tape_index), debug_level=225)
                 try:
                     self.tape.write(tape_index)
-                except:
+                except Exception:
                     self.debug.output('tape write fail')
                     break
 
-            if not self.dump_verify(label_id, self.files.tape_list):
+            if not self.dump_verify(label_id):
                 ## TODO(dconover): real exit from further processing
                 self.debug.output('Fail: dump_verify')
                 break
@@ -147,18 +151,23 @@ class Dump:
             self.debug.output('unloading drive', label_id, debug_level=128)
             self.tape.unload_tape_drive(label_id)
 
+        ## TODO(dconover): move this to a new function = archive_close() [and call from __del__?]
+        ## TODO(dconover): implement removal of temporary files [since dump is verified]
+        ## call self.tape.remove_dir_list() [where do we have the list of queued files?]
         self.debug.output('write tape location')
         self.files.save_tape_ids(','.join(tape_label_ids))
         self.paperdb.write_tape_index(self.files.tape_list, ','.join(tape_label_ids))
         self.labeldb.date_ids(tape_label_ids)
 
-        ## TODO(dconover): cleanup queued files via self.files.status
-        ## TODO(dconover): use the output status to cleanup claimed files in the db
+        ## TODO(dconover): signal cleanup of queued files via self.files.archive_state
+        ## TODO(dconover): use self.db.paperdb_state to initiate cleanup of claimed files in the db
         self.paperdb.status = 0
 
-    def dump_verify(self, tape_id, tape_list):
+    def dump_verify(self, tape_id):
         """take the tape_id and run a self check,
-        then confirm the tape_list matches"""
+        then confirm the tape_list matches
+
+        """
 
         ## run a tape_self_check
         status, item_index, catalog_list, md5_dict, tape_pid = self.tape_self_check(tape_id)
@@ -188,10 +197,10 @@ class Dump:
 
 
     def tape_self_check(self, tape_id):
-        """process to take a tape and run integrity check without reference to external database"""
+        """process to take a tape and run integrity check without reference to external database
 
-        ## assume there is a problem
-        status = False
+        :rtype : bool
+        """
 
         ## load the tape if necessary
         self.tape.load_tape_drive(tape_id)
@@ -236,7 +245,7 @@ class Dump:
             self.debug.output('sending to tape file - %s' % str(tar_index))
             try:
                 self.tape.write(tar_index)
-            except:
+            except Exception:
                 self.debug.output('tape writing exception')
                 break
 
@@ -293,7 +302,8 @@ class Dump:
                 self.tape_used_size += list_size
                 self.tape_index += 1
                 self.files.catalog_list.append([self.tape_index, file_list])
-                self.debug.output("queue list: %s, len(catalog_list): %s" % (str(self.tape_index), len(self.files.catalog_list)))
+                self.debug.output("queue list: {0:s}, len(catalog_list): {1:s}".format(str(self.tape_index),
+                                                                                       len(self.files.catalog_list)))
 
             else:
                 self.debug.output('file list empty')
@@ -341,3 +351,9 @@ class Dump:
         self.debug.output("manual vars - qp:%s, cn:%s" % (tape_index, cumulative_list))
         self.tar_archive_single(self.files.catalog_name)
         self.debug.output("manual to tape complete")
+
+    def __del__(self):
+        """dump cleanup?
+        """
+        ### orderly close of archive objects
+        pass
