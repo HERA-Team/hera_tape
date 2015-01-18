@@ -44,6 +44,9 @@ class Archive:
         :type debug: bool
         :type self: object
         """
+
+        self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
+
         self.version = version
         self.pid = pid
         #self.transfer = LocalTransfer() if local_transfer else Transfer()
@@ -57,7 +60,6 @@ class Archive:
         self.item_index = 0 ## number of file path index
         self.archive_state = 0 ## current dump state
 
-        self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
 
     def __setattr__(self, attr_name, attr_value):
         """debug.output() when a state variable is updated"""

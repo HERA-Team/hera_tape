@@ -293,9 +293,9 @@ class MtxDB:
     def __init__(self, version, credentials, pid, debug=False, debug_threshold=255):
         """Initialize connection and collect list of tape_ids."""
 
+        self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
         self.version = version
         self.pid = pid
-        self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
 
         ## database variables
         self.connection_timeout = 90
