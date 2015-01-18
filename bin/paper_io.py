@@ -45,10 +45,10 @@ class Archive:
         :type self: object
         """
 
+        self.pid = pid
         self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
 
         self.version = version
-        self.pid = pid
         #self.transfer = LocalTransfer() if local_transfer else Transfer()
         self.transfer = LocalTransfer() if local_transfer else None
         self.archive_dir = self.ensure_dir('/papertape/shm/%s/' % self.pid)
