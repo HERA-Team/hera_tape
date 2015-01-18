@@ -41,11 +41,11 @@ class PaperDB:
 
     def __setattr__(self, attr_name, attr_value):
         """debug.output() when a state variable is updated"""
-        self.debug.output("called {}".format(attr_name))
         class_name = self.__class__.__name__.lower
 
         ## we always use the lowercase of the class_name in the state variable
-        if attr_name == '{}_state'.format(class_name):
+        #if attr_name == '{}_state'.format(class_name):
+        if attr_name == 'paperdb_state':
             ## debug whenever we update the state variable
             self.debug.output("updating: {} with {}={}".format(class_name, attr_name, attr_value))
         super(self.__class__, self).__setattr__(attr_name, attr_value)
