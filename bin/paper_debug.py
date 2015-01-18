@@ -1,5 +1,5 @@
 """Basic debug logging and exit functions"""
-import datetime, inspect, sys
+import time, datetime, inspect, sys
 
 class Debug:
     """Debug class"""
