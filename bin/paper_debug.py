@@ -1,10 +1,10 @@
 """Basic debug logging and exit functions"""
-import time, datetime, inspect, sys
+import datetime, inspect, sys
 
 class Debug:
     """Debug class"""
 
-    def __init__(self, pid, debug = False, debug_threshold=256):
+    def __init__(self, pid, debug=False, debug_threshold=256):
         """ Initialize with a pid if debug is set to True
         :type  pid: basestring
         :param pid: unique identifier of the process tree
@@ -28,7 +28,7 @@ class Debug:
         stack = inspect.stack()
         start = 0 + skip
         if len(stack) < start + 1:
-          return ''
+            return ''
         parentframe = stack[start][0]
 
         name = []
@@ -45,11 +45,11 @@ class Debug:
             name.append(parentframe.f_locals['self'].__class__.__name__)
         codename = parentframe.f_code.co_name
         if codename != '<module>':  # top level usually
-            name.append( codename ) # function or a method
+            name.append(codename) # function or a method
         del parentframe
         return ".".join(name)
 
-    def output(self, *messages, debug_level=0 ):
+    def output(self, *messages, debug_level=0):
         """Print arguments as debug message if the message debug_level
         is < than the instance debug_threshold.
         :type  *messages: str
