@@ -37,6 +37,16 @@ class PaperDB:
         self.file_list = []
         self.file_md5_dict = {}
 
+    def __setattr__(self, attr_name, attr_value):
+        """debug.output() when a state variable is updated"""
+        class_name = self.__class__.__name__.lower
+
+        ## we always use the lowercase of the class_name in the state variable
+        if attr_name == '{}_state'.format(class_name):
+            ## debug whenever we update the state variable
+            self.debug.output("updating: {} with {}={}".format(class_name, attr_name, attr_value))
+        super(self.__class__, self).__setattr__(attr_name, attr_value)
+
     def update_connection_time(self):
         """refresh database connection time"""
         self.debug.output('updating connection_time')
