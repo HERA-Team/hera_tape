@@ -230,7 +230,6 @@ class Dump:
 
         :rtype : bool
         """
-
         tape_self_check_status = self.status_code.OK
 
         ## load the tape if necessary
