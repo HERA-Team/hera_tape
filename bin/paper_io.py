@@ -59,7 +59,7 @@ class Archive:
 
         if dir_status is not True:
             self.debug.output('data dir init failed')
-            raise
+            raise Exception
 
         self.catalog_name = "{0:s}/paper.{1:s}.list".format(self.queue_dir, self.pid)
         self.tape_ids_filename = "{0:s}/paper.{1:s}.tape_ids.list".format(self.queue_dir, self.pid)
