@@ -206,7 +206,7 @@ class PaperDB:
                 ## close database connections
                 self.cur.close()
             except Excpetion as mysql_error:
-                self.debug.ouptput('mysql error {}'.format(mysql_error)
+                self.debug.ouptput('mysql error {}'.format(mysql_error))
                 _close_status = False
 
             return _close_status
