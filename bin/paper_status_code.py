@@ -23,5 +23,5 @@ class StatusCode(Enum):
     tar_archive_single_log_label_ids = 14
     write_tape_index_mysql = 15
     tape_archive_md5_mismatch = 16
-
+    date_ids_mysql = 17
     UNKNOWN = 9999

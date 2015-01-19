@@ -175,7 +175,12 @@ class PaperDB:
                 self.debug.ouptput('Got error {!r}, errno is {}'.format(mysql_error, mysql_error.args[0]))
                 write_tape_index_status = self.status_code.write_tape_index_mysql
 
-        self.connect.commit()
+        try:
+            self.connect.commit()
+        except MySQLError as mysql_error:
+            self.debug.ouptput('Got error {!r}, errno is {}'.format(mysql_error, mysql_error.args[0]))
+            write_tape_index_status = self.status_code.write_tape_index_mysql
+
         return write_tape_index_status
 
     def check_tape_locations(self, catalog_list, tape_id):

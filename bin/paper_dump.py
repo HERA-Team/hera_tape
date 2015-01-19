@@ -179,7 +179,7 @@ class Dump:
 
         log_label_ids_status = self.labeldb.date_ids(tape_label_ids)
         if log_label_ids_status is not self.status_code.OK:
-            self.debug.output('problem dating labesl: {}'.format(log_label_ids_status))
+            self.debug.output('problem dating labels: {}'.format(log_label_ids_status))
 
         return log_label_ids_status
 
