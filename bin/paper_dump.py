@@ -149,7 +149,7 @@ class Dump:
                     break
 
             self.paperdb.paperdb_state = self.paperdb.paperdb_states.claim_write
-            dump_verify_status =  self.dump_verify(label_id)
+            dump_verify_status = self.dump_verify(label_id)
             if dump_verify_status is not self.status_code.OK:
                 self.debug.output('Fail: dump_verify {}'.format(dump_verify_status))
                 tar_archive_single_status = self.status_code.tar_archive_single_dump_verify
@@ -200,22 +200,22 @@ class Dump:
 
             self.debug.output('confirming %s' % "item_index")
             if self.files.item_index != int(item_index):
-                self.debug.output("%s mismatch: %s, %s" % ("item_count", self.files.item_index, item_index ))
+                self.debug.output("%s mismatch: %s, %s" % ("item_count", self.files.item_index, item_index))
                 dump_verify_status = self.status_code.dump_verify_item_index
 
             self.debug.output('confirming %s' % "catalog")
             if self.files.tape_list != catalog_list:
-                self.debug.output("%s mismatch: %s, %s" % ("catalog", self.files.tape_list, catalog_list ))
+                self.debug.output("%s mismatch: %s, %s" % ("catalog", self.files.tape_list, catalog_list))
                 dump_verify_status = self.status_code.dump_verify_catalog
 
             self.debug.output('confirming %s' % "md5_dict")
             if self.paperdb.file_md5_dict != md5_dict:
-                self.debug.output("%s mismatch: %s, %s" % ("md5_dict", self.pid, tape_pid ))
+                self.debug.output("%s mismatch: %s, %s" % ("md5_dict", self.pid, tape_pid))
                 dump_verify_status = self.status_code.dump_verify_md5_dict
 
             self.debug.output('confirming %s' % "pid")
             if self.pid != str(tape_pid):
-                self.debug.output("%s mismatch: %s, %s" % ("pid", self.pid, tape_pid ))
+                self.debug.output("%s mismatch: %s, %s" % ("pid", self.pid, tape_pid))
                 dump_verify_status = self.status_code.dump_verify_pid
 
         else:
@@ -245,7 +245,7 @@ class Dump:
 
         tape_archive_md5_status, reference = self.tape.tape_archive_md5(tape_id, tape_pid, catalog_list, md5_dict)
         if tape_archive_md5_status is not self.status_code.OK:
-            self.debug.output("tape failed md5 inspection at index: %s, status: %s" % (reference, tape_archive_md5_status)
+            self.debug.output("tape failed md5 inspection at index: %s, status: %s" % (reference, tape_archive_md5_status))
             tape_self_check_status = tape_archive_md5_status
 
         return tape_self_check_status, item_index, catalog_list, md5_dict, tape_pid
