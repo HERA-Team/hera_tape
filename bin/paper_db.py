@@ -205,8 +205,8 @@ class PaperDB:
             try:
                 ## close database connections
                 self.cur.close()
-            except MySQLError as mysql_error:
-                self.debug.ouptput('Got error {!r}, errno is {}'.format(mysql_error, mysql_error.args[0]))
+            except Excpetion as mysql_error:
+                self.debug.ouptput('mysql error {}'.format(mysql_error)
                 _close_status = False
 
             return _close_status
@@ -230,8 +230,6 @@ class PaperDB:
         self.db_connect()
         self.update_connection_time()
         close_action[self.paperdb_state]()
-        ## close database connections
-        self.cur.close()
 
     def __del__(self):
         """close out the connection and set the final state in the database"""
