@@ -220,11 +220,11 @@ class PaperDB:
             return _close()
 
         close_action = {
-            self.paperdb_states.initialize : '_close',
-            self.paperdb_states.claim : '_unclaim',
-            self.paperdb_states.claim_queue : '_close',
-            self.paperdb_states.claim_write : '_close',
-            self.paperdb_states.claim_complete : '_close',
+            self.paperdb_states.initialize : _close,
+            self.paperdb_states.claim : _unclaim,
+            self.paperdb_states.claim_queue : _close,
+            self.paperdb_states.claim_write : _close,
+            self.paperdb_states.claim_complete : _close,
             }
 
         self.db_connect()
