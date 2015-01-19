@@ -41,6 +41,7 @@ class PaperDB(object):
         self.file_list = []
         self.file_md5_dict = {}
         self.claimed_files = []
+        self.claimed_state = 0
 
     def __setattr__(self, attr_name, attr_value):
         """debug.output() when a state variable is updated"""
@@ -129,6 +130,7 @@ class PaperDB(object):
 
         return self.file_list, total
 
+    ## TODO(dconover): refactor to use self.paperdb_state instead of status_type?
     def claim_files(self, status_type, file_list):
         """Mark files in the database that are "claimed" by a dump process."""
 
@@ -148,6 +150,7 @@ class PaperDB(object):
         ## run the actual sql to unclaim the files
         try:
             self.connect.commit()
+            self.claimed_state = status_type
             self.claimed_files.extend(file_list)
         except Exception as mysql_error:
             self.debug.output('mysql_error {}'.format(mysql_error))
@@ -189,13 +192,13 @@ class PaperDB(object):
             try:
                 self.cur.execute('update paperdata set tape_index="%s" where raw_path="%s"' % (tape_index, raw_path))
             except Exception as mysql_error:
-                self.debug.ouptput('error {}'.format(mysql_error))
+                self.debug.output('error {}'.format(mysql_error))
                 write_tape_index_status = self.status_code.write_tape_index_mysql
 
         try:
             self.connect.commit()
         except Exception as mysql_error:
-            self.debug.ouptput('error {}'.format(mysql_error))
+            self.debug.output('error {}'.format(mysql_error))
             write_tape_index_status = self.status_code.write_tape_index_mysql
 
         return write_tape_index_status
@@ -223,7 +226,7 @@ class PaperDB(object):
                 ## close database connections
                 self.cur.close()
             except Excpetion as mysql_error:
-                self.debug.ouptput('mysql error {}'.format(mysql_error))
+                self.debug.output('mysql error {}'.format(mysql_error))
                 _close_status = False
 
             return _close_status
@@ -233,7 +236,7 @@ class PaperDB(object):
             :rtype : bool
             """
             _unclaim_status = True
-            self.unclaim_files(self.claimed_files)
+            self.unclaim_files(self.claimed_state, self.claimed_files)
             return _close()
 
         close_action = {
