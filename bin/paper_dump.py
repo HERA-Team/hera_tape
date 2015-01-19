@@ -222,6 +222,7 @@ class Dump:
             self.debug.output('Fail: tape_self_check paperdb_state: %s' % self_check_status)
             return self_check_status
 
+        self.debug.output('final {}'.format(dump_verify_status))
         return dump_verify_status
 
 
