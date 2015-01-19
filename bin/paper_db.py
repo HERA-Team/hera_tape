@@ -196,7 +196,7 @@ class PaperDB:
         self.update_connection_time()
 
         ## close database connections
-        self.cur.close() or self.connect.close()
+        self.cur.close()
 
     def __del__(self):
         """close out the connection and set the final state in the database"""
