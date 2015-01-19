@@ -241,7 +241,7 @@ class PaperDB(object):
             self.paperdb_states.claim : _unclaim,
             self.paperdb_states.claim_queue : _close,
             self.paperdb_states.claim_write : _close,
-            self.paperdb_states.claim_complete : _close,
+            self.paperdb_states.claim_verify : _close,
             }
 
         self.db_connect()
@@ -269,6 +269,6 @@ class PaperDBStates(Enum):
     claim          = 1 ## files claimed;                                   action: unclaim files; close db
     claim_queue    = 2 ## claimed files queued;                            action: ignore (?); close db
     claim_write    = 3 ## claimed files written to tape, but not verified; action: ignore (?); close db
-    claim_complete = 4 ## claimed files written and verified;              action: files already finalized?; close db
+    claim_verify   = 4 ## claimed files written and verified;              action: files already finalized?; close db
 
 

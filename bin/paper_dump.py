@@ -10,6 +10,7 @@ __version__ = 20150103
 from random import randint
 from os import getpid
 from sys import exit
+from enum import Enum, unique
 
 from paper_mtx import Changer, MtxDB
 from paper_io import Archive
@@ -67,7 +68,7 @@ class Dump(object):
         ## get a list of files, transfer to disk, write to tape
         while self.tape_used_size + self.batch_size_mb < self.tape_size:
 
-            ## get a list of files
+            ## get a list of files to dump
             archive_list, archive_size = self.get_list(self.batch_size_mb)
 
             if archive_list:
@@ -79,11 +80,10 @@ class Dump(object):
                     self.files.queue_archive(self.tape_index, archive_list)
 
                     ## mark where we are
-                    self.paperdb.paperdb_state = self.paperdb.paperdb_states.claim_queue
+                    self.dump_state = self.dump_states.dump_queue
                 except Exception as error:
                     self.debug.output('archive build/queue error {}'.format(error))
-                    self.dump_state = self.dump_states.
-                    self.close_dump(archive_list)
+                    self.close_dump()
 
                 ## Files in these lists should be identical, but catalog_list has extra data
                 ## catalog_list: [[0, 1, 'test:/testdata/testdir'], [0, 2, 'test:/testdata/testdir2'], ... ]
@@ -137,6 +137,8 @@ class Dump(object):
     def tar_archive_single(self, catalog_file):
         """send archives to single tape drive using tar"""
 
+        ## track how many copies are written
+        tape_copy = 1
         tar_archive_single_status = self.status_code.OK
         ## select ids
         tape_label_ids = self.labeldb.select_ids()
@@ -157,7 +159,13 @@ class Dump(object):
                     self.tape.write(tape_index)
                 except Exception as error:
                     self.debug.output('tape write fail {}'.format(error))
+                    self.close_dump()
                     break
+
+            ## we have written two copies
+            if tape_copy == 2:
+                ## update the dump state
+                self.dump_state = self.dump_states.dump_write
 
             dump_verify_status = self.dump_verify(label_id)
             if dump_verify_status is not self.status_code.OK:
@@ -166,17 +174,18 @@ class Dump(object):
                 self.close_dump()
                 break
 
+            if tape_copy == 2:
+                self.dump_state = self.dump_states.dump_verify
+
             self.debug.output('unloading drive', label_id, debug_level=128)
             self.tape.unload_tape_drive(label_id)
 
-            ## update the current db state
-            self.paperdb.paperdb_state = self.paperdb.paperdb_states.claim_write
-         ## update the current dump state
-         self.dump_state = self.dump_states.archive_files
+            ## track tape copy
+            tape_copy += 1
 
+
+        ## update the current dump state
         if tar_archive_single_status is self.status_code.OK:
-            self.paperdb.paperdb_state = self.paperdb.paperdb_states.claim_complete
-
             log_label_ids_status = self.log_label_ids(tape_label_ids, self.files.tape_list)
             if log_label_ids_status is not self.status_code.OK:
                 self.debug.output('problem writing labels out: {}'.format(log_label_ids_status))
@@ -235,7 +244,7 @@ class Dump(object):
                 dump_verify_status = self.status_code.dump_verify_pid
 
         else:
-            self.debug.output('Fail: tape_self_check paperdb_state: %s' % self_check_status)
+            self.debug.output('Fail: tape_self_check_status: %s' % self_check_status)
             return self_check_status
 
         self.debug.output('final {}'.format(dump_verify_status))
@@ -301,7 +310,6 @@ class Dump(object):
         self.paperdb.write_tape_index(self.files.tape_list, ','.join(tape_label_ids))
         self.debug.output('updating mtx.ids with date')
         self.labeldb.date_ids(tape_label_ids)
-        self.paperdb.paperdb_state = 0
 
     def tar_archive_fast_single(self, catalog_file):
         """Archive files directly to tape using only a single drive to write 2 tapes"""
@@ -327,7 +335,6 @@ class Dump(object):
 
         self.debug.output('writing tape_indexes')
         self.paperdb.write_tape_index(self.files.catalog_list, ','.join(tape_label_ids))
-        self.paperdb.paperdb_state = 0
 
     def batch_files(self, queue=False, regex=False, pid=False, claim=True):
         """populate self.catalog_list; transfer files to shm"""
@@ -379,7 +386,6 @@ class Dump(object):
         self.tape_ids = self.files.tape_ids_from_file()
         self.debug.output('write tape location', ','.join(self.tape_ids))
         self.paperdb.write_tape_index(self.files.catalog_list, ','.join(self.tape_ids))
-        self.paperdb.paperdb_state = 0
 
     def manual_resume_to_tape(self):
         """read in the cumulative list from file and send to tape"""
@@ -397,13 +403,47 @@ class Dump(object):
         self.tar_archive_single(self.files.catalog_name)
         self.debug.output("manual to tape complete")
 
-    def close_dump(self, file_list=None):
+    def close_dump(self):
         """orderly close of dump"""
+
+        def _close_init():
+            """simple cleanup"""
+            pass
+
+        def _close_list():
+            """we have claimed files to cleanup"""
+            self.paperdb.paperdb_state = self.paperdb.paperdb_states.claim
+
+        def _close_queue():
+            """files are queued"""
+            self.paperdb.paperdb_state = self.paperdb.paperdb_states.claim_queue
+
+        def _close_write():
+            """files written to tape"""
+            self.paperdb.paperdb_state = self.paperdb.paperdb_states.claim_write
+
+        def _close_verify():
+            """files verified"""
+            self.paperdb.paperdb_state = self.paperdb.paperdb_states.claim_complete
+
+        close_action = {
+            self.dump_states.initialize : _close_init,
+            self.dump_states.dump_list : _close_list,
+            self.dump_states.dump_queue : _close_queue,
+            self.dump_states.dump_write : _close_write,
+            self.dump_states.dump_verify : _close_verify,
+        }
+
+        ## prep cleanup state
+        close_action[self.dump_state]()
+
+        ## do module cleanup
         self.paperdb.close_paperdb()
         self.files.close_archive()
         self.labeldb.close_mtxdb()
         self.tape.close_changer()
 
+        ## exit
         exit(self.dump_state.value)
 
 @unique
@@ -417,8 +457,8 @@ class DumpStates(Enum):
 
 
     initialize     = 1 ## cleanup temporary files in paper_io              action: always close db
-    get_files      = 2 ## files claimed;                                   action: unclaim files; close db
-    queue_files    = 3 ## claimed files queued;                            action: ignore (?); close db
-    archive_files  = 4 ## claimed files written to tape, but not verified; action: ignore (?); close db
-    complete       = 0 ## done
+    dump_list      = 2 ## files claimed;                                   action: unclaim files; close db
+    dump_queue  = 3 ## claimed files queued;                            action: ignore (?); close db
+    dump_write   = 4 ## claimed files written to tape, but not verified; action: ignore (?); close db
+    dump_verify  = 0 ## done
 
