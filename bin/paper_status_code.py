@@ -26,4 +26,6 @@ class StatusCode(Enum):
     date_ids_mysql = 17
     claim_files_sql_build = 18
     claim_files_sql_commit = 19
+    unclaim_files_sql_build = 20
+    unclaim_files_sql_commit = 21
     UNKNOWN = 9999

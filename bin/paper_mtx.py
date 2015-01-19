@@ -42,8 +42,11 @@ def split_mtx_output(mtx_output):
 class Changer(object):
     """simple tape changer class"""
 
+
     def __init__(self, version, pid, tape_size, debug=False, drive_select=2, debug_threshold=255):
-        """init with debugging"""
+        """init with debugging
+        :param drive_select: 0 = nst0, 1 = nst1, 2 = nst{1,2}"""
+
         self.version = version
         self.pid = pid
         self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
@@ -77,7 +80,7 @@ class Changer(object):
             print('slot: %s, %s' % (id, self.tape_ids[drive_id]))
 
     def get_tape_slot(self, tape_id):
-        """return the slot numver where the given tape is currently loaded"""
+        """return the slot number where the given tape is currently loaded"""
         return self.tape_ids[tape_id]
 
     def load_tape_pair(self, tape_ids):
@@ -435,7 +438,7 @@ class Drives(object):
         ## class and only call through the changer class
         # self.drive_state = 0
 
-    ## This method is deprecated
+    ## This method is deprecated because the tape self check runs though every listed archive
     def count_files(self, drive_int):
         """count the number of files on the current tape in the given drive"""
         drive = "/dev/nst%s" % drive_int
