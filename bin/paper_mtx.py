@@ -8,6 +8,7 @@
 import re, pymysql, datetime, random, time
 from subprocess import *
 from paper_debug import Debug
+from paper_status_code import StatusCode
 
 from collections import defaultdict
 
@@ -56,6 +57,7 @@ class Changer:
         self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
         self.tape_size = tape_size
         self._tape_dev = '/dev/changer'
+        self.status_code = StatusCode
 
         self.drive_ids = []
         self.tape_ids = []
@@ -240,7 +242,7 @@ class Changer:
         :rtype : bool"""
 
         ## default to True
-        status = True
+        tape_archive_md5_status = self.status_code.OK
         reference = None
 
         self.debug.output('loading tape: %s' % tape_id)
@@ -265,13 +267,13 @@ class Changer:
             md5sum = self.tape_drives.md5sum_at_index(job_pid, tape_index, directory_path, drive_int=0)
             if md5sum != md5_dict[directory_path]:
                 self.debug.output('mdsum does not match: %s, %s' % (md5sum, md5_dict[directory_path]))
-                status = False
+                tape_archive_md5_status = self.status_code.tape_archive_md5_mismatch
                 reference = ":".join([str(tape_index), directory_path])
                 break
             else:
                 self.debug.output('md5 match: %s|%s' % (md5sum, md5_dict[directory_path]))
 
-        return status, reference
+        return tape_archive_md5_status, reference
 
     def close_changer(self):
         """cleanup"""
