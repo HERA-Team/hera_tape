@@ -24,4 +24,6 @@ class StatusCode(Enum):
     write_tape_index_mysql = 15
     tape_archive_md5_mismatch = 16
     date_ids_mysql = 17
+    claim_files_sql_build = 18
+    claim_files_sql_commit = 19
     UNKNOWN = 9999

@@ -40,6 +40,7 @@ class PaperDB:
 
         self.file_list = []
         self.file_md5_dict = {}
+        self.claimed_files = []
 
     def __setattr__(self, attr_name, attr_value):
         """debug.output() when a state variable is updated"""
@@ -130,14 +131,27 @@ class PaperDB:
 
     def claim_files(self, status_type, file_list):
         """Mark files in the database that are "claimed" by a dump process."""
+
+        claim_files_status = self.status_code.OK
         self.db_connect()
         for file in file_list:
             update_sql = "update paperdata set tape_index='%s%s' where raw_path='%s'" % (status_type, self.pid, file)
             self.debug.output('claim_files - %s' % update_sql)
-            self.cur.execute(update_sql)
+            try:
+                self.cur.execute(update_sql)
+            except Exception as mysql_error:
+                self.debug.output('mysql_error {}'.format(mysql_error))
+                claim_files_status = self.status_code.claim_files_sql_build
 
-        self.connect.commit()
+        try:
+            self.connect.commit()
+            self.claimed_files.extend(file_list)
+        except Exception as mysql_error:
+            self.debug.output('mysql_error {}'.format(mysql_error))
+            claim_files_status = self.status_code.claim_files_sql_commit
+
         self.paperdb_state = self.paperdb_states.claim
+        return claim_files_status
 
     def unclaim_files(self, status_type, file_list):
         """Release claimed files from database"""
@@ -216,7 +230,7 @@ class PaperDB:
             :rtype : bool
             """
             _unclaim_status = True
-            #self.unclaim_files()
+            self.unclaim_files(self.claimed_files)
             return _close()
 
         close_action = {
