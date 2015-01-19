@@ -230,7 +230,6 @@ class Dump:
 
         :rtype : bool
         """
-
         tape_self_check_status = self.status_code.OK
 
         ## load the tape if necessary
@@ -246,7 +245,7 @@ class Dump:
 
         tape_archive_md5_status, reference = self.tape.tape_archive_md5(tape_id, tape_pid, catalog_list, md5_dict)
         if tape_archive_md5_status is not self.status_code.OK:
-            self.debug.output("tape failed md5 inspection at index: %s, status: %s" % (reference, tape_archive_md5_status)
+            self.debug.output("tape failed md5 inspection at index: %s, status: %s" % (reference, tape_archive_md5_status))
             tape_self_check_status = tape_archive_md5_status
 
         return tape_self_check_status, item_index, catalog_list, md5_dict, tape_pid
