@@ -57,6 +57,10 @@ class Archive:
         dir_status, self.archive_dir = self.ensure_dir('/papertape/shm/%s/' % self.pid)
         dir_status, self.queue_dir = self.ensure_dir('/papertape/queue/%s/' % self.pid)
 
+        if dir_status is not True:
+            self.debug.output('data dir init failed')
+            raise
+
         self.catalog_name = "{0:s}/paper.{1:s}.list".format(self.queue_dir, self.pid)
         self.tape_ids_filename = "{0:s}/paper.{1:s}.tape_ids.list".format(self.queue_dir, self.pid)
         self.catalog_list = []    ## working list of files to write
