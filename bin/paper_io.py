@@ -16,6 +16,7 @@ def get(src_dir, local_path='/dev/null', recursive=True):
     shutil.copytree(src_dir, local_path)
 
 
+
 class LocalScp:
     """special class to redefine scp when transfers are only local"""
     def __init__(self):
@@ -30,6 +31,7 @@ class LocalTransfer:
     def __init__(self):
         self.scp = LocalScp()
         pass
+
 
 class Archive:
     """Build file archives for tape dumps"""
@@ -51,8 +53,10 @@ class Archive:
         self.version = version
         #self.transfer = LocalTransfer() if local_transfer else Transfer()
         self.transfer = LocalTransfer() if local_transfer else None
-        self.archive_dir = self.ensure_dir('/papertape/shm/%s/' % self.pid)
-        self.queue_dir = self.ensure_dir('/papertape/queue/%s/' % self.pid)
+
+        dir_status, self.archive_dir = ensure_dir('/papertape/shm/%s/' % self.pid)
+        dir_status, self.queue_dir = ensure_dir('/papertape/queue/%s/' % self.pid)
+
         self.catalog_name = "{0:s}/paper.{1:s}.list".format(self.queue_dir, self.pid)
         self.tape_ids_filename = "{0:s}/paper.{1:s}.tape_ids.list".format(self.queue_dir, self.pid)
         self.catalog_list = []    ## working list of files to write
@@ -70,6 +74,22 @@ class Archive:
             ## debug whenever we update the state variable
             self.debug.output("updating: {} with {}={}".format(class_name, attr_name, attr_value))
         super(self.__class__, self).__setattr__(attr_name, attr_value)
+
+    def ensure_dir(file_path):
+        """make sure the directory exists creating it if necessary
+        :param file_path: path to make if it doesn't already exist
+        :type file_path: str
+        """
+
+        dir_path = os.path.dirname(file_path)
+        if not os.path.exists(dir_path):
+            try:
+                os.makedirs(dir_path)
+            except Exception as error:
+                self.debug.output('mkdir error {}'.format(error))
+                ensure_dir_status = False
+
+        return ensure_dir_status, dir_path
 
     def build_archive(self, file_list, source_select=None):
         """Copy files to /dev/shm/$PID, create md5sum data for all files"""
@@ -233,16 +253,6 @@ class Archive:
         archive_file = tarfile.open(destination, mode='w')
         archive_file.add(source, arcname=arcname)
         archive_file.close()
-
-    def ensure_dir(self, file_path):
-        """make sure the directory exists creating it if necessary
-        :param file_path: path to make if it doesn't already exist
-        :type file_path: str
-        """
-        dir_path = os.path.dirname(file_path)
-        if not os.path.exists(dir_path):
-            os.makedirs(dir_path)
-        return dir_path
 
     def md5(self, directory_prefix, file_path):
         """return an md5sum for a file"""
