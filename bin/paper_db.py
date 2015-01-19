@@ -216,7 +216,7 @@ class PaperDB:
             :rtype : bool
             """
             _unclaim_status = True
-            self.unclaim_files()
+            #self.unclaim_files()
             return _close()
 
         close_action = {
