@@ -425,7 +425,7 @@ class Dump(object):
 
         def _close_verify():
             """files verified"""
-            self.paperdb.paperdb_state = self.paperdb.paperdb_states.claim_complete
+            self.paperdb.paperdb_state = self.paperdb.paperdb_states.claim_verify
 
         close_action = {
             self.dump_states.initialize : _close_init,

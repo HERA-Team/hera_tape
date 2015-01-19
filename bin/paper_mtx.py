@@ -396,13 +396,13 @@ class MtxDB(object):
             try:
                 self.cur.execute(date_sql)
             except Exception as mysql_error:
-                self.debug.ouptput('error {}'.format(mysql_error))
+                self.debug.output('error {}'.format(mysql_error))
                 date_ids_status = self.status_code.date_ids_mysql
 
         try:
             self.connect.commit()
         except Exception as mysql_error:
-            self.debug.ouptput('error {}'.format(mysql_error))
+            self.debug.output('error {}'.format(mysql_error))
             date_ids_status = self.status_code.date_ids_mysql
 
         return date_ids_status

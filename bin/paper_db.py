@@ -15,7 +15,7 @@ from paper_status_code import StatusCode
 class PaperDB(object):
     """Paper database contains information on file locations"""
 
-    def __init__(self, version, credentials, pid, status=0, debug=False, debug_threshold=255):
+    def __init__(self, version, credentials, pid, debug=False, debug_threshold=255):
         """Initialize connection and collect list of files to dump.
         :type credentials: string
         :type pid: basestring
@@ -30,7 +30,7 @@ class PaperDB(object):
         self.status_code = StatusCode
 
         self.paperdb_states = PaperDBStates
-        self.paperdb_state = status
+        self.paperdb_state = self.paperdb_states.initialize
         self.connection_timeout = 90
         self.connection_time = timedelta()
         self.credentials = credentials
@@ -230,7 +230,7 @@ class PaperDB(object):
             try:
                 ## close database connections
                 self.cur.close()
-            except Excpetion as mysql_error:
+            except Exception as mysql_error:
                 self.debug.output('mysql error {}'.format(mysql_error))
                 _close_status = False
 
