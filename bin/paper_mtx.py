@@ -285,7 +285,7 @@ class MtxDB:
     id        mediumint(9)    NO      PRI     NULL    auto_increment
     label     char(8) YES             NULL
     date      int(11) YES             NULL
-    paperdb_state    int(11) YES             NULL
+    status    int(11) YES             NULL
     capacity  int(11) YES             NULL
 
     """
@@ -353,7 +353,7 @@ class MtxDB:
         ids = []
         for n in [0, 1]:
             select_sql = """select label from ids
-                where paperdb_state is null and
+                where status is null and
                 label like 'PAPR%d%s'
                 order by label
             """ % (n+1, "%")
@@ -379,7 +379,7 @@ class MtxDB:
         self.db_connect()
         for tape_id in ids:
             claim_query = '''update ids 
-                set paperdb_state="%s", description="Paper dump version:%s"
+                set status="%s", description="Paper dump version:%s"
                 where label="%s"''' % (self.pid, self.version, tape_id)
 
             self.debug.output(claim_query)

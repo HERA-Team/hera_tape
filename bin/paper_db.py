@@ -198,7 +198,6 @@ class PaperDB:
         ## can self.status_type be replaced with self.paperdb_state?
         ## TODO(dconover): implement self.status_type; update paperdb_state="{}{}".format(self.status_type, self.pid)
         ## TODO(dconover): close database; implement self.db_close()
-        self.close_db()
         pass
 
 @unique
