@@ -273,7 +273,7 @@ class Changer:
 
         return status, reference
 
-    def __del__(self):
+    def close_changer(self):
         """cleanup"""
         ## TODO(dconover): implement changer locking; remove lock
         pass
@@ -409,7 +409,7 @@ class MtxDB:
         self.db_connect()
         pass
 
-    def __del__(self):
+    def close_mtxdb(self):
         """cleanup mtxdb state
         """
         ## TODO(dconover): dependent on self.mtx_state: claim/unclaim tapes; close mtxdb

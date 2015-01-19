@@ -282,9 +282,8 @@ class Archive:
         id_list = tape_ids.split(",")
         return id_list
 
-    def __del__(self):
-        """cleanup archive files"""
-        ## TODO(dconover): depending on self.archive_state, remove queued files
+    def close_archive(self):
+        """release any locks from the changer"""
         pass
 
 
