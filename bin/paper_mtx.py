@@ -298,6 +298,7 @@ class MtxDB:
         self.version = version
         self.pid = pid
         self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
+        self.status_code = StatusCode
 
         ## database variables
         self.connection_timeout = 90
@@ -391,14 +392,26 @@ class MtxDB:
 
     def date_ids(self, ids):
         """write the date of our completed run to tape"""
+        date_ids_status = self.status_code.OK
         date = datetime.datetime.now().strftime('%Y%m%d-%H%M')
         self.db_connect()
         for tape_id in ids:
             self.debug.output('updating mtxdb: %s, %s' % (date, tape_id))
             date_sql = 'update ids set date="%s" where label="%s"' % (date, tape_id)
-            self.cur.execute(date_sql)
+            try:
+                self.cur.execute(date_sql)
+            except MySQLError as mysql_error:
+                self.debug.ouptput('Got error {!r}, errno is {}'.format(mysql_error, mysql_error.args[0]))
+                date_ids_status = self.status_code.date_ids_mysql
 
-        self.connect.commit()
+        try:
+            self.connect.commit()
+        except MySQLError as mysql_error:
+            self.debug.ouptput('Got error {!r}, errno is {}'.format(mysql_error, mysql_error.args[0]))
+            date_ids_status = self.status_code.date_ids_mysql
+
+        return date_ids_status
+
 
     def write(self, src_directory):
         """take a path like /dev/shm/1003261778 and create a tar archive on two tapes"""
