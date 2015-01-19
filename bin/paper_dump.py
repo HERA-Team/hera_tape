@@ -18,7 +18,7 @@ from paper_debug import Debug
 from paper_status_code import StatusCode
 
 
-class Dump:
+class Dump(object):
     """Coordinate a dump to tape based on deletable files in database"""
 
     def  __init__(self, credentials, debug=False, pid=None, drive_select=2, debug_threshold=255):
@@ -58,8 +58,8 @@ class Dump:
         self.dump_list = []
         self.tape_index = 0
         self.tape_used_size = 0 ## each dump process should write one tape worth of data
-        self.dump_states = StatusCode
-        self.dump_state = self.dump_states.OK
+        self.dump_states = DumpStates
+        self.dump_state = self.dump_states.initialize
 
     def archive_to_tape(self):
         """master method to loop through files to write data to tape"""
@@ -82,7 +82,8 @@ class Dump:
                     self.paperdb.paperdb_state = self.paperdb.paperdb_states.claim_queue
                 except Exception as error:
                     self.debug.output('archive build/queue error {}'.format(error))
-                    self.close_dump()
+                    self.dump_state = self.dump_states.
+                    self.close_dump(archive_list)
 
                 ## Files in these lists should be identical, but catalog_list has extra data
                 ## catalog_list: [[0, 1, 'test:/testdata/testdir'], [0, 2, 'test:/testdata/testdir2'], ... ]
@@ -158,15 +159,20 @@ class Dump:
                     self.debug.output('tape write fail {}'.format(error))
                     break
 
-            self.paperdb.paperdb_state = self.paperdb.paperdb_states.claim_write
             dump_verify_status = self.dump_verify(label_id)
             if dump_verify_status is not self.status_code.OK:
                 self.debug.output('Fail: dump_verify {}'.format(dump_verify_status))
                 tar_archive_single_status = self.status_code.tar_archive_single_dump_verify
+                self.close_dump()
                 break
 
             self.debug.output('unloading drive', label_id, debug_level=128)
             self.tape.unload_tape_drive(label_id)
+
+            ## update the current db state
+            self.paperdb.paperdb_state = self.paperdb.paperdb_states.claim_write
+         ## update the current dump state
+         self.dump_state = self.dump_states.archive_files
 
         if tar_archive_single_status is self.status_code.OK:
             self.paperdb.paperdb_state = self.paperdb.paperdb_states.claim_complete
@@ -391,7 +397,7 @@ class Dump:
         self.tar_archive_single(self.files.catalog_name)
         self.debug.output("manual to tape complete")
 
-    def close_dump(self):
+    def close_dump(self, file_list=None):
         """orderly close of dump"""
         self.paperdb.close_paperdb()
         self.files.close_archive()
@@ -400,4 +406,19 @@ class Dump:
 
         exit(self.dump_state.value)
 
+@unique
+class DumpStates(Enum):
+    """ list of database specific dump states (last known good state)
+
+    This is not to be confused with error codes, which tell the program what
+    went wrong. Rather, these states track what clean-up actions should be
+    performed, when the object is closed.
+    """
+
+
+    initialize     = 1 ## cleanup temporary files in paper_io              action: always close db
+    get_files      = 2 ## files claimed;                                   action: unclaim files; close db
+    queue_files    = 3 ## claimed files queued;                            action: ignore (?); close db
+    archive_files  = 4 ## claimed files written to tape, but not verified; action: ignore (?); close db
+    complete       = 0 ## done
 

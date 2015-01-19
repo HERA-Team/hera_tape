@@ -33,7 +33,7 @@ class LocalTransfer:
         pass
 
 
-class Archive:
+class Archive(object):
     """Build file archives for tape dumps"""
 
     def __init__(self, version, pid, debug=False, debug_threshold=255, local_transfer=True):

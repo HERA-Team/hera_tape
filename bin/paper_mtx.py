@@ -39,15 +39,7 @@ def split_mtx_output(mtx_output):
 
     return drive_ids, tape_slot, label_in_drive
 
-def split_tape_catalog(tape_catalog):
-    """return pid, and file list"""
-    pid = ''
-    file_list = []
-    md5_dict = {}
-
-    return pid, file_list, md5_dict
-
-class Changer:
+class Changer(object):
     """simple tape changer class"""
 
     def __init__(self, version, pid, tape_size, debug=False, drive_select=2, debug_threshold=255):
@@ -280,7 +272,7 @@ class Changer:
         ## TODO(dconover): implement changer locking; remove lock
         pass
 
-class MtxDB:
+class MtxDB(object):
     """db to handle record of label ids
 
     Field     Type    Null    Key     Default Extra
@@ -430,7 +422,7 @@ class MtxDB:
         ## TODO(dconover): dependent on self.mtx_state: claim/unclaim tapes; close mtxdb
         pass
 
-class Drives:
+class Drives(object):
     """class to manage low level access directly with tape (equivalient of mt level commands)"""
 
     def __init__(self, pid, drive_select=2, debug=False, debug_threshold=128):
