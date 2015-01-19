@@ -12,7 +12,7 @@ from paper_debug import Debug
 from enum import Enum, unique
 from paper_status_code import StatusCode
 
-class PaperDB:
+class PaperDB(object):
     """Paper database contains information on file locations"""
 
     def __init__(self, version, credentials, pid, status=0, debug=False, debug_threshold=255):

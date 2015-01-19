@@ -1,7 +1,7 @@
 """Basic debug logging and exit functions"""
 import datetime, inspect, sys
 
-class Debug:
+class Debug(object):
     """Debug class"""
 
     def __init__(self, pid, debug=False, debug_threshold=256):

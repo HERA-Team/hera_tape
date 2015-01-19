@@ -18,7 +18,7 @@ from paper_debug import Debug
 from paper_status_code import StatusCode
 
 
-class Dump:
+class Dump(object):
     """Coordinate a dump to tape based on deletable files in database"""
 
     def  __init__(self, credentials, debug=False, pid=None, drive_select=2, debug_threshold=255):
