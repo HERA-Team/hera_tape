@@ -131,7 +131,7 @@ class Dump(object):
         ## claim the files so other jobs can request different files
         if self.dump_list and claim:
             self.debug.output(str(list_size))
-            self.paperdb.claim_files(1, self.dump_list)
+            self.paperdb.claim_files(self.dump_list)
         return self.dump_list, list_size
 
     def tar_archive_single(self, catalog_file):
@@ -140,6 +140,7 @@ class Dump(object):
         ## track how many copies are written
         tape_copy = 1
         tar_archive_single_status = self.status_code.OK
+
         ## select ids
         tape_label_ids = self.labeldb.select_ids()
         self.labeldb.claim_ids(tape_label_ids)

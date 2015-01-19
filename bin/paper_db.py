@@ -130,9 +130,12 @@ class PaperDB(object):
 
         return self.file_list, total
 
-    ## TODO(dconover): refactor to use self.paperdb_state instead of status_type?
-    def claim_files(self, status_type, file_list):
+    def claim_files(self, file_list=None):
         """Mark files in the database that are "claimed" by a dump process."""
+
+        status_type = self.paperdb_state.value
+        if file_list is None:
+            file_list = self.claimed_files
 
         claim_files_status = self.status_code.OK
         self.db_connect()
@@ -160,15 +163,29 @@ class PaperDB(object):
         return claim_files_status
 
     def unclaim_files(self, status_type, file_list):
-        """Release claimed files from database"""
+        """Release claimed files from database
+        :rtype : bool
+        """
+        unclaim_files_status = self.status_code.OK
         self.db_connect()
         for file in file_list:
             update_sql = "update paperdata set tape_index='' where raw_path='%s' and tape_index='%s%s'" % (file, status_type, self.pid)
             self.debug.output("unclaim_files - %s" % update_sql)
-            self.cur.execute(update_sql)
+            try:
+                self.cur.execute(update_sql)
+            except Exception as mysql_error:
+                self.debug.output('mysql_error {}'.format(mysql_error))
+                unclaim_files_status = self.status_code.unclaim_files_sql_build
 
-        self.connect.commit()
-        self.paperdb_state = self.paperdb_states.initialize
+        try:
+            self.connect.commit()
+            self.paperdb_state = self.paperdb_states.initialize
+        except Exception as mysql_error:
+            self.debug.output('mysql_error {}'.format(mysql_error))
+            unclaim_files_status = self.status_code.unclaim_files_sql_commit
+
+
+        return unclaim_files_status
 
     def write_tape_index(self, catalog_list, tape_id):
         """Take a dictionary of files and labels and update the database
