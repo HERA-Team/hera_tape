@@ -68,11 +68,18 @@ class Dump:
             archive_list, archive_size = self.get_list(self.batch_size_mb)
 
             if archive_list:
-                ## copy files to b5, gen catalog file
-                self.files.build_archive(archive_list)
+                try:
+                    ## copy files to b5, gen catalog file
+                    self.files.build_archive(archive_list)
 
-                ## files to tar on disk with catalog
-                self.files.queue_archive(self.tape_index, archive_list)
+                    ## files to tar on disk with catalog
+                    self.files.queue_archive(self.tape_index, archive_list)
+
+                    ## mark where we are
+                    self.paperdb.paperdb_state = self.paperdb.paperdb_states.claim_queue
+                except Exception as error:
+                    self.debug.output('archive build/queue error {}'.format(error))
+                    self.close_dump()
 
                 ## Files in these lists should be identical, but catalog_list has extra data
                 ## catalog_list: [[0, 1, 'test:/testdata/testdir'], [0, 2, 'test:/testdata/testdir2'], ... ]
@@ -144,8 +151,8 @@ class Dump:
                 self.debug.output('sending tar to single drive', str(tape_index), debug_level=225)
                 try:
                     self.tape.write(tape_index)
-                except Exception:
-                    self.debug.output('tape write fail')
+                except Exception as error:
+                    self.debug.output('tape write fail {}'.format(error))
                     break
 
             self.paperdb.paperdb_state = self.paperdb.paperdb_states.claim_write
@@ -274,8 +281,8 @@ class Dump:
             self.debug.output('sending to tape file - %s' % str(tar_index))
             try:
                 self.tape.write(tar_index)
-            except Exception:
-                self.debug.output('tape writing exception')
+            except Exception as error:
+                self.debug.output('tape writing exception {}'.format(error))
                 break
 
         self.tape.unload_tape_pair()

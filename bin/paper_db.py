@@ -171,14 +171,14 @@ class PaperDB:
             self.debug.output("writing tapelocation: %s for %s" % (tape_index, raw_path))
             try:
                 self.cur.execute('update paperdata set tape_index="%s" where raw_path="%s"' % (tape_index, raw_path))
-            except MySQLError as mysql_error:
-                self.debug.ouptput('Got error {!r}, errno is {}'.format(mysql_error, mysql_error.args[0]))
+            except Exception as mysql_error:
+                self.debug.ouptput('error {}'.format(mysql_error))
                 write_tape_index_status = self.status_code.write_tape_index_mysql
 
         try:
             self.connect.commit()
-        except MySQLError as mysql_error:
-            self.debug.ouptput('Got error {!r}, errno is {}'.format(mysql_error, mysql_error.args[0]))
+        except Exception as mysql_error:
+            self.debug.ouptput('error {}'.format(mysql_error))
             write_tape_index_status = self.status_code.write_tape_index_mysql
 
         return write_tape_index_status
@@ -194,12 +194,42 @@ class PaperDB:
 
 
     def close_paperdb(self):
-        """depeding on state clean-up file claims"""
+        """depending on state clean-up file claims"""
+
+        def _close():
+            """close the database leave any files in place
+            :rtype : bool
+            """
+
+            _close_status = True
+            try:
+                ## close database connections
+                self.cur.close()
+            except MySQLError as mysql_error:
+                self.debug.ouptput('Got error {!r}, errno is {}'.format(mysql_error, mysql_error.args[0]))
+                _close_status = False
+
+            return _close_status
+
+        def _unclaim():
+            """unlcaim files in database; close database
+            :rtype : bool
+            """
+            _unclaim_status = True
+            self.unclaim_files()
+            return _close()
+
+        close_action = {
+            self.paperdb_states.initialize : '_close',
+            self.paperdb_states.claim : '_unclaim',
+            self.paperdb_states.claim_queue : '_close',
+            self.paperdb_states.claim_write : '_close',
+            self.paperdb_states.claim_complete : '_close',
+            }
 
         self.db_connect()
-        #self.cur.execute(ready_sql)
         self.update_connection_time()
-
+        close_action[self.paperdb_state]()
         ## close database connections
         self.cur.close()
 
@@ -221,9 +251,9 @@ class PaperDBStates(Enum):
     """
 
     initialize     = 0 ## no file cleanup;                                 action: always close db
-    claim          = 1 ## files claimed;                                   action: unclaim files
-    claim_queue    = 2 ## claimed files queued;                            action: ignore (?)
-    claim_write    = 3 ## claimed files written to tape, but not verified; action: ignore (?)
-    claim_complete = 4 ## claimed files written and verified;              action: finalize claimed files
+    claim          = 1 ## files claimed;                                   action: unclaim files; close db
+    claim_queue    = 2 ## claimed files queued;                            action: ignore (?); close db
+    claim_write    = 3 ## claimed files written to tape, but not verified; action: ignore (?); close db
+    claim_complete = 4 ## claimed files written and verified;              action: files already finalized?; close db
 
 

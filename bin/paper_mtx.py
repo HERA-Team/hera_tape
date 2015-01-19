@@ -400,14 +400,14 @@ class MtxDB:
             date_sql = 'update ids set date="%s" where label="%s"' % (date, tape_id)
             try:
                 self.cur.execute(date_sql)
-            except MySQLError as mysql_error:
-                self.debug.ouptput('Got error {!r}, errno is {}'.format(mysql_error, mysql_error.args[0]))
+            except Exception as mysql_error:
+                self.debug.ouptput('error {}'.format(mysql_error))
                 date_ids_status = self.status_code.date_ids_mysql
 
         try:
             self.connect.commit()
-        except MySQLError as mysql_error:
-            self.debug.ouptput('Got error {!r}, errno is {}'.format(mysql_error, mysql_error.args[0]))
+        except Exception as mysql_error:
+            self.debug.ouptput('error {}'.format(mysql_error))
             date_ids_status = self.status_code.date_ids_mysql
 
         return date_ids_status
