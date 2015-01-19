@@ -7,14 +7,16 @@ be dumped to tape using this class.
 __author__ = 'dconover@sas.upenn.edu'
 __version__ = 20150103
 
+from random import randint
+from os import getpid
+from sys import exit
+
 from paper_mtx import Changer, MtxDB
 from paper_io import Archive
 from paper_db import PaperDB
 from paper_debug import Debug
 from paper_status_code import StatusCode
 
-from random import randint
-from os import getpid
 
 class Dump:
     """Coordinate a dump to tape based on deletable files in database"""
@@ -56,7 +58,8 @@ class Dump:
         self.dump_list = []
         self.tape_index = 0
         self.tape_used_size = 0 ## each dump process should write one tape worth of data
-        self.dump_state = 0
+        self.dump_states = StatusCode
+        self.dump_state = self.dump_states.OK
 
     def archive_to_tape(self):
         """master method to loop through files to write data to tape"""
@@ -394,5 +397,7 @@ class Dump:
         self.files.close_archive()
         self.labeldb.close_mtxdb()
         self.tape.close_changer()
+
+        exit(self.dump_state.value)
 
 
