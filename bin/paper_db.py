@@ -130,10 +130,11 @@ class PaperDB(object):
 
         return self.file_list, total
 
-    def claim_files(self, file_list=None):
+    def claim_files(self, file_list=None, unclaim=False):
         """Mark files in the database that are "claimed" by a dump process."""
 
         status_type = self.paperdb_state.value
+        ## if no list is passed assume we are updating existing list
         if file_list is None:
             file_list = self.claimed_files
 
@@ -142,7 +143,12 @@ class PaperDB(object):
 
         ## build an sql to unclaim the given files
         for file in file_list:
-            update_sql = "update paperdata set tape_index='%s%s' where raw_path='%s'" % (status_type, self.pid, file)
+
+            if unclaim is True:
+                update_sql = "update paperdata set tape_index='' where raw_path='%s' and tape_index='%s%s'" % (file, status_type, self.pid)
+            else:
+                update_sql = "update paperdata set tape_index='%s%s' where raw_path='%s'" % (status_type, self.pid, file)
+
             self.debug.output('claim_files - %s' % update_sql)
             try:
                 self.cur.execute(update_sql)
@@ -162,30 +168,12 @@ class PaperDB(object):
         self.paperdb_state = self.paperdb_states.claim
         return claim_files_status
 
-    def unclaim_files(self, status_type, file_list):
+    def unclaim_files(self, file_list=None):
         """Release claimed files from database
         :rtype : bool
         """
-        unclaim_files_status = self.status_code.OK
-        self.db_connect()
-        for file in file_list:
-            update_sql = "update paperdata set tape_index='' where raw_path='%s' and tape_index='%s%s'" % (file, status_type, self.pid)
-            self.debug.output("unclaim_files - %s" % update_sql)
-            try:
-                self.cur.execute(update_sql)
-            except Exception as mysql_error:
-                self.debug.output('mysql_error {}'.format(mysql_error))
-                unclaim_files_status = self.status_code.unclaim_files_sql_build
 
-        try:
-            self.connect.commit()
-            self.paperdb_state = self.paperdb_states.initialize
-        except Exception as mysql_error:
-            self.debug.output('mysql_error {}'.format(mysql_error))
-            unclaim_files_status = self.status_code.unclaim_files_sql_commit
-
-
-        return unclaim_files_status
+        self.claim_files(file_list, unclaim=True)
 
     def write_tape_index(self, catalog_list, tape_id):
         """Take a dictionary of files and labels and update the database
