@@ -134,6 +134,8 @@ class PaperDB(object):
 
         claim_files_status = self.status_code.OK
         self.db_connect()
+
+        ## build an sql to unclaim the given files
         for file in file_list:
             update_sql = "update paperdata set tape_index='%s%s' where raw_path='%s'" % (status_type, self.pid, file)
             self.debug.output('claim_files - %s' % update_sql)
@@ -143,6 +145,7 @@ class PaperDB(object):
                 self.debug.output('mysql_error {}'.format(mysql_error))
                 claim_files_status = self.status_code.claim_files_sql_build
 
+        ## run the actual sql to unclaim the files
         try:
             self.connect.commit()
             self.claimed_files.extend(file_list)
