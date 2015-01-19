@@ -10,6 +10,7 @@ import pymysql
 from datetime import datetime, timedelta
 from paper_debug import Debug
 from enum import Enum, unique
+from paper_status_code import StatusCode
 
 class PaperDB:
     """Paper database contains information on file locations"""
@@ -26,6 +27,7 @@ class PaperDB:
         self.pid = pid
         self.version = version
         self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
+        self.status_code = StatusCode
 
         self.paperdb_states = PaperDBStates
         self.paperdb_state = status
@@ -157,6 +159,7 @@ class PaperDB:
         :param tape_id: str
         """
 
+        write_tape_index_status = self.status_code.OK
         self.debug.output("catalog_list contains %s files, and with ids: %s" % (len(catalog_list), tape_id))
         self.db_connect()
 
@@ -166,9 +169,14 @@ class PaperDB:
             tape_index = "%s[%s]-%s:%s" % (self.version, tape_id, catalog[0], catalog[1])
             raw_path = catalog[2]
             self.debug.output("writing tapelocation: %s for %s" % (tape_index, raw_path))
-            self.cur.execute('update paperdata set tape_index="%s" where raw_path="%s"' % (tape_index, raw_path))
+            try:
+                self.cur.execute('update paperdata set tape_index="%s" where raw_path="%s"' % (tape_index, raw_path))
+            except MySQLError as mysql_error:
+                self.debug.ouptput('Got error {!r}, errno is {}'.format(mysql_error, mysql_error.args[0]))
+                write_tape_index_status = self.status_code.write_tape_index_mysql
 
         self.connect.commit()
+        return write_tape_index_status
 
     def check_tape_locations(self, catalog_list, tape_id):
         """Take a dictionary of files and labels and confirm existence of files on tape.
@@ -180,7 +188,7 @@ class PaperDB:
         pass
 
 
-    def close_db(self):
+    def close_paperdb(self):
         """depeding on state clean-up file claims"""
 
         self.db_connect()

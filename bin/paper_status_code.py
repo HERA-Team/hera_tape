@@ -14,6 +14,13 @@ class StatusCode(Enum):
     md5_mismatch = 5
     truncated_tape = 6
     db_credentials = 7
-    taoe_self_check = 8
+    tape_self_check = 8
+    dump_verify_pid = 9
+    dump_verify_item_index = 10
+    dump_verify_catalog = 11
+    dump_verify_md5_dict = 12
+    tar_archive_single_dump_verify = 13
+    tar_archive_single_log_label_ids = 14
+    write_tape_index_mysql = 15
 
     UNKNOWN = 9999

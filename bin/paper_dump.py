@@ -11,6 +11,7 @@ from paper_mtx import Changer, MtxDB
 from paper_io import Archive
 from paper_db import PaperDB
 from paper_debug import Debug
+from paper_status_code import StatusCode
 
 from random import randint
 from os import getpid
@@ -25,6 +26,7 @@ class Dump:
         self.pid = "%0.6d%0.3d" % (getpid(), randint(1, 999)) if pid is None else pid
         self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
 
+        self.status_code = StatusCode
         self.mtx_creds = '~/.my.mtx.cnf'
         self.debug.output(credentials)
         self.paper_creds = credentials
@@ -87,6 +89,7 @@ class Dump:
                 self.tape_index += 1
 
             else:
+                ## we ran out of files
                 self.debug.output('file list empty')
                 break
 
@@ -106,9 +109,8 @@ class Dump:
             ## no files found
             self.debug.output('Abort - no files found')
 
-        self.paperdb.close_db()
+        self.close_dump()
 
-    ## TODO(dconover): move to PaperDB; refactor get_new
     def get_list(self, limit=7500, regex=False, pid=False, claim=True):
         """get a list less than limit size"""
 
@@ -116,7 +118,6 @@ class Dump:
         self.dump_list, list_size = self.paperdb.get_new(limit, regex=regex, pid=pid)
 
         ## claim the files so other jobs can request different files
-        ## TODO(dconover): claim files as part of get_new
         if self.dump_list and claim:
             self.debug.output(str(list_size))
             self.paperdb.claim_files(1, self.dump_list)
@@ -125,6 +126,7 @@ class Dump:
     def tar_archive_single(self, catalog_file):
         """send archives to single tape drive using tar"""
 
+        tar_archive_single_status = self.status_code.OK
         ## select ids
         tape_label_ids = self.labeldb.select_ids()
         self.labeldb.claim_ids(tape_label_ids)
@@ -146,27 +148,41 @@ class Dump:
                     self.debug.output('tape write fail')
                     break
 
-            if not self.dump_verify(label_id):
-                ## TODO(dconover): real exit from further processing
-                self.debug.output('Fail: dump_verify')
+            self.paperdb.paperdb_state = self.paperdb.paperdb_states.claim_write
+            dump_verify_status =  self.dump_verify(label_id)
+            if dump_verify_status is not self.status_code.OK:
+                self.debug.output('Fail: dump_verify {}'.format(dump_verify_status))
+                tar_archive_single_status = self.status_code.tar_archive_single_dump_verify
                 break
-
-
 
             self.debug.output('unloading drive', label_id, debug_level=128)
             self.tape.unload_tape_drive(label_id)
 
-        ## TODO(dconover): move this to a new function = archive_close() [and call from __del__?]
-        ## TODO(dconover): implement removal of temporary files [since dump is verified]
-        ## call self.tape.remove_dir_list() [where do we have the list of queued files?]
-        self.debug.output('write tape location')
-        self.files.save_tape_ids(','.join(tape_label_ids))
-        self.paperdb.write_tape_index(self.files.tape_list, ','.join(tape_label_ids))
-        self.labeldb.date_ids(tape_label_ids)
+        if tar_archive_single_status is self.status_code.OK:
+            self.paperdb.paperdb_state = self.paperdb.paperdb_states.claim_complete
 
-        ## TODO(dconover): signal cleanup of queued files via self.files.archive_state
-        ## TODO(dconover): use self.db.paperdb_state to initiate cleanup of claimed files in the db
-        self.paperdb.paperdb_state = 0
+            log_label_ids_status = self.log_label_ids(tape_label_ids, self.files.tape_list)
+            if log_label_ids_status is not self.status_code.OK:
+                self.debug.output('problem writing labels out: {}'.format(log_label_ids_status))
+        else:
+            self.debug.output("Abort dump: {}".format(tar_archive_single_status))
+
+        self.close_dump()
+
+    def log_label_ids(self, tape_label_ids, tape_list):
+        """send label ids to db"""
+        log_label_ids_status = self.status_code.OK
+        log_label_ids_status = self.paperdb.write_tape_index(self.files.tape_list, ','.join(tape_label_ids))
+        if log_label_ids_status is not self.status_code.OK:
+            self.debug.output('problem writing label: {}'.format(log_label_ids_status))
+            self.files.save_tape_ids(','.join(tape_label_ids))
+
+        log_label_ids_status = self.labeldb.date_ids(tape_label_ids)
+        if log_label_ids_status is not self.status_code.OK:
+            self.debug.output('problem dating labesl: {}'.format(log_label_ids_status))
+
+        return log_label_ids_status
+
 
     def dump_verify(self, tape_id):
         """take the tape_id and run a self check,
@@ -174,31 +190,39 @@ class Dump:
 
         """
 
+        dump_verify_status = self.status_code.OK
+
         ## run a tape_self_check
-        status, item_index, catalog_list, md5_dict, tape_pid = self.tape_self_check(tape_id)
+        self_check_status, item_index, catalog_list, md5_dict, tape_pid = self.tape_self_check(tape_id)
 
         ## take output from tape_self_check and compare against current dump
-        if status:
+        if self_check_status is self.status_code.OK:
 
             self.debug.output('confirming %s' % "item_index")
             if self.files.item_index != int(item_index):
                 self.debug.output("%s mismatch: %s, %s" % ("item_count", self.files.item_index, item_index ))
+                dump_verify_status = self.status_code.dump_verify_item_index
 
             self.debug.output('confirming %s' % "catalog")
             if self.files.tape_list != catalog_list:
                 self.debug.output("%s mismatch: %s, %s" % ("catalog", self.files.tape_list, catalog_list ))
+                dump_verify_status = self.status_code.dump_verify_catalog
 
             self.debug.output('confirming %s' % "md5_dict")
             if self.paperdb.file_md5_dict != md5_dict:
                 self.debug.output("%s mismatch: %s, %s" % ("md5_dict", self.pid, tape_pid ))
+                dump_verify_status = self.status_code.dump_verify_md5_dict
 
             self.debug.output('confirming %s' % "pid")
             if self.pid != str(tape_pid):
                 self.debug.output("%s mismatch: %s, %s" % ("pid", self.pid, tape_pid ))
-        else:
-            self.debug.output('Fail: tape_self_check paperdb_state: %s' % status)
+                dump_verify_status = self.status_code.dump_verify_pid
 
-        return status
+        else:
+            self.debug.output('Fail: tape_self_check paperdb_state: %s' % self_check_status)
+            return self_check_status
+
+        return dump_verify_status
 
 
     def tape_self_check(self, tape_id):
@@ -206,6 +230,8 @@ class Dump:
 
         :rtype : bool
         """
+
+        tape_self_check_status = self.status_code.OK
 
         ## load the tape if necessary
         self.tape.load_tape_drive(tape_id)
@@ -218,14 +244,12 @@ class Dump:
         ## build an file_md5_dict
         item_index, catalog_list, md5_dict, tape_pid = self.files.final_from_file(catalog=first_block)
 
-        ## last item_index = (first value of the last catalog entry)
-        #item_index = catalog_list[-1][0] + 1
+        tape_archive_md5_status, reference = self.tape.tape_archive_md5(tape_id, tape_pid, catalog_list, md5_dict)
+        if tape_archive_md5_status is not self.status_code.OK:
+            self.debug.output("tape failed md5 inspection at index: %s, status: %s" % (reference, tape_archive_md5_status)
+            tape_self_check_status = tape_archive_md5_status
 
-        status, reference = self.tape.tape_archive_md5(tape_id, tape_pid, catalog_list, md5_dict)
-        if not status:
-            self.debug.output("tape failed md5 inspection at index: %s" % reference)
-
-        return status, item_index, catalog_list, md5_dict, tape_pid
+        return tape_self_check_status, item_index, catalog_list, md5_dict, tape_pid
 
 
     def test_build_archive(self, regex=False):
@@ -357,10 +381,11 @@ class Dump:
         self.tar_archive_single(self.files.catalog_name)
         self.debug.output("manual to tape complete")
 
-    def __del__(self):
-        """dump cleanup?
-        """
-        ### orderly close of archive objects
-        pass
+    def close_dump(self):
+        """orderly close of dump"""
+        self.paperdb.close_paperdb()
+        self.files.close_archive()
+        self.labeldb.close_mtxdb()
+        self.tape.close_changer()
 
 
