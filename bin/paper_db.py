@@ -130,6 +130,7 @@ class PaperDB(object):
 
         return self.file_list, total
 
+    ## TODO(dconover): refactor to use self.paperdb_state instead of status_type?
     def claim_files(self, status_type, file_list):
         """Mark files in the database that are "claimed" by a dump process."""
 
