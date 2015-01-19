@@ -54,8 +54,8 @@ class Archive:
         #self.transfer = LocalTransfer() if local_transfer else Transfer()
         self.transfer = LocalTransfer() if local_transfer else None
 
-        dir_status, self.archive_dir = ensure_dir('/papertape/shm/%s/' % self.pid)
-        dir_status, self.queue_dir = ensure_dir('/papertape/queue/%s/' % self.pid)
+        dir_status, self.archive_dir = self.ensure_dir('/papertape/shm/%s/' % self.pid)
+        dir_status, self.queue_dir = self.ensure_dir('/papertape/queue/%s/' % self.pid)
 
         self.catalog_name = "{0:s}/paper.{1:s}.list".format(self.queue_dir, self.pid)
         self.tape_ids_filename = "{0:s}/paper.{1:s}.tape_ids.list".format(self.queue_dir, self.pid)
@@ -75,12 +75,13 @@ class Archive:
             self.debug.output("updating: {} with {}={}".format(class_name, attr_name, attr_value))
         super(self.__class__, self).__setattr__(attr_name, attr_value)
 
-    def ensure_dir(file_path):
+    def ensure_dir(self, file_path):
         """make sure the directory exists creating it if necessary
         :param file_path: path to make if it doesn't already exist
         :type file_path: str
         """
 
+        ensure_dir_status = True
         dir_path = os.path.dirname(file_path)
         if not os.path.exists(dir_path):
             try:
