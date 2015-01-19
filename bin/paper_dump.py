@@ -106,6 +106,8 @@ class Dump:
             ## no files found
             self.debug.output('Abort - no files found')
 
+        self.close_db()
+
     ## TODO(dconover): move to PaperDB; refactor get_new
     def get_list(self, limit=7500, regex=False, pid=False, claim=True):
         """get a list less than limit size"""
