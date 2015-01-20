@@ -5,12 +5,16 @@
     Drives: access to mt functions and writing data to tape
 """
 
-import re, pymysql, datetime, random, time
+import re
+import datetime
+import random
 from subprocess import *
+
+import pymysql
+from collections import defaultdict
+
 from paper_debug import Debug
 from paper_status_code import StatusCode
-
-from collections import defaultdict
 
 
 def split_mtx_output(mtx_output):

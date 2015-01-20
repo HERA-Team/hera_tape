@@ -10,6 +10,7 @@ __version__ = 20150103
 from random import randint
 from os import getpid
 from sys import exit
+
 from enum import Enum, unique
 
 from paper_mtx import Changer, MtxDB
