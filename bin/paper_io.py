@@ -60,7 +60,7 @@ class Archive(object):
         #self.transfer = LocalTransfer() if local_transfer else Transfer()
         self.transfer = LocalTransfer() if local_transfer else None
 
-        dir_status, self.archive_dir = self.ensure_dir('/papertape/shm/%s/' % self.pid)
+        dir_status, self.archive_copy_dir = self.ensure_dir('/papertape/shm/%s/' % self.pid)
         dir_status, self.queue_dir = self.ensure_dir('/papertape/queue/%s/' % self.pid)
 
         if dir_status is not True:
@@ -70,9 +70,9 @@ class Archive(object):
         self.catalog_name = "{0:s}/paper.{1:s}.list".format(self.queue_dir, self.pid)
         self.tape_ids_filename = "{0:s}/paper.{1:s}.tape_ids.list".format(self.queue_dir, self.pid)
         self.catalog_list = []    ## working list of files to write
-        self.tape_list = [] ## cumulative list of written files
-        self.item_index = 0 ## number of file path index
-        self.archive_state = 0 ## current dump state
+        self.tape_list = []       ## cumulative list of written files
+        self.item_index = 0       ## number of file path index (human readable line numbers in catalog)
+        self.archive_state = 0    ## current archive state
 
 
     def __setattr__(self, attr_name, attr_value):
@@ -105,7 +105,7 @@ class Archive(object):
     def build_archive(self, file_list, source_select=None):
         """Copy files to /dev/shm/$PID, create md5sum data for all files"""
         for file in file_list:
-            transfer_path = '%s/%s' % (self.archive_dir, file)
+            transfer_path = '%s/%s' % (self.archive_copy_dir, file)
             self.debug.output("build_archive - %s" % file)
             get("/papertape/" + file, local_path=transfer_path, recursive=True)
 
@@ -128,7 +128,7 @@ class Archive(object):
         :param tape_catalog_file: str
         :param tape_list: list of [int, int, string]
         """
-        self.debug.output('tap_list - %s' % tape_list)
+        self.debug.output('tape_list - %s' % tape_list)
 
         job_details = " ".join([ 
             self.pid,  
@@ -162,7 +162,7 @@ class Archive(object):
                 ## what is the md5sum of the file_path/visdata_file
                 data_md5 = md5_dict[file_path]
 
-                ## We don't need the item_index; it is a convenience to the user
+                ## We don't actually need the item_index; it is a convenience to the user
                 ## when reading the catalog
                 catalog_line = [self.item_index, tape_index, archive_index, data_md5, file_path]
                 output = ':'.join(str(x) for x in catalog_line) + "\n"
@@ -230,10 +230,10 @@ class Archive(object):
         catalog_name = "%s/%s.list" %(self.queue_dir, arcname)
 
         ## make the tar in the queue_directory
-        self.tar_archive(self.archive_dir, arcname, tar_name)
+        self.tar_archive(self.archive_copy_dir, arcname, tar_name)
 
         ## make room for additional transfers
-        self.remove_dir_list(file_list)
+        self.rm_archive_copy_dir_list(file_list)
 
         ## make the catalog
         self.gen_catalog(catalog_name, file_list, tape_id)
@@ -246,18 +246,20 @@ class Archive(object):
         catalog_name = "%s/%s.list" %(self.queue_dir, arcname)
 
         ## make the tar in the queue_directory
-        self.tar_archive(self.archive_dir, arcname, tar_name)
+        self.tar_archive(self.archive_copy_dir, arcname, tar_name)
 
         ## make the catalog
         self.gen_catalog(catalog_name, file_list, tape_id)
 
-    def remove_dir_list(self, file_list):
-        """remove the given diretory tree
+    def rm_archive_copy_dir_list(self, file_list):
+        """remove the given directory tree of files that have been copied into
+        the temporary archive_copy_dir
+
         :param file_list: list of files
         :type  file_list: list
         """
         for dir_path in file_list:
-            shutil.rmtree('%s/%s' % (self.archive_dir, dir_path))
+            shutil.rmtree('%s/%s' % (self.archive_copy_dir, dir_path))
 
     def tar_archive(self, source, arcname, destination):
         """create the queued tar for the archive file"""

@@ -344,18 +344,33 @@ class Dump(object):
         while self.tape_used_size + self.batch_size_mb < self.tape_size:
 
             ## get a list of files smaller than our batch size
-            file_list, list_size = self.get_list(self.batch_size_mb, regex=regex, pid=pid, claim=claim)
+            archive_list, list_size = self.get_list(self.batch_size_mb, regex=regex, pid=pid, claim=claim)
             self.debug.output("list_size %s" % list_size)
 
-            if file_list:
-                ## copy files to b5, gen catalog file
+            if archive_list:
+                ## if we request disk queuing build an archive
                 if queue:
-                    self.files.build_archive(file_list)
-                    self.files.queue_archive(self.tape_index, file_list)
+                    ## copy files to archive, gen catalog file
+                    self.files.build_archive(archive_list)
+
+                    ## archives to tar from disk with catalog file
+                    ## also write the tape_catalog
+                    self.files.queue_archive(self.tape_index, archive_list)
+
+                    ## mark where we are
+                    self.dump_state = self.dump_states.dump_queue
+                except Exception as error:
+                    self.debug.output('archive build/queue error {}'.format(error))
+                    self.close_dump()
+                else:
+                    ## we must perform the cataloging task otherwise done by queue_archive()
+                    self.files.gen_catalog()
+
+
 
                 self.tape_used_size += list_size
                 self.tape_index += 1
-                self.files.catalog_list.append([self.tape_index, file_list])
+                self.files.catalog_list.append([self.tape_index, archive_list])
                 self.debug.output("queue list: {0:s}, len(catalog_list): {1:s}".format(str(self.tape_index),
                                                                                        len(self.files.catalog_list)))
 
