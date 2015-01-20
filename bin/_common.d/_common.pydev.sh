@@ -27,9 +27,11 @@ _logfile () {    ## open, close, or kill the logfile
 }
 
 
-export LOG_DIR=/root/git/papertape.shredder/bin/log TERM=ansi
+export WORK_DIR=/root/git/papertape.dconover/bin 
+export LOG_DIR=$WORK_DIR/log TERM=ansi
 #alias pylint='pylint --rcfile=~/.pylint.d/pylintrc'
 
+_pgrep () { grep "$*" paper_*.py; }
 _highlight () { highlight -A $1; }
 _pylint () { /root/.pyenv/shims/pylint --rcfile=~/.pylint.d/pylintrc $1; }
 
@@ -48,17 +50,21 @@ _t (){
     echo opening $_log_file
     _logfile open $_log_file
     [ -f "/root/git/papertape.shredder/bin/x.log" ] && rm x.log
-    ln -s $_log_file /root/git/papertape.shredder/bin/x.log
+    ln -s $_log_file $WORK_DIR/x.log
 
     local _command=${1:-$TLAST}
     local _comment=${2}
 
     echo _t:$(_date):$_command${_comment:+:$_comment}
-    time python $_command
+    if [ -n "$_command" ]; then 
+        time python $_command
+    else
+        echo empty command: "'$_command'"
+    fi
     echo _t:$(_date)
 
     _logfile tty $_log_file
-    TLAST=$_command
+    export TLAST=$_command
 }
 _v () { vim ${1:-$last};last=${1-$last}; }
 _m () { echo using file: ${2:-$mlast}; echo "$1"| mysql --defaults-extra-file=/root/.my.${2:-$mlast}.cnf||ls /root/.my.*; mlast=${2:-$mlast}; }
@@ -69,10 +75,20 @@ _tf () { tar tf /dev/nst0 ; }
 
 _comment () { sed -e 's/^/# /'; }
 
+_pc () {    ## list classes in a module
+    local _module=$1
+    local _list=${_module:-$(ls paper_*.py)}
+    for _module in $_list; do
+        echo $_module:
+        _inspect="import ${_module%.py}, sys, inspect\nfor x in inspect.getmembers(${_module%.py}, inspect.isclass):\n  print('    ', x)"
+       echo -e "$_inspect"|python|grep ${_module%.py}; echo 
+    done
+}
+
 _pi () {   ## inpsect fucntion source code (takes: _module, _class, _function)
     local _module=$1
     local _class=$2
-    local _function=$3
+    local _function=${3:-__init__}
     cat <<eop|sed -e 's/        //'|python|highlight -AS py
         import $_module, inspect
         print(''.join(inspect.getsourcelines($_module${_class:+.$_class}.$_function)[0]))

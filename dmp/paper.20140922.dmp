@@ -3,27 +3,110 @@ Description:
 	Raw data collected from Precision Array to Probe Epoch of Reionization
 (PAPER) is moving from disk to tape. Compressed versions of the data are being
 kept on disk for analysis. Files collected on disk are also catalogued in a
-mysql database (mysql@shredder:paperdata). This data is being transfered to
+mysql database (mysql@shredder:paperdata). This data is being transferred to
 tape for final archival storage.
 
 Archival process:
 
     1. LTO5 tapes are labeled according to the date of transfer to tape
-    2. md5 hashes are computed for each raw data file
-    3. a list of files and hashes is written to the first 64kb block on tape
-	4. the second file on the tape is a tar archive of the scripts (bash and
+
+    2. md5 hashes are read from the database for each raw data file
+
+    3. the catalog of files and hashes is written to the first 32kb block on tape
+       b. the list includes both the path of data parent diretory and a
+          numerical index pointing to the location of every directory on tape
+       c. the list also includes the md5sum of the data file in each directory
+          (visdata)
+       d. the index is a colon separated string like: 
+
+           item_index:tar_index:file_index:md_sum:dir_path(host:full_path)
+
+       e.g.:
+           1:0:1:d41d8cd98f00b204e9800998ecf8427e:test:/testdata/testdir
+
+       e. the catalog file includes a preamble describing the job details:
+
+           ## Paper dump catalog: dump_pid (version: version on date)
+           ## this tape contains files as listed below:
+           ## directory_index:tape_index:file_index:data_md5:file_path
+           item_index:tape_index:file_index:data_md5:dir_path(host:full_path)
+           ...
+
+        e.g.:
+           ## Paper dump catalog: 011946366 (version: 20150103 on 20150101-2003)
+           ## this tape contains files as listed below:
+           ## item_index:tape_index:file_index:data_md5:dir_path(host:full_path)
+           1:0:1:d41d8cd98f00b204e9800998ecf8427e:test:/testdata/testdir
+           2:0:2:d41d8cd98f00b204e9800998ecf8427e:test:/testdata/testdir2
+           3:1:1:d41d8cd98f00b204e9800998ecf8427e:test:/testdata/testdir3
+           ...
+
+    4. data is written to tape in multi-GB tar files (archives)
+       a. the contents of several data directories are written to an archive
+       b. the names of the data directories are written to a catalog file
+       c. the catalog file and archive are appended to tape using tar
+       d. the catalog file and archive are named according to pid and index:
+
+           paper.pid.tape_index.list
+           paper.pid.tape_index.tar
+
+       e.g.:
+           paper.011946366.0.list
+           paper.011946366.0.tar
+
+	5. the last file on the tape is a tar archive of the scripts (bash and
 	   python) that are used to print the barcoded labels, read/write archive
        status to the database, and write the files to tape
-    5. each block of data is streamed to two tapes at once
-    6. a random file from each written tape is restored and checked for integrity
-    7. the tape ids for each file is updated in the paperdata db
-    8. after writing data to two tapes the raw data files are later deleted from disk
-    9. tapes are to be stored in DRL
+
+    6. all data is written to two tapes
+
+    7. a random file from each written archive is restored and checked for 
+       integrity
+
+    8. the tape ids and numerical location index for each file is updated in the 
+       paperdata database with the version number of the archiving scripts:
+
+           version_id[tape_ids]-tape_index:file_index
+
+       e.g.:
+           20150103[PAPR1012,PAPR2012]-0:1
+
+    9. after writing data to each tape, the tape write count is compared to the
+       number of archives "dumped" to tape
+
+    10. the tape catalog is checked to confirm all "dumped" files are indexed
+    
+    11. a block md5sum is performed on one tape randomly selected from each 
+        archive
+
+    10. tapes are to be stored on a shelf in DRL-4nxx
+
+
+Integrity checking:
+
+    Several aspects of integrity checking may be examined, either alone or in 
+combination, when determining if file integrity has been preserved during the 
+archive process.
+
+    1. tape write count - the number of archives on each tape (tape_index)
+    2. tape catalog - file names, md5 hashes, and positional indexes are written 
+       to the first 32kb block of tape
+    4. tar catalog - paths are read from the catalog list written with each
+       archive to tape
+    5. tar table - paths as read from the actual archive containing data 
+    6. block md5sum - files are streamed to a hashing algorithm directly from 
+       tape but never written to disk
+    7. file md5sum - files are written to disk then an md5sum is calculated
+
 
 Archive monitoring:
 
-	1. tapes are checked once every five years to ensure data integrity and
-       to evaluate new storage options
+	1. once a month, one tape is selected from the written collection and
+       sample files are restored from the selected tape to check data integrity 
+       and to evaluate new archive options
+    2. results for each test are logged in the database so that no tape will be 
+       repeatedly checked unless all the tapes have already been checked
+
    
 Tape Labels:
 
@@ -33,13 +116,15 @@ Tape Labels:
 	2. tape labels include the tape id printed with both a scannable font
        (code39) and a human readable font (Helvetica)
 	3. tape labels also include the date the labels are printed, the name of
-	   the project (PAPER), the type of the data (RAW), and the copy index
+	   the project (paper), the type of the data (raw), and the copy index
        (e.g. [ 20140922 - paper - raw - copy 1])
     4. tape labels are laser printed on self-adhesive white avery 1/3 cut file
        folder labels
-     
+
+
 Data Longevity: Perpetuity
 Tape Lifespan: 30 years          
 
 Data Owner: James Aguirre <jaguirre@sas.upenn.edu>
 Tape Operator: Dareus Conover <dconover@sas.upenn.edu>
+Review: dconover - last updated 20150103
