@@ -6,7 +6,13 @@
    Transfers are completed using scp
 """
 
-import os, hashlib, shutil, tarfile, re, datetime
+import os
+import shutil
+import tarfile
+import re
+import datetime
+
+import hashlib
 #from paper_paramiko import Transfer
 from paper_debug import Debug
 

@@ -6,11 +6,14 @@ can be copied to tape, and can be used to update the database once the files
 are written to tape.
 """
 
-import pymysql
 from datetime import datetime, timedelta
-from paper_debug import Debug
+
+import pymysql
 from enum import Enum, unique
+
+from paper_debug import Debug
 from paper_status_code import StatusCode
+
 
 class PaperDB(object):
     """Paper database contains information on file locations"""
@@ -241,7 +244,7 @@ class PaperDB(object):
             :rtype : bool
             """
             _unclaim_status = True
-            self.unclaim_files(self.claimed_state, self.claimed_files)
+            self.unclaim_files()
             return _close()
 
         close_action = {
