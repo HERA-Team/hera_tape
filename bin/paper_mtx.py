@@ -203,15 +203,19 @@ class Changer(object):
              
         return status
         
-    def write(self, queue_pass):
+    def write(self, queue_pass, fast=False, catalog_list=None):
         """write data to tape"""
         ## tar dir to two drives
         arcname = "paper.%s.%s" % (self.pid, queue_pass)
         tar_name = "/papertape/queue/%s/%s.tar" % (self.pid, arcname)
-        catalog_name = "/papertape/queue/%s/%s.list" % (self.pid, arcname)
+        catalog_name = "/papertape/queue/%s/%s.file_list" % (self.pid, arcname)
 
-        self.debug.output("writing", catalog_name, tar_name)
-        self.tape_drives.tar_files([catalog_name, tar_name])
+        if not fast:
+            self.debug.output("writing", catalog_name, tar_name)
+            self.tape_drives.tar_files([catalog_name, tar_name])
+        elif fast and catalog_list:
+            self.tape_drives.tar_fast([catalog_name, catalog_list])
+
 
     def prep_tape(self, catalog_file):
         """write the catalog to tape. write all of our source code to the first file"""
@@ -293,7 +297,7 @@ class MtxDB(object):
     """
 
     def __init__(self, version, credentials, pid, debug=False, debug_threshold=255):
-        """Initialize connection and collect list of tape_ids."""
+        """Initialize connection and collect file_list of tape_ids."""
 
         self.version = version
         self.pid = pid
@@ -465,17 +469,21 @@ class Drives(object):
         return int(output[0])
 
     def tar_files(self, files):
-        """send files in a list to drive(s) with tar"""
+        """send files in a file_list to drive(s) with tar"""
         commands = []
         for drive_int in range(self.drive_select):
             commands.append('tar cf /dev/nst%s  %s ' % (drive_int, ' '.join(files)))
         self.exec_commands(commands)
 
-    def tar(self, file):
-        """send the given file to a drive(s) with tar"""
+    def tar_fast(self, files):
+        """send catalog file and file_list of source files to tape as archive"""
+
+
+    def tar(self, file_name):
+        """send the given file_name to a drive(s) with tar"""
         commands = []
         for drive_int in range(self.drive_select):
-            commands.append('tar cf /dev/nst%s %s ' % (drive_int, file))
+            commands.append('tar cf /dev/nst%s %s ' % (drive_int, file_name))
         self.exec_commands(commands)
 
     def dd(self, text_file):
@@ -550,7 +558,7 @@ class Drives(object):
         """ Exec commands in parallel in multiple process
         (as much as we have CPU)
         """
-        if not cmds: return # empty list
+        if not cmds: return # empty file_list
 
         def done(proc):
             return proc.poll() is not None

@@ -66,10 +66,10 @@ class Dump(object):
     def archive_to_tape(self):
         """master method to loop through files to write data to tape"""
 
-        ## get a list of files, transfer to disk, write to tape
+        ## get a file_list of files, transfer to disk, write to tape
         while self.tape_used_size + self.batch_size_mb < self.tape_size:
 
-            ## get a list of files to dump
+            ## get a file_list of files to dump
             archive_list, archive_size = self.get_list(self.batch_size_mb)
 
             if archive_list:
@@ -82,6 +82,7 @@ class Dump(object):
 
                     ## mark where we are
                     self.dump_state = self.dump_states.dump_queue
+
                 except Exception as error:
                     self.debug.output('archive build/queue error {}'.format(error))
                     self.close_dump()
@@ -90,7 +91,7 @@ class Dump(object):
                 ## catalog_list: [[0, 1, 'test:/testdata/testdir'], [0, 2, 'test:/testdata/testdir2'], ... ]
                 ## archive_list: ['test:/testdata/testdir', 'test:/testdata/testdir2', ... ]
                 self.debug.output('catalog_list - %s' % self.files.catalog_list)
-                self.debug.output('list - %s' % archive_list)
+                self.debug.output('file_list - %s' % archive_list)
 
                 ## queue archive does the job of making the catalog_list we need to update the tape_list
                 self.files.tape_list.extend(self.files.catalog_list)
@@ -102,7 +103,7 @@ class Dump(object):
 
             else:
                 ## we ran out of files
-                self.debug.output('file list empty')
+                self.debug.output('file file_list empty')
                 break
 
         if self.tape_used_size > 0:
@@ -124,9 +125,9 @@ class Dump(object):
         self.close_dump()
 
     def get_list(self, limit=7500, regex=False, pid=False, claim=True):
-        """get a list less than limit size"""
+        """get a file_list less than limit size"""
 
-        ## get a 7.5 gb list of files to transfer
+        ## get a 7.5 gb file_list of files to transfer
         self.dump_list, list_size = self.paperdb.get_new(limit, regex=regex, pid=pid)
 
         ## claim the files so other jobs can request different files
@@ -263,7 +264,7 @@ class Dump(object):
         ## load the tape if necessary
         self.tape.load_tape_drive(tape_id)
 
-        ## read tape_catalog as list
+        ## read tape_catalog as file_list
         self.debug.output('read catalog from tape: %s' % tape_id)
         first_block = self.tape.read_tape_catalog(tape_id)
 
@@ -329,9 +330,9 @@ class Dump(object):
             self.tape.prep_tape(catalog_file)
 
             ## for each archive, append it to the tape
-            for index_int in range(self.tape_index):
-                self.debug.output('sending tar to single drive:', label_id, str(index_int))
-                self.tape.write(index_int)
+            for tape_index in range(self.tape_index):
+                self.debug.output('sending tar to single drive:', label_id, str(tape_index))
+                self.tape.write(tape_index)
 
             self.tape.unload_tape_drive(label_id)
 
@@ -343,39 +344,40 @@ class Dump(object):
         ## get files in batch size chunks
         while self.tape_used_size + self.batch_size_mb < self.tape_size:
 
-            ## get a list of files smaller than our batch size
+            ## get a file_list of files smaller than our batch size
             archive_list, list_size = self.get_list(self.batch_size_mb, regex=regex, pid=pid, claim=claim)
             self.debug.output("list_size %s" % list_size)
 
-            if archive_list:
+            if archive_list and queue:
                 ## if we request disk queuing build an archive
-                if queue:
+                try:
                     ## copy files to archive, gen catalog file
                     self.files.build_archive(archive_list)
 
                     ## archives to tar from disk with catalog file
-                    ## also write the tape_catalog
+                    ## also write the self.files.catalog_list
                     self.files.queue_archive(self.tape_index, archive_list)
 
                     ## mark where we are
                     self.dump_state = self.dump_states.dump_queue
+
                 except Exception as error:
                     self.debug.output('archive build/queue error {}'.format(error))
                     self.close_dump()
-                else:
-                    ## we must perform the cataloging task otherwise done by queue_archive()
-                    self.files.gen_catalog()
 
-
+            elif archive_list:
+                ## we must perform the cataloging task otherwise done by queue_archive()
+                arcname = "%s.%s.%s" % ('paper', self.pid, self.tape_index)
+                catalog_name = "%s/%s.file_list" %(self.queue_dir, arcname)
+                self.files.gen_catalog(catalog_name, archive_list, self.tape_index)
 
                 self.tape_used_size += list_size
                 self.tape_index += 1
-                self.files.catalog_list.append([self.tape_index, archive_list])
-                self.debug.output("queue list: {0:s}, len(catalog_list): {1:s}".format(str(self.tape_index),
+                self.debug.output("queue file_list: {0:s}, len(catalog_list): {1:s}".format(str(self.tape_index),
                                                                                        len(self.files.catalog_list)))
 
             else:
-                self.debug.output('file list empty')
+                self.debug.output('file file_list empty')
                 break
 
         self.debug.output("complete:%s:%s:%s:%s" % (queue, regex, pid, claim))
@@ -405,7 +407,7 @@ class Dump(object):
         self.paperdb.write_tape_index(self.files.catalog_list, ','.join(self.tape_ids))
 
     def manual_resume_to_tape(self):
-        """read in the cumulative list from file and send to tape"""
+        """read in the cumulative file_list from file and send to tape"""
 
         self.tape_index, catalog, md5_dict, pid = self.files.final_from_file()
         self.debug.output('pass: %s' % self.tape_index)
@@ -463,9 +465,11 @@ class Dump(object):
         ## exit
         exit(self.dump_state.value)
 
+
+# noinspection PyClassHasNoInit
 @unique
 class DumpStates(Enum):
-    """ list of database specific dump states (last known good state)
+    """ file_list of database specific dump states (last known good state)
 
     This is not to be confused with error codes, which tell the program what
     went wrong. Rather, these states track what clean-up actions should be

@@ -51,7 +51,7 @@ class Debug(object):
 
     def output(self, *messages, debug_level=0):
         """Print arguments as debug message if the message debug_level
-        is < than the instance debug_threshold.
+        is below (<) the the instance debug_threshold.
         :type  *messages: str
         :param *messages: strings to join and send to output
         :type debug_level: int
@@ -67,9 +67,10 @@ class Debug(object):
             print(_message, flush=True)
 
     def print_source(self):
-        print(''.join(inspect.getsourcelines(self.caller_name())[0]))
+        caller = self.caller_name()
+        print(''.join(inspect.getsourcelines(caller)[0]))
 
-    def exit(self, debug_level=255):
+    def force_exit(self, debug_level=255):
         """Force exit if debugging and level is less than debug_threshold"""
         if self.debug_state and debug_level < self.debug_threshold:
             sys.exit()

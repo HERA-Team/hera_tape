@@ -19,10 +19,10 @@ class PaperDB(object):
     """Paper database contains information on file locations"""
 
     def __init__(self, version, credentials, pid, debug=False, debug_threshold=255):
-        """Initialize connection and collect list of files to dump.
+        """Initialize connection and collect file_list of files to dump.
+        :type version: int
         :type credentials: string
         :type pid: basestring
-        :type status: int
         :type debug: bool
         :type debug_threshold: int
         """
@@ -84,7 +84,7 @@ class PaperDB(object):
         self.debug.output("connection_time:%s" % self.connection_time)
 
     def get_new(self, size_limit, regex=False, pid=False):
-        """Retrieve a list of available files.
+        """Retrieve a file_list of available files.
 
         Outputs files that are "write_to_tape"
         Optionally, limit search by file_path regex or pid in tape_index
@@ -137,7 +137,7 @@ class PaperDB(object):
         """Mark files in the database that are "claimed" by a dump process."""
 
         status_type = self.paperdb_state.value
-        ## if no list is passed assume we are updating existing list
+        ## if no file_list is passed assume we are updating existing file_list
         if file_list is None:
             file_list = self.claimed_files
 
@@ -145,12 +145,12 @@ class PaperDB(object):
         self.db_connect()
 
         ## build an sql to unclaim the given files
-        for file in file_list:
+        for file_name in file_list:
 
             if unclaim is True:
-                update_sql = "update paperdata set tape_index='' where raw_path='%s' and tape_index='%s%s'" % (file, status_type, self.pid)
+                update_sql = "update paperdata set tape_index='' where raw_path='%s' and tape_index='%s%s'" % (file_name, status_type, self.pid)
             else:
-                update_sql = "update paperdata set tape_index='%s%s' where raw_path='%s'" % (status_type, self.pid, file)
+                update_sql = "update paperdata set tape_index='%s%s' where raw_path='%s'" % (status_type, self.pid, file_name)
 
             self.debug.output('claim_files - %s' % update_sql)
             try:
@@ -191,7 +191,7 @@ class PaperDB(object):
         self.debug.output("catalog_list contains %s files, and with ids: %s" % (len(catalog_list), tape_id))
         self.db_connect()
 
-        ## catalog list is set in paper_io.py: self.catalog_list.append([queue_pass, int, file])
+        ## catalog file_list is set in paper_io.py: self.catalog_list.append([queue_pass, int, file])
         for catalog in catalog_list:
             ## tape_index: 20150103[papr1001,papr2001]-132:3
             tape_index = "%s[%s]-%s:%s" % (self.version, tape_id, catalog[0], catalog[1])
@@ -267,9 +267,11 @@ class PaperDB(object):
         ## TODO(dconover): close database; implement self.db_close()
         pass
 
+
+# noinspection PyClassHasNoInit
 @unique
 class PaperDBStates(Enum):
-    """ list of database specific dump states
+    """ file_list of database specific dump states
 
     This is not to be confused with error codes, which tell the program what
     went wrong. Rather, these states track what clean-up actions should be
