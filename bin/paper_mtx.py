@@ -709,9 +709,12 @@ class RamTar(object):
 
             for tape_index in archive_dict:
 
-                ## for file in archive group build archive
                 archive_list = ''
                 archive_name = ''
+
+                ## for file in archive group build archive
+                for item in archive_dict[tape_index]:
+                    self.debug.output('item - {}'.format(item))
 
                 ## send archive group to both tapes
                 for drive in self.tape_drive:
