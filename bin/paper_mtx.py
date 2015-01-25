@@ -221,7 +221,7 @@ class Changer(object):
         tar_name = "/papertape/queue/%s/%s.tar" % (self.pid, arcname)
         catalog_name = "/papertape/queue/%s/%s.file_list" % (self.pid, arcname)
 
-        if not self.disk_queue:
+        if self.disk_queue:
             self.debug.output("writing", catalog_name, tar_name)
             self.tape_drives.tar_files([catalog_name, tar_name])
         elif self.disk_queue and catalog_list:
@@ -623,8 +623,10 @@ class RamTar(object):
     def __init__(self, pid, drive_select=1, debug=False, debug_threshold=128):
         """initialize"""
 
-        ## TODO(dconover): add initialization of debug and pid vars
+        self.pid = pid
+        self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
 
+        self.drive_select = drive_select
         ## if we're not using disk queuing we open the drives differently;
         ## we need to track different states
         ## for faster archiving we keep some data in memory instead of queuing to disk
@@ -694,7 +696,33 @@ class RamTar(object):
 
         return action_return
 
-    def append_to_archive(self, drive_int, file_path, file_path_rewrite=None):
+    def archive_from_list(self, tape_list):
+        """take a tape list, build each archive, write to tapes"""
+
+        if self.drive_select == 2:
+            self.debug.output('writing data to two tapes')
+            ## for archive group in list
+            ## build a dictionary of archives
+            for item in catalog_list:
+                self.debug.output('item to check: %s' % item)
+                archive_dict[item[0]].append(item[-1])
+
+            for tape_index in archive_dict:
+
+                ## for file in archive group build archive
+                archive_list = ''
+                archive_name = ''
+
+                ## send archive group to both tapes
+                for drive in self.tape_drive:
+                    send_archive_to_tape(drive, archive_list, archive_name)
+
+        else:
+            """I don't think its a good idea to do this since you have to read the data twice"""
+            self.debug.output('skipping data write')
+            pass
+
+    def append_to_archive(self, file_path, file_path_rewrite=None):
         """add data to an open archive"""
         arcname = file_path if file_path_rewrite is None else file_path_rewrite
         try:
