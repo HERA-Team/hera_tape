@@ -323,7 +323,7 @@ class Dump(object):
 
         ## load up a fresh set of tapes
         for label_id in tape_label_ids:
-            self.debug.output('printing to label_id: %s' % label_id)
+            self.debug.output('printing to label_id - {}'.format(label_id))
             self.tape.load_tape_drive(label_id)
 
             ## prepare the first block of the tape with the current tape_catalog
@@ -331,7 +331,7 @@ class Dump(object):
 
             ## for each archive, append it to the tape
             for tape_index in range(self.tape_index):
-                self.debug.output('sending tar to single drive:', label_id, str(tape_index))
+                self.debug.output('sending tar to single drive - {}:{}'.format(label_id, tape_index)
                 self.tape.write(tape_index)
 
             self.tape.unload_tape_drive(label_id)
