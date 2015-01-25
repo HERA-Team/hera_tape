@@ -595,13 +595,17 @@ class Drives(object):
 class TarFileDrive(object):
     """handling python tarfile opened directly against tape devices"""
 
-    def __init__(self):
+    def __init__(self, pid, drive_select=1, debug=False, debug_threshold=128):
         """initialize"""
-                ## if we're not using disk queuing we open the drives differently;
+
+        ## TODO(dconover): add initialization of debug and pid vars
+
+        ## if we're not using disk queuing we open the drives differently;
         ## we need to track different states
         ## for faster archiving we keep some data in memory instead of queuing to disk
         self.archive_bytes = byte_stream()
         self.archive_tar = tarfile.open(mode='w:', fileobj=self.archive_bytes)
+        self.archive_info = tarfile.TarInfo()
 
         ## tape opened with tar
         ## this is a dictionary where we will do:
@@ -613,8 +617,8 @@ class TarFileDrive(object):
         self.drive_state = self.tarfile_tape_drive(drive_select, self.drive_states.drive_init)
 
     def tarfile_tape_drive(self, drive_int, request):
-
         """open, close, update state, or reserve a drive for another process
+
         :rtype : Enum
         """
 
@@ -665,7 +669,7 @@ class TarFileDrive(object):
 
         return action_return
 
-    def append_to_archive(self, file_path, file_path_rewrite=None, drive_int):
+    def append_to_archive(self, drive_int, file_path, file_path_rewrite=None):
         """add data to an open archive"""
         arcname = file_path if file_path_rewrite is None else file_path_rewrite
         if self.drive_state[drive_int] is self.drive_states.drive_open:
@@ -677,10 +681,23 @@ class TarFileDrive(object):
         else:
             self.debug.output('bad drive_state - {}'.format(self.drive_state[drive_int]))
 
-    def send_archive_to_tape(self):
-        """send the current archive to tape"""
-        pass
+    def update_archive_info(self, archive_name):
+        """update name and size of self.archive"""
+        self.archive_info.name = archive_name
+        self.archive_info.size = len(self.archive_bytes.getvalue())
+        self.archive_bytes.seek(0)
 
+    def send_archive_to_tape(self, drive_int, archive_list, archive_name):
+        """send the current archive to tape"""
+        ## add archive_list
+        self.tape_drive[drive_int].add(archive_list)
+        ## add archive
+        try:
+            self.update_archive_info(archive_name)
+            self.tape_drive[drive_int].addfile(tarinfo=self.archive_info, fileobj=self.archive_bytes)
+        except Exception as cept:
+            self.debug.output('tarfile - {}'.format(cept))
+            raise
 
     def reset_archive(self):
         """reset the archive"""
