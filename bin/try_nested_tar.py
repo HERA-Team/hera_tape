@@ -7,7 +7,7 @@ __author__ = 'dconover@sas.upenn.edu'
 
 import tarfile, io
 
-class ramtar(object):
+class RamTar(object):
 
     def __init__(self):
         self.archive_bytes = io.BytesIO()
@@ -53,7 +53,7 @@ class ramtar(object):
 
         self.tape_tar.add('paper_io.py', arcname='file_list')
 
-test = ramtar()
+test = RamTar()
 test.add_sample_data()
 test.add_tape_sample_list()
 test.append_archive_to_tape('archive.1.tar')
