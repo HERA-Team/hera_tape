@@ -16,6 +16,9 @@ from collections import defaultdict
 
 from paper_debug import Debug
 from paper_status_code import StatusCode
+from io import BytesIO as byte_stream
+import tarfile
+from enum import Enum, unique
 
 
 def split_mtx_output(mtx_output):
@@ -50,6 +53,7 @@ class Changer(object):
 
     def __init__(self, version, pid, tape_size, debug=False, drive_select=2, debug_threshold=255):
         """init with debugging
+        :type drive_select: int
         :param drive_select: 0 = nst0, 1 = nst1, 2 = nst{1,2}"""
 
         self.version = version
@@ -100,7 +104,7 @@ class Changer(object):
                 self.debug.output('failed to load tape pair: %s' % tape_ids)
 
     ## using type hinting with Sphinx
-    ## pycharms doesn't seem to like PEP 3107 style type hinting
+    ## pycharm doesn't seem to like PEP 3107 style type hinting
     def load_tape_drive(self, tape_id, drive=0):
         """load a given tape_id into a given drive=drive_int, unload if necessary.
         :type  tape_id: label of tape to load
@@ -215,7 +219,6 @@ class Changer(object):
             self.tape_drives.tar_files([catalog_name, tar_name])
         elif fast and catalog_list:
             self.tape_drives.tar_fast([catalog_name, catalog_list])
-
 
     def prep_tape(self, catalog_file):
         """write the catalog to tape. write all of our source code to the first file"""
@@ -435,17 +438,21 @@ class MtxDB(object):
         pass
 
 class Drives(object):
-    """class to manage low level access directly with tape (equivalient of mt level commands)"""
+    """class to manage low level access directly with tape (equivalient of mt level commands)
 
-    def __init__(self, pid, drive_select=2, debug=False, debug_threshold=128):
+    It also can handle python directly opening or more drives with tar.
+    It assumes that exactly two drives are installed, and that you will use either one, or both
+    via the tape_select option
+    """
+
+    def __init__(self, pid, drive_select=2, debug=False, disk_queue=True, debug_threshold=128):
         """initialize debugging and pid"""
         self.pid = pid
         self.debug = Debug(pid, debug=debug, debug_threshold=debug_threshold)
         self.drive_select = drive_select
 
-        ## I don't think we need to keep state here since we lock at the changer
-        ## class and only call through the changer class
-        # self.drive_state = 0
+
+
 
     ## This method is deprecated because the tape self check runs though every listed archive
     def count_files(self, drive_int):
@@ -462,7 +469,6 @@ class Drives(object):
                 echo $_count
             }
  
-            _count_files_on_tape
         """
         output = check_output(bash_to_count_files, shell=True).decode('utf8').split('\n')
 
@@ -477,7 +483,6 @@ class Drives(object):
 
     def tar_fast(self, files):
         """send catalog file and file_list of source files to tape as archive"""
-
 
     def tar(self, file_name):
         """send the given file_name to a drive(s) with tar"""
@@ -587,4 +592,106 @@ class Drives(object):
             else:
                 time.sleep(0.05)
 
+class TarFileDrive(object):
+    """handling python tarfile opened directly against tape devices"""
 
+    def __init__(self):
+        """initialize"""
+                ## if we're not using disk queuing we open the drives differently;
+        ## we need to track different states
+        ## for faster archiving we keep some data in memory instead of queuing to disk
+        self.archive_bytes = byte_stream()
+        self.archive_tar = tarfile.open(mode='w:', fileobj=self.archive_bytes)
+
+        ## tape opened with tar
+        ## this is a dictionary where we will do:
+        ## self.tape_drive[drive_int] = tarfile.open(mode='w:')
+        self.tape_drive = {}
+
+        ## if we use tarfile, we need to track the state
+        self.drive_states = DriveStates
+        self.drive_state = self.tarfile_tape_drive(drive_select, self.drive_states.drive_init)
+
+    def tarfile_tape_drive(self, drive_int, request):
+
+        """open, close, update state, or reserve a drive for another process
+        :rtype : Enum
+        """
+
+        self.debug.output('reqeust - {}'.format(request))
+        action_return = []
+        ## TODO(dconover): prly don't need this
+        def init_tar_drive():
+            """Mark the given drives as available
+            """
+
+            new_state = {}
+            if int(drive_int) == 2:
+                for _loop_drive_int in 0,1:
+                    new_state[_loop_drive_int]= self.drive_states.drive_init
+            else:
+                self.debug.output('init single - {}'.format(drive_int))
+                reserve_drive = 0 if drive_int == 1 else 1
+                new_state[drive_int] = self.drive_states.drive_init
+                new_state[reserve_drive] = self.drive_states.drive_reserve
+
+            return new_state
+
+        def open_tar_drive():
+            """open a tar file against a particular drive"""
+            device_path = '/dev/nst{}'.format(drive_int)
+            if self.drive_state is self.drive_states.drive_init:
+                self.tape_drive[drive_int] = tarfile.open(name=device_path, mode='w:')
+                self.drive_state[drive_int] = self.drive_states.drive_open
+
+        def close_tar_drive():
+            """close a previously opened tar for a particular drive"""
+            if self.drive_state is self.drive_states.drive_open:
+                self.tape_drive[drive_int].close()
+                self.drive_state[drive_int] = self.drive_states.drive_init
+
+        action = {
+            self.drive_states.drive_init : init_tar_drive,
+            self.drive_states.drive_open : open_tar_drive,
+            self.drive_states.drive_close : close_tar_drive
+        }
+
+        try:
+            action_return = action[request]()
+            self.debug.output('action_return = {}'.format(action_return))
+        except Exception as action_exception:
+            self.debug.output('tar_exception: {}'.format(action_exception))
+            raise
+
+        return action_return
+
+    def append_to_archive(self, file_path, file_path_rewrite=None, drive_int):
+        """add data to an open archive"""
+        arcname = file_path if file_path_rewrite is None else file_path_rewrite
+        if self.drive_state[drive_int] is self.drive_states.drive_open:
+            try:
+                self.archive_tar.add(file_path, arcname=arcname)
+            except Exception as cept:
+                self.debug.output('tarfile exception - {}'.format(cept))
+                raise
+        else:
+            self.debug.output('bad drive_state - {}'.format(self.drive_state[drive_int]))
+
+    def send_archive_to_tape(self):
+        """send the current archive to tape"""
+        pass
+
+
+    def reset_archive(self):
+        """reset the archive"""
+        self.archive_bytes.seek(0)
+        self.archive_bytes.truncate()
+        self.archive_tar = tarfile.open(mode='w:', fileobj=self.archive_bytes)
+
+
+@unique
+class DriveStates(Enum):
+    drive_init = 0 ## in an available, but unbound state
+    drive_open = 1 ## open requested by some process
+    drive_close = 2 ## close requested
+    drive_reserve = 3 ## drive not reserved for use by another process
