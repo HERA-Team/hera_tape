@@ -211,7 +211,6 @@ class Dump(object):
 
         return log_label_ids_status
 
-
     def dump_verify(self, tape_id):
         """take the tape_id and run a self check,
         then confirm the tape_list matches
@@ -253,7 +252,6 @@ class Dump(object):
         self.debug.output('final {}'.format(dump_verify_status))
         return dump_verify_status
 
-
     def tape_self_check(self, tape_id):
         """process to take a tape and run integrity check without reference to external database
 
@@ -278,7 +276,6 @@ class Dump(object):
             tape_self_check_status = tape_archive_md5_status
 
         return tape_self_check_status, item_index, catalog_list, md5_dict, tape_pid
-
 
     def test_build_archive(self, regex=False):
         """master method to loop through files to write data to tape"""
