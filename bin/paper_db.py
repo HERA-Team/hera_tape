@@ -284,4 +284,10 @@ class PaperDBStateCode(Enum):
     claim_write    = 3 ## claimed files written to tape, but not verified; action: ignore (?); close db
     claim_verify   = 4 ## claimed files written and verified;              action: files already finalized?; close db
 
+class TestPaperDB(PaperDB):
+    """load test data into database for quick testing"""
+
+    def load_sample_data(self):
+        """load the sample data"""
+        pass
 
