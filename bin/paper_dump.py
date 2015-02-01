@@ -480,6 +480,8 @@ class ResumeDump(Dump):
 class TestDump(DumpFast):
     """move all the testing methods here to cleanup the production dump class"""
 
+    def test_load_sample_data(self):
+
     def test_fast_archive(self):
         """skip tar of local archive on disk
 
