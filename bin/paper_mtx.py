@@ -601,12 +601,15 @@ class Drives(object):
         if not cmds: return # empty file_list
 
         def done(proc):
+            self.debug.output('process done')
             return proc.poll() is not None
 
         def success(proc):
+            self.debug.output('process succeess')
             return proc.returncode == 0
 
         def fail():
+            self.debug.output('process fail, now what?')
             return
 
         processes = []
@@ -625,7 +628,8 @@ class Drives(object):
             if not processes and not cmds:
                 break
             else:
-                time.sleep(0.05)
+                self.debug.output('sleep', debug_level=250)
+                time.sleep(0.5)
 
 class RamTar(object):
     """handling python tarfile opened directly against tape devices"""
