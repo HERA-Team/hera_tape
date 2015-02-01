@@ -365,7 +365,7 @@ class DumpFast(Dump):
         self.labeldb.claim_ids(tape_label_ids)
 
         ## load up a fresh set of tapes
-        self.tape.load_tape_pair()
+        self.tape.load_tape_pair(tape_label_ids)
 
         ## add the catalog to the beginning of the tape
         for label_id in tape_label_ids:
@@ -414,12 +414,12 @@ class DumpFast(Dump):
             elif archive_list:
                 ## we must perform the cataloging task otherwise done by queue_archive()
                 arcname = "%s.%s.%s" % ('paper', self.pid, self.tape_index)
-                catalog_name = "%s/%s.file_list" %(self.queue_dir, arcname)
+                catalog_name = "%s/%s.file_list" %(self.files.queue_dir, arcname)
                 self.files.gen_catalog(catalog_name, archive_list, self.tape_index)
 
                 self.tape_used_size += list_size
                 self.tape_index += 1
-                self.debug.output("queue file_list: {0:s}, len(catalog_list): {1:s}".format(str(self.tape_index),
+                self.debug.output("queue file_list: {}, len(catalog_list): {}".format(str(self.tape_index),
                                                                                        len(self.files.catalog_list)))
 
             else:
