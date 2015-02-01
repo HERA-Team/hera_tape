@@ -215,7 +215,7 @@ class Changer(object):
              
         return status
         
-    def write(self, tape_index, catalog_list=None):
+    def write(self, tape_index, tape_list=None):
         """write data to tape"""
         ## tar dir to two drives
         arcname = "paper.%s.%s" % (self.pid, tape_index)
@@ -225,10 +225,19 @@ class Changer(object):
         if self.disk_queue:
             self.debug.output("writing", catalog_name, tar_name)
             self.tape_drives.tar_files([catalog_name, tar_name])
-        elif self.disk_queue and catalog_list:
-            pass
+        elif self.disk_queue and tape_list:
+            ## what should we do with a disk queue and a tape_list?
+            self.debug.output('disk queue with tape_list given')
+            raise Exception
          #   self.ramtar.send_archive_to_tape()
-        elif self.disk_queue:
+        elif not self.disk_queue and tape_list:
+            ## write a fast archive to disk using the given list of files
+            ##self.ramtar.archive_from_list(tape_list)
+            self.debug.output('unnecessary call to write?')
+
+
+
+        elif not self.disk_queue and not tape_list:
             self.debug.output('no list given')
             raise Exception
 
@@ -301,7 +310,7 @@ class Changer(object):
         pass
 
 @unique
-class ChangerStates(Enum):
+class ChangerStateCode(Enum):
     """states related to tape changer"""
     changer_init = 0
     changer_active = 1
@@ -642,7 +651,7 @@ class RamTar(object):
         self.tape_drive = {}
 
         ## if we use tarfile, we need to track the state
-        self.drive_states = RamTarStates
+        self.drive_states = RamTarStateCode
         self.drive_state = self.ramtar_tape_drive(drive_select, self.drive_states.drive_init)
 
     def ramtar_tape_drive(self, drive_int, request):
@@ -754,10 +763,10 @@ class RamTar(object):
 
     def send_archive_to_tape(self, drive_int, archive_list, archive_name, archive_file):
         """send the current archive to tape"""
-        ## add archive_list
-        self.tape_drive[drive_int].add(archive_list)
         ## add archive
         try:
+            ## add archive_list
+            self.tape_drive[drive_int].add(archive_list)
             ## get the basic info from the blank file we wrote
             self.archive_info = self.tape_drive[drive_int].gettarinfo(archive_file)
             ## change the size to the byte size of our BytesIO object
@@ -779,7 +788,7 @@ class RamTar(object):
 
 
 @unique
-class RamTarStates(Enum):
+class RamTarStateCode(Enum):
     drive_init = 0 ## in an available, but unbound state
     drive_open = 1 ## open requested by some process
     drive_close = 2 ## close requested

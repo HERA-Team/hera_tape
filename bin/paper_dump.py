@@ -23,7 +23,7 @@ from paper_status_code import StatusCode
 class Dump(object):
     """Coordinate a dump to tape based on deletable files in database"""
 
-    def  __init__(self, credentials, debug=False, pid=None, drive_select=2, debug_threshold=255):
+    def  __init__(self, credentials, debug=False, pid=None, disk_queue=True, drive_select=2, debug_threshold=255):
         """initialize"""
 
         self.version = __version__
@@ -55,13 +55,13 @@ class Dump(object):
 
         ## use the pid here to lock changer
         self.drive_select = drive_select
-        self.tape = Changer(self.version, self.pid, self.tape_size, debug=True, drive_select=drive_select, debug_threshold=debug_threshold)
+        self.tape = Changer(self.version, self.pid, self.tape_size, debug=True, drive_select=drive_select, disk_queue=disk_queue, debug_threshold=debug_threshold)
 
         self.dump_list = []
         self.tape_index = 0
         self.tape_used_size = 0 ## each dump process should write one tape worth of data
-        self.dump_states = DumpStates
-        self.dump_state = self.dump_states.initialize
+        self.dump_state_code = DumpStateCode
+        self.dump_state = self.dump_state_code.initialize
 
     def archive_to_tape(self):
         """master method to loop through files to write data to tape"""
@@ -81,7 +81,7 @@ class Dump(object):
                     self.files.queue_archive(self.tape_index, archive_list)
 
                     ## mark where we are
-                    self.dump_state = self.dump_states.dump_queue
+                    self.dump_state = self.dump_state_code.dump_queue
 
                 except Exception as error:
                     self.debug.output('archive build/queue error {}'.format(error))
@@ -168,7 +168,7 @@ class Dump(object):
             ## we have written two copies
             if tape_copy == 2:
                 ## update the dump state
-                self.dump_state = self.dump_states.dump_write
+                self.dump_state = self.dump_state_code.dump_write
 
             dump_verify_status = self.dump_verify(label_id)
             if dump_verify_status is not self.status_code.OK:
@@ -178,7 +178,7 @@ class Dump(object):
                 break
 
             if tape_copy == 2:
-                self.dump_state = self.dump_states.dump_verify
+                self.dump_state = self.dump_state_code.dump_verify
 
             self.debug.output('unloading drive', label_id, debug_level=128)
             self.tape.unload_tape_drive(label_id)
@@ -277,12 +277,6 @@ class Dump(object):
 
         return tape_self_check_status, item_index, catalog_list, md5_dict, tape_pid
 
-    def test_build_archive(self, regex=False):
-        """master method to loop through files to write data to tape"""
-
-        self.batch_files(queue=True, regex=regex)
-        self.files.gen_final_catalog(self.files.catalog_name, self.files.catalog_list, self.paperdb.file_md5_dict)
-
     def tar_archive(self, catalog_file):
         """send archives to tape drive pair using tar"""
 
@@ -311,7 +305,59 @@ class Dump(object):
         self.debug.output('updating mtx.ids with date')
         self.labeldb.date_ids(tape_label_ids)
 
-    def tar_archive_fast_single(self, catalog_file):
+    def close_dump(self):
+        """orderly close of dump"""
+
+        def _close_init():
+            """simple cleanup"""
+            pass
+
+        def _close_list():
+            """we have claimed files to cleanup"""
+            self.paperdb.paperdb_state = self.paperdb.paperdb_state_code.claim
+
+        def _close_queue():
+            """files are queued"""
+            self.paperdb.paperdb_state = self.paperdb.paperdb_state_code.claim_queue
+
+        def _close_write():
+            """files written to tape"""
+            self.paperdb.paperdb_state = self.paperdb.paperdb_state_code.claim_write
+
+        def _close_verify():
+            """files verified"""
+            self.paperdb.paperdb_state = self.paperdb.paperdb_state_code.claim_verify
+
+        close_action = {
+            self.dump_state_code.initialize : _close_init,
+            self.dump_state_code.dump_list : _close_list,
+            self.dump_state_code.dump_queue : _close_queue,
+            self.dump_state_code.dump_write : _close_write,
+            self.dump_state_code.dump_verify : _close_verify,
+        }
+
+        ## prep cleanup state
+        close_action[self.dump_state]()
+
+        ## do module cleanup
+        self.paperdb.close_paperdb()
+        self.files.close_archive()
+        self.labeldb.close_mtxdb()
+        self.tape.close_changer()
+
+        ## exit
+        exit(self.dump_state.value)
+
+class DumpFast(Dump):
+
+    """Queless archiving means that the data is never transferred to our disk queues
+
+    Disk queues are still used to maintain state in the event of a partial dump failure
+
+
+    """
+
+    def tar_archive_fast(self, catalog_file):
         """Archive files directly to tape using only a single drive to write 2 tapes"""
 
         ## select ids
@@ -319,19 +365,22 @@ class Dump(object):
         self.labeldb.claim_ids(tape_label_ids)
 
         ## load up a fresh set of tapes
+        self.tape.load_tape_pair()
+
+        ## add the catalog to the beginning of the tape
         for label_id in tape_label_ids:
             self.debug.output('printing to label_id - {}'.format(label_id))
-            self.tape.load_tape_drive(label_id)
 
-            ## prepare the first block of the tape with the current tape_catalog
-            self.tape.prep_tape(catalog_file)
+        ## prepare the first block of the tape with the current tape_catalog
+        self.tape.prep_tape(catalog_file)
 
-            ## for each archive, append it to the tape
-            for tape_index in range(self.tape_index):
-                self.debug.output('sending tar to single drive - {}:{}'.format(label_id, tape_index)
-                self.tape.write(tape_index)
+        self.tape.ramtar.archive_from_list(self.files.tape_list)
+        ### for each archive, append it to the tape
+        #for tape_index in range(self.tape_index):
+        #    self.debug.output('sending tar to single drive - {}:{}'.format(label_id, tape_index)
+        #    self.tape.write(tape_index)
 
-            self.tape.unload_tape_drive(label_id)
+        self.tape.unload_tape_pair()
 
         self.debug.output('writing tape_indexes')
         self.paperdb.write_tape_index(self.files.catalog_list, ','.join(tape_label_ids))
@@ -356,7 +405,7 @@ class Dump(object):
                     self.files.queue_archive(self.tape_index, archive_list)
 
                     ## mark where we are
-                    self.dump_state = self.dump_states.dump_queue
+                    self.dump_state = self.dump_state_code.dump_queue
 
                 except Exception as error:
                     self.debug.output('archive build/queue error {}'.format(error))
@@ -380,16 +429,25 @@ class Dump(object):
         self.debug.output("complete:%s:%s:%s:%s" % (queue, regex, pid, claim))
         return True if self.tape_used_size != 0 else False
 
-    def test_fast_archive(self):
-        """skip tar of local archive on disk
+# noinspection PyClassHasNoInit
+@unique
+class DumpStateCode(Enum):
+    """ file_list of database specific dump states (last known good state)
 
-           send files to two tapes using a single drive."""
-        if self.batch_files():
-            self.debug.output('found %s files' % len(self.files.catalog_list))
-            self.files.gen_final_catalog(self.files.catalog_name, self.files.catalog_list, self.paperdb.file_md5_dict)
-            self.tar_archive_fast_single(self.files.catalog_name)
-        else:
-            self.debug.output("no files batched")
+    This is not to be confused with error codes, which tell the program what
+    went wrong. Rather, these states track what clean-up actions should be
+    performed, when the object is closed.
+    """
+
+
+    initialize     = 1 ## cleanup temporary files in paper_io              action: always close db
+    dump_list      = 2 ## files claimed;                                   action: unclaim files; close db
+    dump_queue  = 3 ## claimed files queued;                            action: ignore (?); close db
+    dump_write   = 4 ## claimed files written to tape, but not verified; action: ignore (?); close db
+    dump_verify  = 0 ## done
+
+class ResumeDump(Dump):
+    """methods for resuming a normal dump that was interrupted"""
 
     def manual_write_tape_location(self):
         """on a tape dump that fails after writing to tape, but before writing
@@ -419,64 +477,24 @@ class Dump(object):
         self.tar_archive_single(self.files.catalog_name)
         self.debug.output("manual to tape complete")
 
-    def close_dump(self):
-        """orderly close of dump"""
+class TestDump(DumpFast):
+    """move all the testing methods here to cleanup the production dump class"""
 
-        def _close_init():
-            """simple cleanup"""
-            pass
+    def test_fast_archive(self):
+        """skip tar of local archive on disk
 
-        def _close_list():
-            """we have claimed files to cleanup"""
-            self.paperdb.paperdb_state = self.paperdb.paperdb_states.claim
+           send files to two tapes using a single drive."""
+        ## batch_files() does the job of making the lists that queue_archive does
+        ## it also updates self.tape_index which is used by Changer.write()
+        if self.batch_files():
+            self.debug.output('found %s files' % len(self.files.catalog_list))
+            self.files.gen_final_catalog(self.files.catalog_name, self.files.catalog_list, self.paperdb.file_md5_dict)
+            self.tar_archive_fast(self.files.catalog_name)
+        else:
+            self.debug.output("no files batched")
 
-        def _close_queue():
-            """files are queued"""
-            self.paperdb.paperdb_state = self.paperdb.paperdb_states.claim_queue
+    def test_build_archive(self, regex=False):
+        """master method to loop through files to write data to tape"""
 
-        def _close_write():
-            """files written to tape"""
-            self.paperdb.paperdb_state = self.paperdb.paperdb_states.claim_write
-
-        def _close_verify():
-            """files verified"""
-            self.paperdb.paperdb_state = self.paperdb.paperdb_states.claim_verify
-
-        close_action = {
-            self.dump_states.initialize : _close_init,
-            self.dump_states.dump_list : _close_list,
-            self.dump_states.dump_queue : _close_queue,
-            self.dump_states.dump_write : _close_write,
-            self.dump_states.dump_verify : _close_verify,
-        }
-
-        ## prep cleanup state
-        close_action[self.dump_state]()
-
-        ## do module cleanup
-        self.paperdb.close_paperdb()
-        self.files.close_archive()
-        self.labeldb.close_mtxdb()
-        self.tape.close_changer()
-
-        ## exit
-        exit(self.dump_state.value)
-
-
-# noinspection PyClassHasNoInit
-@unique
-class DumpStates(Enum):
-    """ file_list of database specific dump states (last known good state)
-
-    This is not to be confused with error codes, which tell the program what
-    went wrong. Rather, these states track what clean-up actions should be
-    performed, when the object is closed.
-    """
-
-
-    initialize     = 1 ## cleanup temporary files in paper_io              action: always close db
-    dump_list      = 2 ## files claimed;                                   action: unclaim files; close db
-    dump_queue  = 3 ## claimed files queued;                            action: ignore (?); close db
-    dump_write   = 4 ## claimed files written to tape, but not verified; action: ignore (?); close db
-    dump_verify  = 0 ## done
-
+        self.batch_files(queue=True, regex=regex)
+        self.files.gen_final_catalog(self.files.catalog_name, self.files.catalog_list, self.paperdb.file_md5_dict)

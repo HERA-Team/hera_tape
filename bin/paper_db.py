@@ -32,8 +32,8 @@ class PaperDB(object):
         self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
         self.status_code = StatusCode
 
-        self.paperdb_states = PaperDBStates
-        self.paperdb_state = self.paperdb_states.initialize
+        self.paperdb_state_code = PaperDBStateCode
+        self.paperdb_state = self.paperdb_state_code.initialize
         self.connection_timeout = 90
         self.connection_time = timedelta()
         self.credentials = credentials
@@ -168,7 +168,7 @@ class PaperDB(object):
             self.debug.output('mysql_error {}'.format(mysql_error))
             claim_files_status = self.status_code.claim_files_sql_commit
 
-        self.paperdb_state = self.paperdb_states.claim
+        self.paperdb_state = self.paperdb_state_code.claim
         return claim_files_status
 
     def unclaim_files(self, file_list=None):
@@ -248,11 +248,11 @@ class PaperDB(object):
             return _close()
 
         close_action = {
-            self.paperdb_states.initialize : _close,
-            self.paperdb_states.claim : _unclaim,
-            self.paperdb_states.claim_queue : _close,
-            self.paperdb_states.claim_write : _close,
-            self.paperdb_states.claim_verify : _close,
+            self.paperdb_state_code.initialize : _close,
+            self.paperdb_state_code.claim : _unclaim,
+            self.paperdb_state_code.claim_queue : _close,
+            self.paperdb_state_code.claim_write : _close,
+            self.paperdb_state_code.claim_verify : _close,
             }
 
         self.db_connect()
@@ -270,7 +270,7 @@ class PaperDB(object):
 
 # noinspection PyClassHasNoInit
 @unique
-class PaperDBStates(Enum):
+class PaperDBStateCode(Enum):
     """ file_list of database specific dump states
 
     This is not to be confused with error codes, which tell the program what
