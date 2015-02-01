@@ -102,14 +102,20 @@ class Changer(object):
 
     def load_tape_pair(self, tape_ids):
         """load the next available tape pair"""
-        self.debug.output('checking drives')
-        if self.drives_empty():
-            if len(tape_ids) == 2:
-                for drive, tape_id in enumerate(tape_ids):
+        load_tape_pair_status = True
+
+        if len(tape_ids) == 2:
+            for drive, tape_id in enumerate(tape_ids):
+                if load_tape_pair_status is True:
                     self.debug.output('loading', str(id), str(drive))
-                    self.load_tape(tape_id, drive)
-            else:
-                self.debug.output('failed to load tape pair: %s' % tape_ids)
+                    load_tape_pair_status = self.load_tape(tape_id, drive)
+                else:
+                    self.debug.output('load failure for tape_id - {}'.format(tape_id))
+        else:
+            self.debug.output('failed to load tape pair: %s' % tape_ids)
+            load_tape_pair_status = False
+
+        return load_tape_pair_status
 
     ## using type hinting with Sphinx
     ## pycharm doesn't seem to like PEP 3107 style type hinting
@@ -619,6 +625,7 @@ class Drives(object):
                 processes.append(Popen(task, shell=True))
 
             for process in processes:
+                self.debug.output('{}'.format(process.args))
                 if done(process):
                     if success(process):
                         processes.remove(process)
@@ -626,6 +633,7 @@ class Drives(object):
                         fail()
 
             if not processes and not cmds:
+                self.debug.output('break')
                 break
             else:
                 self.debug.output('sleep', debug_level=250)
