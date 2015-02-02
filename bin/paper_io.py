@@ -69,7 +69,7 @@ class Archive(object):
 
         self.catalog_name = "{0:s}/paper.{1:s}.file_list".format(self.queue_dir, self.pid)
         self.tape_ids_filename = "{0:s}/paper.{1:s}.tape_ids.file_list".format(self.queue_dir, self.pid)
-        self.catalog_list = []    ## working file_list of files to write
+        self.archive_list = []    ## working file_list of files to write
         self.tape_list = []       ## cumulative file_list of written files
         self.item_index = 0       ## number of file path index (human readable line numbers in catalog)
         self.archive_state = 0    ## current archive state
@@ -115,10 +115,10 @@ class Archive(object):
         # noinspection PyArgumentList
         with open(archive_catalog_file, mode='w') as cfile:
             archive_index = 1
-            self.catalog_list = []
+            self.archive_list = []
             for file_name in file_list:
-                self.debug.output('catalog_list: %s %s %s' % (tape_index, archive_index, file_name), debug_level=249)
-                self.catalog_list.append([tape_index, archive_index, file_name])
+                self.debug.output('archive_list: %s %s %s' % (tape_index, archive_index, file_name), debug_level=249)
+                self.archive_list.append([tape_index, archive_index, file_name])
                 cfile.write("%s:%s:%s\n" % (tape_index, archive_index, file_name))
                 archive_index += 1
 
@@ -176,7 +176,7 @@ class Archive(object):
 
     def final_from_file(self, catalog=None, tape_ids=False):
         """gen final catalog from file_name"""
-        self.catalog_list = []
+        self.archive_list = []
         md5_dict = {}
         pid=''
         item_index=0
@@ -213,13 +213,13 @@ class Archive(object):
 
                 catalog_list = [tape_index, archive_index, file_path]
 
-                self.catalog_list.append(catalog_list)
+                self.archive_list.append(catalog_list)
 
             elif header_line.match(line):
                 self.debug.output('found header line')
                 pid = header_line.match(line).groups()[0]
 
-        return item_index, self.catalog_list, md5_dict, pid
+        return item_index, self.archive_list, md5_dict, pid
 
     def queue_archive(self, tape_index, file_list):
         """move the archive from /dev/shm to a tar file in the queue directory

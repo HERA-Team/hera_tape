@@ -15,7 +15,8 @@ from enum import Enum, unique
 
 from paper_mtx import Changer, MtxDB
 from paper_io import Archive
-from paper_db import PaperDB
+#from paper_db import PaperDB
+from paper_db import TestPaperDB
 from paper_debug import Debug
 from paper_status_code import StatusCode
 
@@ -45,7 +46,11 @@ class Dump(object):
         #self.tape_size = 13000
 
         ## setup PaperDB connection
-        self.paperdb = PaperDB(self.version, self.paper_creds, self.pid, debug=True, debug_threshold=debug_threshold)
+        #self.paperdb = PaperDB(self.version, self.paper_creds, self.pid, debug=True, debug_threshold=debug_threshold)
+        ## test database
+        self.paperdb = TestPaperDB(self.version, self.paper_creds, self.pid, debug=True, debug_threshold=debug_threshold)
+        ## reload test data
+        #self.paperdb.load_sample_data()
 
         ## setup tape library
         self.labeldb = MtxDB(self.version, self.mtx_creds, self.pid, debug=debug, debug_threshold=debug_threshold)
@@ -87,14 +92,14 @@ class Dump(object):
                     self.debug.output('archive build/queue error {}'.format(error))
                     self.close_dump()
 
-                ## Files in these lists should be identical, but catalog_list has extra data
-                ## catalog_list: [[0, 1, 'test:/testdata/testdir'], [0, 2, 'test:/testdata/testdir2'], ... ]
+                ## Files in these lists should be identical, but archive_list has extra data
+                ## archive_list: [[0, 1, 'test:/testdata/testdir'], [0, 2, 'test:/testdata/testdir2'], ... ]
                 ## archive_list: ['test:/testdata/testdir', 'test:/testdata/testdir2', ... ]
-                self.debug.output('catalog_list - %s' % self.files.catalog_list)
+                self.debug.output('archive_list - %s' % self.files.archive_list)
                 self.debug.output('file_list - %s' % archive_list)
 
-                ## queue archive does the job of making the catalog_list we need to update the tape_list
-                self.files.tape_list.extend(self.files.catalog_list)
+                ## queue archive does the job of making the archive_list we need to update the tape_list
+                self.files.tape_list.extend(self.files.archive_list)
                 self.debug.output("q:%s l:%s t:%s" % (self.tape_used_size, archive_size, self.tape_size))
 
                 ## add archive_size to current tape_used_size
@@ -266,7 +271,7 @@ class Dump(object):
         self.debug.output('read catalog from tape: %s' % tape_id)
         first_block = self.tape.read_tape_catalog(tape_id)
 
-        ## parse the catalog_list
+        ## parse the archive_list
         ## build an file_md5_dict
         item_index, catalog_list, md5_dict, tape_pid = self.files.final_from_file(catalog=first_block)
 
@@ -365,7 +370,7 @@ class DumpFast(Dump):
         self.labeldb.claim_ids(tape_label_ids)
 
         ## load up a fresh set of tapes
-        self.tape.load_tape_pair()
+        self.tape.load_tape_pair(tape_label_ids)
 
         ## add the catalog to the beginning of the tape
         for label_id in tape_label_ids:
@@ -374,16 +379,12 @@ class DumpFast(Dump):
         ## prepare the first block of the tape with the current tape_catalog
         self.tape.prep_tape(catalog_file)
 
+        self.debug.output('got list - {}'.format(self.files.tape_list))
         self.tape.ramtar.archive_from_list(self.files.tape_list)
-        ### for each archive, append it to the tape
-        #for tape_index in range(self.tape_index):
-        #    self.debug.output('sending tar to single drive - {}:{}'.format(label_id, tape_index)
-        #    self.tape.write(tape_index)
-
         self.tape.unload_tape_pair()
 
         self.debug.output('writing tape_indexes')
-        self.paperdb.write_tape_index(self.files.catalog_list, ','.join(tape_label_ids))
+        self.paperdb.write_tape_index(self.files.archive_list, ','.join(tape_label_ids))
 
     def batch_files(self, queue=False, regex=False, pid=False, claim=True):
         """populate self.catalog_list; transfer files to shm"""
@@ -401,7 +402,7 @@ class DumpFast(Dump):
                     self.files.build_archive(archive_list)
 
                     ## archives to tar from disk with catalog file
-                    ## also write the self.files.catalog_list
+                    ## also write the self.files.archive_list
                     self.files.queue_archive(self.tape_index, archive_list)
 
                     ## mark where we are
@@ -414,17 +415,24 @@ class DumpFast(Dump):
             elif archive_list:
                 ## we must perform the cataloging task otherwise done by queue_archive()
                 arcname = "%s.%s.%s" % ('paper', self.pid, self.tape_index)
-                catalog_name = "%s/%s.file_list" %(self.queue_dir, arcname)
+                catalog_name = "%s/%s.file_list" %(self.files.queue_dir, arcname)
                 self.files.gen_catalog(catalog_name, archive_list, self.tape_index)
 
                 self.tape_used_size += list_size
                 self.tape_index += 1
-                self.debug.output("queue file_list: {0:s}, len(catalog_list): {1:s}".format(str(self.tape_index),
-                                                                                       len(self.files.catalog_list)))
+                self.debug.output("queue file_list: {}, len(catalog_list): {}".format(str(self.tape_index),
+                                                                                       len(self.files.archive_list)))
+
+                ## queue archive does the job of making the archive_list we need to update the tape_list
+                self.files.tape_list.extend(self.files.archive_list)
 
             else:
                 self.debug.output('file file_list empty')
                 break
+
+        #if self.tape_used_size > 0:
+        #    self.debug.output('generating final catalog - %s, %s' % (len(self.files.tape_list), self.files.tape_list))
+        #    self.files.gen_final_catalog(self.files.catalog_name, self.files.tape_list, self.paperdb.file_md5_dict)
 
         self.debug.output("complete:%s:%s:%s:%s" % (queue, regex, pid, claim))
         return True if self.tape_used_size != 0 else False
@@ -459,7 +467,7 @@ class ResumeDump(Dump):
         self.tape_index, catalog, md5_dict, pid = self.files.final_from_file()
         self.tape_ids = self.files.tape_ids_from_file()
         self.debug.output('write tape location', ','.join(self.tape_ids))
-        self.paperdb.write_tape_index(self.files.catalog_list, ','.join(self.tape_ids))
+        self.paperdb.write_tape_index(self.files.archive_list, ','.join(self.tape_ids))
 
     def manual_resume_to_tape(self):
         """read in the cumulative file_list from file and send to tape"""
@@ -486,9 +494,12 @@ class TestDump(DumpFast):
            send files to two tapes using a single drive."""
         ## batch_files() does the job of making the lists that queue_archive does
         ## it also updates self.tape_index which is used by Changer.write()
+        self.debug.output('reloading sample data into paperdatatest database')
+
+
         if self.batch_files():
-            self.debug.output('found %s files' % len(self.files.catalog_list))
-            self.files.gen_final_catalog(self.files.catalog_name, self.files.catalog_list, self.paperdb.file_md5_dict)
+            self.debug.output('found %s files' % len(self.files.archive_list))
+            self.files.gen_final_catalog(self.files.catalog_name, self.files.archive_list, self.paperdb.file_md5_dict)
             self.tar_archive_fast(self.files.catalog_name)
         else:
             self.debug.output("no files batched")
@@ -497,4 +508,4 @@ class TestDump(DumpFast):
         """master method to loop through files to write data to tape"""
 
         self.batch_files(queue=True, regex=regex)
-        self.files.gen_final_catalog(self.files.catalog_name, self.files.catalog_list, self.paperdb.file_md5_dict)
+        self.files.gen_final_catalog(self.files.catalog_name, self.files.archive_list, self.paperdb.file_md5_dict)

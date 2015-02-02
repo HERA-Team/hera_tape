@@ -8,7 +8,7 @@ are written to tape.
 
 from datetime import datetime, timedelta
 
-import pymysql
+import pymysql, subprocess
 from enum import Enum, unique
 
 from paper_debug import Debug
@@ -51,11 +51,12 @@ class PaperDB(object):
         class_name = self.__class__.__name__.lower()
 
         ## we always use the lowercase of the class_name in the state variable
-        #if attr_name == '{}_state'.format(class_name):
         if attr_name == 'paperdb_state':
             ## debug whenever we update the state variable
             self.debug.output("updating: {} with {}={}".format(class_name, attr_name, attr_value))
-        super(self.__class__, self).__setattr__(attr_name, attr_value)
+
+        #super(self.__class__, self).__setattr__(attr_name, attr_value)
+        super().__setattr__(attr_name, attr_value)
 
     def update_connection_time(self):
         """refresh database connection time"""
@@ -283,5 +284,52 @@ class PaperDBStateCode(Enum):
     claim_queue    = 2 ## claimed files queued;                            action: ignore (?); close db
     claim_write    = 3 ## claimed files written to tape, but not verified; action: ignore (?); close db
     claim_verify   = 4 ## claimed files written and verified;              action: files already finalized?; close db
+
+class TestPaperDB(PaperDB):
+    """load test data into database for quick testing"""
+
+    def py_load_sample_data(self, sample_sql_file):
+        """load the sample data"""
+        load_sample_data_status = True
+        db_name = self.connect.db
+        if db_name != b'paperdatatest':
+            self.debug.output('found bad database name'.format(db_name))
+            return False
+
+
+            ## load the sample_sql_file data into the database
+        with open(sample_sql_file) as open_sql:
+            try:
+                line_number = 0
+                for line in open_sql:
+                    line_number +=1
+                    if line_number < 10:
+                        self.debug.output('line - {}'.format(line), debug_level=250)
+                    self.cur.execute(line)
+
+                self.connect.commit()
+                self.debug.output('data loaded')
+            except Exception as mysql_error:
+                self.debug.output('mysql_error {}'.format(mysql_error))
+                load_sample_data_status = False
+
+        return load_sample_data_status
+
+    def load_sample_data(self):
+        """load the sample data"""
+        load_sample_data_status = True
+
+        db_name = self.connect.db
+        if db_name != b'paperdatatest':
+            self.debug.output('bad database_name'.format(db_name))
+            return False
+
+        try:
+            subprocess.Popen('mysql paperdatatest <paperdatatest.blank.sql', shell=True)
+        except Exception as cept:
+            self.debug.output('{}'.format(cept))
+            load_sample_data_status = False
+
+        return load_sample_data_status
 
 
