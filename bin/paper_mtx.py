@@ -77,7 +77,7 @@ class Changer(object):
         self.disk_queue = disk_queue
         if not self.disk_queue:
             ## we need to use Ramtar
-            self.ramtar = RamTar
+            self.ramtar = RamTar(pid, drive_select=drive_select, rewrite_path=None, debug=debug, debug_threshold=debug_threshold)
         ## TODO(dconover): implement a lock on the changer to prevent overlapping requests
         self.changer_state = 0
 
@@ -126,17 +126,19 @@ class Changer(object):
         status = False
 
         self.debug.output('check then load')
+
         for attempt in range(3):
             if self.drives_empty(drive_int=drive):
-                self.debug.output('loading', str(tape_id), str(drive), debug_level=128)
+                self.debug.output('calling load_tape - ', str(tape_id), str(drive), debug_level=128)
                 self.load_tape(tape_id, drive)
                 status = True
                 break
 
             ## return if the drive already contains the tape we want
             ## just rewind
-            elif self.label_in_drive[str(drive)] == tape_id:
+            elif str(drive) in self.label_in_drive and self.label_in_drive[str(drive)] == tape_id:
                 ## if we call this function we probably need a rewind
+                self.debug.output('rewinding tape in drive - {}:{}'.format(str(drive), tape_id))
                 self.rewind_tape(tape_id)
                 status = True
 
@@ -156,7 +158,7 @@ class Changer(object):
 
     def unload_tape_drive(self, tape_int):
         """unload the tapes in the current drives"""
-        if not self.drives_empty():
+        if not self.drives_empty(drive_int=tape_int):
             self.debug.output('unloading', str(tape_int))
             self.unload_tape(tape_int)
         else:
@@ -166,10 +168,16 @@ class Changer(object):
         """retun true if the drives are currently empty"""
         self.check_inventory()
 
-        if drive_int:
-            self.debug.output('called with drive_int: %s' % self.label_in_drive)
-            return False if drive_int in self.label_in_drive else True
+        if drive_int is not None:
+            self.debug.output('called for {} while loaded: {}'.format(drive_int, self.label_in_drive))
+            if str(drive_int) in self.label_in_drive:
+                self.debug.output('drive loaded already - {} with {}'.format(drive_int, self.label_in_drive[str(drive_int)]))
+                return False
+            else:
+                self.debug.output('drive_empty')
+                return True
         else:
+            ## TODO(dconover): what's this now?
             self.debug.output('basic check drive labels: %s' % self.label_in_drive)
             return not len(self.drive_ids)
 
@@ -189,10 +197,17 @@ class Changer(object):
 
     def load_tape(self, tape_id, tape_drive):
         """Load a tape into a free drive slot"""
-        if self.tape_ids[tape_id]:
-            self.debug.output('Loading - %s' % tape_id)
-            output = check_output(['mtx', 'load', str(self.tape_ids[tape_id]), str(tape_drive)])
-            self.check_inventory()
+        load_tape_status = True
+        try:
+            if self.tape_ids[tape_id]:
+                self.debug.output('Loading - %s' % tape_id)
+                output = check_output(['mtx', 'load', str(self.tape_ids[tape_id]), str(tape_drive)])
+                self.check_inventory()
+        except KeyError:
+            self.debug.output('tape not in storage - {}'.format(tape_id))
+            load_tape_status = False
+
+        return load_tape_status
 
     def unload_tape(self, tape_id):
         """Unload a tape from a drive and put in the original slot"""
@@ -611,7 +626,7 @@ class Drives(object):
             return proc.poll() is not None
 
         def success(proc):
-            self.debug.output('process succeess')
+            self.debug.output('process success')
             return proc.returncode == 0
 
         def fail():
@@ -722,21 +737,21 @@ class RamTar(object):
     def archive_from_list(self, tape_list):
         """take a tape list, build each archive, write to tapes"""
 
-        archive_dict = {}
-        archive_list_dict = {}
-
+        archive_dict = defaultdict(list)
+        archive_list_dict = defaultdict(list)
 
         if self.drive_select == 2:
             self.debug.output('writing data to two tapes')
             ## for archive group in list
             ## build a dictionary of archives
             for item in tape_list:
-                self.debug.output('item to check: %s' % item)
+                self.debug.output('item to check: {}'.format(item))
                 archive_list_dict[item[0]].append(item)
                 archive_dict[item[0]].append(item[-1])
 
             for tape_index in archive_dict:
 
+                data_dir = '/papertape'
                 archive_dir = '/papertape/queue/{}'.format(self.pid)
                 archive_name = 'paper.{}.{}.tar'.format(self.pid,tape_index)
                 archive_file =  '{}/{}'.format(archive_dir,archive_name)
@@ -746,11 +761,11 @@ class RamTar(object):
                 for item in archive_dict[tape_index]:
                     self.debug.output('item - {}'.format(item))
                     #arcname_rewrite = self.rewrite_path
-                    self.append_to_archive(item)
+                    self.append_to_archive('/'.join([data_dir, item]))
 
-                list = open(archive_list, mode='w')
-                list.write('\n'.join(archive_list_dict[tape_index]))
-                list.close()
+                open_list = open(archive_list, mode='w')
+                open_list.write('\n'.join(archive_list_dict[str(tape_index)]))
+                open_list.close()
 
                 arc = open(archive_file, mode='w')
                 arc.close()
