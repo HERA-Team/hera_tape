@@ -15,7 +15,8 @@ from enum import Enum, unique
 
 from paper_mtx import Changer, MtxDB
 from paper_io import Archive
-from paper_db import PaperDB
+#from paper_db import PaperDB
+from paper_db import TestPaperDB
 from paper_debug import Debug
 from paper_status_code import StatusCode
 
@@ -45,7 +46,11 @@ class Dump(object):
         #self.tape_size = 13000
 
         ## setup PaperDB connection
-        self.paperdb = PaperDB(self.version, self.paper_creds, self.pid, debug=True, debug_threshold=debug_threshold)
+        #self.paperdb = PaperDB(self.version, self.paper_creds, self.pid, debug=True, debug_threshold=debug_threshold)
+        ## test database
+        self.paperdb = TestPaperDB(self.version, self.paper_creds, self.pid, debug=True, debug_threshold=debug_threshold)
+        ## reload test data
+        #self.paperdb.load_sample_data()
 
         ## setup tape library
         self.labeldb = MtxDB(self.version, self.mtx_creds, self.pid, debug=debug, debug_threshold=debug_threshold)
@@ -480,14 +485,15 @@ class ResumeDump(Dump):
 class TestDump(DumpFast):
     """move all the testing methods here to cleanup the production dump class"""
 
-    def test_load_sample_data(self):
-
     def test_fast_archive(self):
         """skip tar of local archive on disk
 
            send files to two tapes using a single drive."""
         ## batch_files() does the job of making the lists that queue_archive does
         ## it also updates self.tape_index which is used by Changer.write()
+        self.debug.output('reloading sample data into paperdatatest database')
+
+
         if self.batch_files():
             self.debug.output('found %s files' % len(self.files.catalog_list))
             self.files.gen_final_catalog(self.files.catalog_name, self.files.catalog_list, self.paperdb.file_md5_dict)

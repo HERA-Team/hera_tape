@@ -8,7 +8,7 @@ are written to tape.
 
 from datetime import datetime, timedelta
 
-import pymysql
+import pymysql, subprocess
 from enum import Enum, unique
 
 from paper_debug import Debug
@@ -288,7 +288,7 @@ class PaperDBStateCode(Enum):
 class TestPaperDB(PaperDB):
     """load test data into database for quick testing"""
 
-    def load_sample_data(self, sample_sql_file):
+    def py_load_sample_data(self, sample_sql_file):
         """load the sample data"""
         load_sample_data_status = True
         db_name = self.connect.db
@@ -300,13 +300,36 @@ class TestPaperDB(PaperDB):
             ## load the sample_sql_file data into the database
         with open(sample_sql_file) as open_sql:
             try:
+                line_number = 0
                 for line in open_sql:
+                    line_number +=1
+                    if line_number < 10:
+                        self.debug.output('line - {}'.format(line), debug_level=250)
                     self.cur.execute(line)
 
                 self.connect.commit()
+                self.debug.output('data loaded')
             except Exception as mysql_error:
                 self.debug.output('mysql_error {}'.format(mysql_error))
                 load_sample_data_status = False
 
         return load_sample_data_status
+
+    def load_sample_data(self):
+        """load the sample data"""
+        load_sample_data_status = True
+
+        db_name = self.connect.db
+        if db_name != b'paperdatatest':
+            self.debug.output('bad database_name'.format(db_name))
+            return False
+
+        try:
+            subprocess.Popen('mysql paperdatatest <paperdatatest.blank.sql', shell=True)
+        except Exception as cept:
+            self.debug.output('{}'.format(cept))
+            load_sample_data_status = False
+
+        return load_sample_data_status
+
 

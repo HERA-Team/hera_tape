@@ -108,7 +108,7 @@ class Changer(object):
             for drive, tape_id in enumerate(tape_ids):
                 if load_tape_pair_status is True:
                     self.debug.output('loading', str(id), str(drive))
-                    load_tape_pair_status = self.load_tape(tape_id, drive)
+                    load_tape_pair_status = self.load_tape_drive(tape_id, drive=drive)
                 else:
                     self.debug.output('load failure for tape_id - {}'.format(tape_id))
         else:
