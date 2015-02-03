@@ -138,13 +138,13 @@ class Changer(object):
             ## just rewind
             elif str(drive) in self.label_in_drive and self.label_in_drive[str(drive)] == tape_id:
                 ## if we call this function we probably need a rewind
-                self.debug.output('rewinding tape in drive - {}:{}'.format(str(drive), tape_id))
+                self.debug.output('tape loaded; rewinding tape - {}:{}'.format(str(drive), tape_id))
                 self.rewind_tape(tape_id)
                 status = True
 
             ## if the drive is full attempt to unload, then retry
             else:
-                self.debug.output('unable to load, drive filled', str(self.label_in_drive), str(drive), debug_level=128)
+                self.debug.output('different tape loaded, unloading - {}:{}'.format(str(self.label_in_drive), str(drive)), debug_level=128)
                 self.unload_tape_drive(self.label_in_drive[str(drive)])
 
         return status
@@ -689,7 +689,7 @@ class RamTar(object):
 
         self.debug.output('reqeust - {}'.format(request))
         action_return = []
-        ## TODO(dconover): prly don't need this
+        ## TODO(dconover): prly don't need this?
         def init_tar_drive():
             """Mark the given drives as available
             """
@@ -710,14 +710,20 @@ class RamTar(object):
             """open a tar file against a particular drive"""
             device_path = '/dev/nst{}'.format(drive_int)
             if self.drive_state is self.drive_states.drive_init:
+                self.debug.output('open tar on {}'.format(device_path))
                 self.tape_drive[drive_int] = tarfile.open(name=device_path, mode='w:')
                 self.drive_state[drive_int] = self.drive_states.drive_open
+            else:
+                self.debug.output('Fail to open {}'.format(device_path))
 
         def close_tar_drive():
             """close a previously opened tar for a particular drive"""
             if self.drive_state is self.drive_states.drive_open:
                 self.tape_drive[drive_int].close()
                 self.drive_state[drive_int] = self.drive_states.drive_init
+            else:
+                self.debug.output('Fail to close {}'.format(device_path))
+
 
         action = {
             self.drive_states.drive_init : init_tar_drive,
@@ -792,6 +798,8 @@ class RamTar(object):
         """send the current archive to tape"""
         ## add archive
         try:
+            self.debug.output('{}'.format(archive_name))
+            self.ramtar_tape_drive(drive_int,self.drive_states.drive_open)
             ## add archive_list
             self.tape_drive[drive_int].add(archive_list)
             ## get the basic info from the blank file we wrote

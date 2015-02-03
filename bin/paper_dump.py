@@ -374,13 +374,21 @@ class DumpFast(Dump):
 
         ## add the catalog to the beginning of the tape
         for label_id in tape_label_ids:
-            self.debug.output('printing to label_id - {}'.format(label_id))
+            self.debug.output('archiving to label_id - {}'.format(label_id))
 
         ## prepare the first block of the tape with the current tape_catalog
         self.tape.prep_tape(catalog_file)
 
         self.debug.output('got list - {}'.format(self.files.tape_list))
         self.tape.ramtar.archive_from_list(self.files.tape_list)
+
+        for label_id in tape_label_ids:
+            dump_verify_status = self.dump_verify(label_id)
+            if dump_verify_status is not self.status_code.OK:
+                self.debug.output('Fail: dump_verify {}'.format(dump_verify_status))
+                tar_archive_single_status = self.status_code.tar_archive_single_dump_verify
+                self.close_dump()
+
         self.tape.unload_tape_pair()
 
         self.debug.output('writing tape_indexes')
