@@ -125,7 +125,7 @@ class Changer(object):
         :param tape_id: label of tape to load"""
         status = False
 
-        self.debug.output('check then load')
+        self.debug.output('check then load - {}, {}'.format(tape_id, drive))
 
         for attempt in range(3):
             if self.drives_empty(drive_int=drive):
@@ -141,11 +141,12 @@ class Changer(object):
                 self.debug.output('tape loaded; rewinding tape - {}:{}'.format(str(drive), tape_id))
                 self.rewind_tape(tape_id)
                 status = True
+                break
 
             ## if the drive is full attempt to unload, then retry
             else:
                 self.debug.output('different tape loaded, unloading - {}:{}'.format(str(self.label_in_drive), str(drive)), debug_level=128)
-                self.unload_tape_drive(self.label_in_drive[str(drive)])
+                self.unload_tape_drive(drive)
 
         return status
 
@@ -158,14 +159,16 @@ class Changer(object):
 
     def unload_tape_drive(self, tape_int):
         """unload the tapes in the current drives"""
+        self.debug.output('unloading {}'.format(tape_int))
         if not self.drives_empty(drive_int=tape_int):
-            self.debug.output('unloading', str(tape_int))
-            self.unload_tape(tape_int)
+            self.debug.output('unloading {} from {}'.format(self.label_in_drive[str(tape_int)],tape_int))
+            self.unload_tape(self.label_in_drive[str(tape_int)])
         else:
             self.debug.output('tape already empty', str(tape_int))
 
     def drives_empty(self, drive_int=None):
         """retun true if the drives are currently empty"""
+        self.debug.output('recheck inventory')
         self.check_inventory()
 
         if drive_int is not None:
@@ -216,6 +219,8 @@ class Changer(object):
             self.debug.output('%s' % command)
             output = check_output(command)
             self.check_inventory()
+        else:
+            self.debug.output('tape_id({}) not in drive'.format(tape_id))
 
     def rewind_tape(self, tape_id):
         """rewind the tape in the given drive"""
@@ -696,6 +701,7 @@ class RamTar(object):
 
             new_state = {}
             if int(drive_int) == 2:
+                self.debug.output('drive_select==2')
                 for _loop_drive_int in 0,1:
                     new_state[_loop_drive_int]= self.drive_states.drive_init
             else:
@@ -708,19 +714,34 @@ class RamTar(object):
 
         def open_tar_drive():
             """open a tar file against a particular drive"""
-            device_path = '/dev/nst{}'.format(drive_int)
-            if self.drive_state is self.drive_states.drive_init:
-                self.debug.output('open tar on {}'.format(device_path))
-                self.tape_drive[drive_int] = tarfile.open(name=device_path, mode='w:')
-                self.drive_state[drive_int] = self.drive_states.drive_open
+            if int(drive_int) == 2:
+                for _loop_int in 0,1:
+                    device_path = '/dev/nst{}'.format(drive_int)
+                    if self.drive_state[drive_int] is self.drive_states.drive_init:
+                        self.debug.output('open tar on {}'.format(device_path))
+                        self.tape_drive[drive_int] = tarfile.open(name=device_path, mode='w:')
+                        self.drive_state[drive_int] = self.drive_states.drive_open
+                    else:
+                        self.debug.output('Fail to open {}:{}'.format(device_path, self.drive_state[drive_int]))
             else:
-                self.debug.output('Fail to open {}'.format(device_path))
+                self.debug.output('called with drive_int=={}'.format(drive_int))
+                device_path = '/dev/nst{}'.format(drive_int)
+                if drive_int in self.drive_state and self.drive_state[drive_int] is self.drive_states.drive_init:
+                    self.debug.output('open tar on {}'.format(device_path))
+                    self.tape_drive[drive_int] = tarfile.open(name=device_path, mode='w:')
+                    self.drive_state[drive_int] = self.drive_states.drive_open
+                else:
+                    self.debug.output('Fail to open {}'.format(device_path))
+            self.debug.output('state={}'.format(self.drive_state))
+            return self.drive_state
+
 
         def close_tar_drive():
             """close a previously opened tar for a particular drive"""
-            if self.drive_state is self.drive_states.drive_open:
+            if self.drive_state[drive_int] is self.drive_states.drive_open:
                 self.tape_drive[drive_int].close()
                 self.drive_state[drive_int] = self.drive_states.drive_init
+                self.debug.output('closed drive_int={}'.format(drive_int))
             else:
                 self.debug.output('Fail to close {}'.format(device_path))
 
@@ -759,9 +780,10 @@ class RamTar(object):
 
                 data_dir = '/papertape'
                 archive_dir = '/papertape/queue/{}'.format(self.pid)
-                archive_name = 'paper.{}.{}.tar'.format(self.pid,tape_index)
+                archive_prefix = 'paper.{}.{}'.format(self.pid,tape_index)
+                archive_name = '{}.tar'.format(archive_prefix)
                 archive_file =  '{}/{}'.format(archive_dir,archive_name)
-                archive_list = '{}/{}.file_list'.format(archive_dir, archive_name)
+                archive_list = '{}/{}.file_list'.format(archive_dir, archive_prefix)
 
                 ## for file in archive group build archive
                 for item in archive_dict[tape_index]:
@@ -769,19 +791,20 @@ class RamTar(object):
                     #arcname_rewrite = self.rewrite_path
                     self.append_to_archive('/'.join([data_dir, item]))
 
-                open_list = open(archive_list, mode='w')
-                open_list.write('\n'.join(archive_list_dict[str(tape_index)]))
-                open_list.close()
+                #open_list = open(archive_list, mode='w')
+                #open_list.write('\n'.join(archive_list_dict[str(tape_index)]))
+                #open_list.close()
 
                 arc = open(archive_file, mode='w')
                 arc.close()
 
                 ## send archive group to both tapes
-                for drive in self.tape_drive:
+                for drive in [0,1]:
+                    self.debug.output('send data')
                     self.send_archive_to_tape(drive, archive_list, archive_name, archive_file)
 
         else:
-            """I don't think its a good idea to do this since you have to read the data twice"""
+            ## I don't think its a good idea to do this since you have to read the data twice
             self.debug.output('skipping data write')
             pass
 
@@ -796,10 +819,10 @@ class RamTar(object):
 
     def send_archive_to_tape(self, drive_int, archive_list, archive_name, archive_file):
         """send the current archive to tape"""
-        ## add archive
         try:
             self.debug.output('{}'.format(archive_name))
-            self.ramtar_tape_drive(drive_int,self.drive_states.drive_open)
+            self.ramtar_tape_drive(drive_int, self.drive_states.drive_open)
+            self.debug.output('{}'.format(self.drive_state))
             ## add archive_list
             self.tape_drive[drive_int].add(archive_list)
             ## get the basic info from the blank file we wrote
@@ -810,7 +833,7 @@ class RamTar(object):
             self.archive_bytes.seek(0)
             ## write the bytes with info to the tape
             self.tape_drive[drive_int].addfile(tarinfo=self.archive_info, fileobj=self.archive_bytes)
-            self.tape_drive[drive_int].close()
+            self.ramtar_tape_drive(drive_int, self.drive_states.drive_close)
         except Exception as cept:
             self.debug.output('tarfile - {}'.format(cept))
             raise

@@ -179,24 +179,24 @@ class PaperDB(object):
 
         self.claim_files(file_list, unclaim=True)
 
-    def write_tape_index(self, catalog_list, tape_id):
+    def write_tape_index(self, tape_list, tape_id):
         """Take a dictionary of files and labels and update the database
 
         record the barcode of tape in the tape_index field, but not
         setting the delete_file field to 1 for all files just written to tape.
-        :param catalog_list: dict
+        :param tape_list: dict
         :param tape_id: str
         """
 
         write_tape_index_status = self.status_code.OK
-        self.debug.output("catalog_list contains %s files, and with ids: %s" % (len(catalog_list), tape_id))
+        self.debug.output("tape_list contains %s files, and with ids: %s" % (len(tape_list), tape_id))
         self.db_connect()
 
-        ## catalog file_list is set in paper_io.py: self.catalog_list.append([queue_pass, int, file])
-        for catalog in catalog_list:
+        ## item file_list is set in paper_io.py: self.tape_list.append([queue_pass, int, file])
+        for item in tape_list:
             ## tape_index: 20150103[papr1001,papr2001]-132:3
-            tape_index = "%s[%s]-%s:%s" % (self.version, tape_id, catalog[0], catalog[1])
-            raw_path = catalog[2]
+            tape_index = "%s[%s]-%s:%s" % (self.version, tape_id, item[0], item[1])
+            raw_path = item[2]
             self.debug.output("writing tapelocation: %s for %s" % (tape_index, raw_path))
             try:
                 self.cur.execute('update paperdata set tape_index="%s" where raw_path="%s"' % (tape_index, raw_path))
