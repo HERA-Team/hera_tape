@@ -55,7 +55,6 @@ class PaperDB(object):
             ## debug whenever we update the state variable
             self.debug.output("updating: {} with {}={}".format(class_name, attr_name, attr_value))
 
-        #super(self.__class__, self).__setattr__(attr_name, attr_value)
         super().__setattr__(attr_name, attr_value)
 
     def update_connection_time(self):
@@ -151,6 +150,8 @@ class PaperDB(object):
             if unclaim is True:
                 update_sql = "update paperdata set tape_index='' where raw_path='%s' and tape_index='%s%s'" % (file_name, status_type, self.pid)
             else:
+                ## TODO(dconover): allow claim to use current state
+                status_type = self.paperdb_state_code.claim.value
                 update_sql = "update paperdata set tape_index='%s%s' where raw_path='%s'" % (status_type, self.pid, file_name)
 
             self.debug.output('claim_files - %s' % update_sql)
