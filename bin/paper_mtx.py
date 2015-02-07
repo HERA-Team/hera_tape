@@ -680,6 +680,7 @@ class RamTar(object):
         ## tape opened with tar
         ## this is a dictionary where we will do:
         ## self.tape_drive[drive_int] = tarfile.open(mode='w:')
+        self.tape_filehandle = {}
         self.tape_drive = {}
 
         ## if we use tarfile, we need to track the state
@@ -716,10 +717,14 @@ class RamTar(object):
             """open a tar file against a particular drive"""
             if int(drive_int) == 2:
                 for _loop_int in 0,1:
+                    ## define the actual device path
                     device_path = '/dev/nst{}'.format(drive_int)
                     if self.drive_state[drive_int] is self.drive_states.drive_init:
                         self.debug.output('open tar on {}'.format(device_path))
-                        self.tape_drive[drive_int] = tarfile.open(name=device_path, mode='w:')
+                        ## create a filehandle for the device
+                        self.tape_filehandle[drive_int] = open(device_path, mode='wb')
+                        ## send the filehandle to the tarfile
+                        self.tape_drive[drive_int] = tarfile.open(fileobj=self.tape_filehandle[drive_int], mode='w:')
                         self.drive_state[drive_int] = self.drive_states.drive_open
                     else:
                         self.debug.output('Fail to open {}:{}'.format(device_path, self.drive_state[drive_int]))
@@ -728,22 +733,29 @@ class RamTar(object):
                 device_path = '/dev/nst{}'.format(drive_int)
                 if drive_int in self.drive_state and self.drive_state[drive_int] is self.drive_states.drive_init:
                     self.debug.output('open tar on {}'.format(device_path))
-                    self.tape_drive[drive_int] = tarfile.open(name=device_path, mode='w:')
+                    ## create a filehandle for the device
+                    self.tape_filehandle[drive_int] = open(device_path, mode='wb')
+                    self.tape_drive[drive_int] = tarfile.open(fileobj=self.tape_filehandle[drive_int], mode='w:')
                     self.drive_state[drive_int] = self.drive_states.drive_open
                 else:
                     self.debug.output('Fail to open {}'.format(device_path))
             self.debug.output('state={}'.format(self.drive_state))
             return self.drive_state
 
-
         def close_tar_drive():
             """close a previously opened tar for a particular drive"""
             if self.drive_state[drive_int] is self.drive_states.drive_open:
+
+                ## close tarfile
                 self.tape_drive[drive_int].close()
+
+                ## close tape_filehandle
+                self.tape_filehandle[drive_int].close()
+
                 self.drive_state[drive_int] = self.drive_states.drive_init
                 self.debug.output('closed drive_int={}'.format(drive_int))
             else:
-                self.debug.output('Fail to close {}'.format(device_path))
+                self.debug.output('Fail to close drive_int={} ({})'.format(drive_int, self.drive_state[drive_int]))
 
 
         action = {
@@ -787,9 +799,12 @@ class RamTar(object):
 
                 ## for file in archive group build archive
                 for item in archive_dict[tape_index]:
-                    self.debug.output('item - {}'.format(item))
+                    self.debug.output('item - {}..{}'.format(tape_index,item))
                     #arcname_rewrite = self.rewrite_path
-                    self.append_to_archive('/'.join([data_dir, item]))
+                    data_path = '/'.join([data_dir, item])
+                    ## TODO(dconover): remove excess leading paths from archive_path
+                    archive_path = '/'.join([archive_prefix, item])
+                    self.append_to_archive(data_path, file_path_rewrite=archive_path )
 
                 #open_list = open(archive_list, mode='w')
                 #open_list.write('\n'.join(archive_list_dict[str(tape_index)]))
@@ -812,6 +827,7 @@ class RamTar(object):
         """add data to an open archive"""
         arcname = file_path if file_path_rewrite is None else file_path_rewrite
         try:
+            self.debug.output('file_path={}, arcname={}'.format(file_path, arcname))
             self.archive_tar.add(file_path, arcname=arcname)
         except Exception as cept:
             self.debug.output('tarfile exception - {}'.format(cept))
