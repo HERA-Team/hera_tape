@@ -365,6 +365,8 @@ class DumpFast(Dump):
     def tar_archive_fast(self, catalog_file):
         """Archive files directly to tape using only a single drive to write 2 tapes"""
 
+        tar_archive_fast_status = self.status_code.OK
+
         ## select ids
         tape_label_ids = self.labeldb.select_ids()
         self.labeldb.claim_ids(tape_label_ids)
@@ -374,17 +376,30 @@ class DumpFast(Dump):
 
         ## add the catalog to the beginning of the tape
         for label_id in tape_label_ids:
-            self.debug.output('printing to label_id - {}'.format(label_id))
+            self.debug.output('archiving to label_id - {}'.format(label_id))
 
         ## prepare the first block of the tape with the current tape_catalog
         self.tape.prep_tape(catalog_file)
 
         self.debug.output('got list - {}'.format(self.files.tape_list))
         self.tape.ramtar.archive_from_list(self.files.tape_list)
+
+        for label_id in tape_label_ids:
+            dump_verify_status = self.dump_verify(label_id)
+            if dump_verify_status is not self.status_code.OK:
+                self.debug.output('Fail: dump_verify {}'.format(dump_verify_status))
+                tar_archive_single_status = self.status_code.tar_archive_single_dump_verify
+                self.close_dump()
+
         self.tape.unload_tape_pair()
 
-        self.debug.output('writing tape_indexes')
-        self.paperdb.write_tape_index(self.files.archive_list, ','.join(tape_label_ids))
+        ## update the current dump state
+        if tar_archive_fast_status is self.status_code.OK:
+            log_label_ids_status = self.log_label_ids(tape_label_ids, self.files.tape_list)
+            if log_label_ids_status is not self.status_code.OK:
+                self.debug.output('problem writing labels out: {}'.format(log_label_ids_status))
+        else:
+            self.debug.output("Abort dump: {}".format(tar_archive_single_status))
 
     def batch_files(self, queue=False, regex=False, pid=False, claim=True):
         """populate self.catalog_list; transfer files to shm"""
@@ -432,7 +447,7 @@ class DumpFast(Dump):
 
         #if self.tape_used_size > 0:
         #    self.debug.output('generating final catalog - %s, %s' % (len(self.files.tape_list), self.files.tape_list))
-        #    self.files.gen_final_catalog(self.files.catalog_name, self.files.tape_list, self.paperdb.file_md5_dict)
+        #   self.files.gen_final_catalog(self.files.catalog_name, self.files.tape_list, self.paperdb.file_md5_dict)
 
         self.debug.output("complete:%s:%s:%s:%s" % (queue, regex, pid, claim))
         return True if self.tape_used_size != 0 else False
@@ -498,8 +513,8 @@ class TestDump(DumpFast):
 
 
         if self.batch_files():
-            self.debug.output('found %s files' % len(self.files.archive_list))
-            self.files.gen_final_catalog(self.files.catalog_name, self.files.archive_list, self.paperdb.file_md5_dict)
+            self.debug.output('found %s files' % len(self.files.tape_list))
+            self.files.gen_final_catalog(self.files.catalog_name, self.files.tape_list, self.paperdb.file_md5_dict)
             self.tar_archive_fast(self.files.catalog_name)
         else:
             self.debug.output("no files batched")
