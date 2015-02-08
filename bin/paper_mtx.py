@@ -797,6 +797,9 @@ class RamTar(object):
                 archive_file =  '{}/{}'.format(archive_dir,archive_name)
                 archive_list = '{}/{}.file_list'.format(archive_dir, archive_prefix)
 
+                ## rewind the archive to zero to we don't fill up ram
+                self.archive_bytes.seek(0)
+
                 ## for file in archive group build archive
                 for item in archive_dict[tape_index]:
                     self.debug.output('item - {}..{}'.format(tape_index,item))
@@ -850,6 +853,8 @@ class RamTar(object):
             ## write the bytes with info to the tape
             self.tape_drive[drive_int].addfile(tarinfo=self.archive_info, fileobj=self.archive_bytes)
             self.ramtar_tape_drive(drive_int, self.drive_states.drive_close)
+            self.archive_bytes.seek(0)
+
         except Exception as cept:
             self.debug.output('tarfile - {}'.format(cept))
             raise
