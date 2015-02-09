@@ -798,7 +798,7 @@ class RamTar(object):
                 archive_list = '{}/{}.file_list'.format(archive_dir, archive_prefix)
 
                 ## rewind the archive to zero to we don't fill up ram
-                self.archive_bytes.seek(0)
+                self.archive_bytes = BytesIO()
 
                 ## for file in archive group build archive
                 for item in archive_dict[tape_index]:
