@@ -77,7 +77,7 @@ class Changer(object):
         self.disk_queue = disk_queue
         if not self.disk_queue:
             ## we need to use Ramtar
-            self.ramtar = RamTar(pid, drive_select=drive_select, rewrite_path=None, debug=debug, debug_threshold=debug_threshold)
+            self.ramtar = FastTar(pid, drive_select=drive_select, rewrite_path=None, debug=debug, debug_threshold=debug_threshold)
         ## TODO(dconover): implement a lock on the changer to prevent overlapping requests
         self.changer_state = 0
 
@@ -752,6 +752,7 @@ class RamTar(object):
                 ## close tape_filehandle
                 self.tape_filehandle[drive_int].close()
 
+
                 self.drive_state[drive_int] = self.drive_states.drive_init
                 self.debug.output('closed drive_int={}'.format(drive_int))
             else:
@@ -799,6 +800,7 @@ class RamTar(object):
 
                 ## rewind the archive to zero to we don't fill up ram
                 self.archive_bytes = BytesIO()
+                self.archive_tar = tarfile.open(mode='w:', fileobj=self.archive_bytes)
 
                 ## for file in archive group build archive
                 for item in archive_dict[tape_index]:
@@ -809,10 +811,8 @@ class RamTar(object):
                     archive_path = '/'.join([archive_prefix, item])
                     self.append_to_archive(data_path, file_path_rewrite=archive_path )
 
-                #open_list = open(archive_list, mode='w')
-                #open_list.write('\n'.join(archive_list_dict[str(tape_index)]))
-                #open_list.close()
-
+                ## close the file but not the bytestream
+                self.archive_tar.close()
                 arc = open(archive_file, mode='w')
                 arc.close()
 
@@ -844,12 +844,16 @@ class RamTar(object):
             self.debug.output('{}'.format(self.drive_state))
             ## add archive_list
             self.tape_drive[drive_int].add(archive_list)
+
             ## get the basic info from the blank file we wrote
             self.archive_info = self.tape_drive[drive_int].gettarinfo(archive_file)
-            ## change the size to the byte size of our BytesIO object
+
+            ## fix the size to the byte size of our BytesIO object
             self.archive_info.size = len(self.archive_bytes.getvalue())
+
             ## rewind
             self.archive_bytes.seek(0)
+
             ## write the bytes with info to the tape
             self.tape_drive[drive_int].addfile(tarinfo=self.archive_info, fileobj=self.archive_bytes)
             self.ramtar_tape_drive(drive_int, self.drive_states.drive_close)
@@ -865,6 +869,101 @@ class RamTar(object):
         self.archive_bytes.truncate()
         self.archive_tar = tarfile.open(mode='w:', fileobj=self.archive_bytes)
 
+class FastTar(RamTar):
+    """handling python tarfile opened directly against tape devices"""
+
+    def __init__(self, pid, drive_select=1, rewrite_path=None, debug=False, debug_threshold=128):
+        """initialize"""
+
+        self.pid = pid
+        self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
+
+        self.drive_select = drive_select
+        self.rewrite_path = rewrite_path
+        ## if we're not using disk queuing we open the drives differently;
+        ## we need to track different states
+        ## for faster archiving we keep some data in memory instead of queuing to disk
+        self.archive_tar = ''
+
+        ## tape opened with tar
+        ## this is a dictionary where we will do:
+        ## self.tape_drive[drive_int] = tarfile.open(mode='w:')
+        self.tape_filehandle = {}
+        self.tape_drive = {}
+
+        ## if we use tarfile, we need to track the state
+        self.drive_states = RamTarStateCode
+        self.drive_state = self.ramtar_tape_drive(drive_select, self.drive_states.drive_init)
+
+    def archive_from_list(self, tape_list):
+        """take a tape list, build each archive, write to tapes"""
+
+        archive_dict = defaultdict(list)
+        archive_list_dict = defaultdict(list)
+
+        if self.drive_select == 2:
+            self.debug.output('writing data to two tapes')
+            ## for archive group in list
+            ## build a dictionary of archives
+            for item in tape_list:
+                self.debug.output('item to check: {}'.format(item))
+                archive_list_dict[item[0]].append(item)
+                archive_dict[item[0]].append(item[-1])
+
+            for tape_index in archive_dict:
+
+                data_dir = '/papertape'
+                archive_dir = '/papertape/queue/{}'.format(self.pid)
+                archive_prefix = 'paper.{}.{}'.format(self.pid,tape_index)
+                archive_name = '{}.tar'.format(archive_prefix)
+                archive_file =  '{}/{}'.format(archive_dir,archive_name)
+                archive_list = '{}/{}.file_list'.format(archive_dir, archive_prefix)
+
+                self.archive_tar = tarfile.open(archive_file,mode='w:')
+
+                ## for file in archive group build archive
+                for item in archive_dict[tape_index]:
+                    self.debug.output('item - {}..{}'.format(tape_index,item))
+                    #arcname_rewrite = self.rewrite_path
+                    data_path = '/'.join([data_dir, item])
+                    ## TODO(dconover): remove excess leading paths from archive_path
+                    archive_path = '/'.join([archive_prefix, item])
+                    self.append_to_archive(data_path, file_path_rewrite=archive_path )
+
+                ## close the file
+                self.archive_tar.close()
+
+                ## send archive group to both tapes
+                for drive in [0,1]:
+                    self.debug.output('send data')
+                    self.send_archive_to_tape(drive, archive_list, archive_name, archive_file)
+
+        else:
+            ## I don't think its a good idea to do this since you have to read the data twice
+            self.debug.output('skipping data write')
+            pass
+
+    def send_archive_to_tape(self, drive_int, archive_list, archive_name, archive_file):
+        """send the current archive to tape"""
+        try:
+            self.debug.output('{}'.format(archive_name))
+            self.ramtar_tape_drive(drive_int, self.drive_states.drive_open)
+            self.debug.output('{}'.format(self.drive_state))
+
+            ## add archive_list
+            self.tape_drive[drive_int].add(archive_list)
+
+            ## write the tape
+            #self.tape_drive[drive_int].add(archive_file)
+            self.ramtar_tape_drive(drive_int, self.drive_states.drive_close)
+
+            ## truncate the current archive to save disk space
+            archive_open = open(archive_file, 'w')
+            archive_open.truncate(0)
+
+        except Exception as cept:
+            self.debug.output('tarfile - {}'.format(cept))
+            raise
 
 @unique
 class RamTarStateCode(Enum):
