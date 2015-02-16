@@ -66,6 +66,8 @@ class Changer(object):
         self.tape_size = tape_size
         self._tape_dev = '/dev/changer'
         self.status_code = StatusCode
+        self.drive_select = drive_select
+        self.archive_tar = ''
 
         self.drive_ids = []
         self.tape_ids = []
@@ -261,12 +263,9 @@ class Changer(object):
             ##self.ramtar.archive_from_list(tape_list)
             self.debug.output('unnecessary call to write?')
 
-
-
         elif not self.disk_queue and not tape_list:
             self.debug.output('no list given')
             raise Exception
-
 
     def prep_tape(self, catalog_file):
         """write the catalog to tape. write all of our source code to the first file"""
@@ -303,6 +302,7 @@ class Changer(object):
         self.debug.output('loading tape: %s' % tape_id)
         ## load a tape or rewind the existing tape
         self.load_tape_drive(tape_id)
+        drive_int = self.drive_ids[tape_id][0]
 
         ## for every tar advance the tape
         ## select a random path from the tape
@@ -319,7 +319,7 @@ class Changer(object):
             ## starting at the beginning of the tape we can advance one at a
             ## time through each archive and test one directory_path/visdata md5sum
             self.debug.output('checking md5sum for %s' % directory_path)
-            md5sum = self.tape_drives.md5sum_at_index(job_pid, tape_index, directory_path, drive_int=0)
+            md5sum = self.tape_drives.md5sum_at_index(job_pid, tape_index, directory_path, drive_int=drive_int)
             if md5sum != md5_dict[directory_path]:
                 self.debug.output('mdsum does not match: %s, %s' % (md5sum, md5_dict[directory_path]))
                 tape_archive_md5_status = self.status_code.tape_archive_md5_mismatch
@@ -334,6 +334,79 @@ class Changer(object):
         """cleanup"""
         ## TODO(dconover): implement changer locking; remove lock
         pass
+
+    def append_to_archive(self, file_path, file_path_rewrite=None):
+        """add data to an open archive"""
+        arcname = file_path if file_path_rewrite is None else file_path_rewrite
+        try:
+            self.debug.output('file_path={}, arcname={}'.format(file_path, arcname))
+            self.archive_tar.add(file_path, arcname=arcname)
+        except Exception as cept:
+            self.debug.output('tarfile exception - {}'.format(cept))
+            raise
+
+    def archive_from_list(self, tape_list):
+        """take a tape list, build each archive, write to tapes"""
+
+        archive_dict = defaultdict(list)
+        archive_list_dict = defaultdict(list)
+
+        if self.drive_select == 2:
+            self.debug.output('writing data to two tapes')
+            ## for archive group in list
+            ## build a dictionary of archives
+            for item in tape_list:
+                self.debug.output('item to check: {}'.format(item))
+                archive_list_dict[item[0]].append(item)
+                archive_dict[item[0]].append(item[-1])
+
+            for tape_index in archive_dict:
+
+                data_dir = '/papertape'
+                archive_dir = '/papertape/queue/{}'.format(self.pid)
+                archive_prefix = 'paper.{}.{}'.format(self.pid,tape_index)
+                archive_name = '{}.tar'.format(archive_prefix)
+                #archive_file =  '{}/{}'.format(archive_dir,archive_name)
+                archive_file =  '{}/shm/{}'.format(data_dir,archive_name)
+                archive_list = '{}/{}.file_list'.format(archive_dir, archive_prefix)
+
+                self.archive_tar = tarfile.open(archive_file,mode='w:')
+
+                ## for file in archive group build archive
+                for item in archive_dict[tape_index]:
+                    self.debug.output('item - {}..{}'.format(tape_index,item))
+                    #arcname_rewrite = self.rewrite_path
+                    data_path = '/'.join([data_dir, item])
+                    ## TODO(dconover): remove excess leading paths from archive_path
+                    archive_path = '/'.join([archive_prefix, item])
+                    self.append_to_archive(data_path, file_path_rewrite=archive_path )
+
+                ## close the file
+                self.archive_tar.close()
+
+                ## send archive group to both tapes
+                self.debug.output('send data')
+                self.send_archive_to_tape(archive_list, archive_name, archive_file)
+
+        else:
+            ## I don't think its a good idea to do this since you have to read the data twice
+            self.debug.output('skipping data write')
+            pass
+
+    def send_archive_to_tape(self, archive_list, archive_name, archive_file):
+        """send the current archive to tape"""
+        try:
+            self.debug.output('{}'.format(archive_name))
+            ## add archive_list, and archive_file
+            self.tape_drives.tar_files([archive_list, archive_file])
+
+            ## truncate the current archive to save disk space
+            archive_open = open(archive_file, 'w')
+            archive_open.truncate(0)
+
+        except Exception as cept:
+            self.debug.output('tarfile - {}'.format(cept))
+            raise
 
 @unique
 class ChangerStateCode(Enum):
@@ -657,7 +730,7 @@ class Drives(object):
                 break
             else:
                 self.debug.output('sleep', debug_level=250)
-                time.sleep(0.5)
+                time.sleep(5)
 
 class RamTar(object):
     """handling python tarfile opened directly against tape devices"""
@@ -895,53 +968,6 @@ class FastTar(RamTar):
         self.drive_states = RamTarStateCode
         self.drive_state = self.ramtar_tape_drive(drive_select, self.drive_states.drive_init)
 
-    def archive_from_list(self, tape_list):
-        """take a tape list, build each archive, write to tapes"""
-
-        archive_dict = defaultdict(list)
-        archive_list_dict = defaultdict(list)
-
-        if self.drive_select == 2:
-            self.debug.output('writing data to two tapes')
-            ## for archive group in list
-            ## build a dictionary of archives
-            for item in tape_list:
-                self.debug.output('item to check: {}'.format(item))
-                archive_list_dict[item[0]].append(item)
-                archive_dict[item[0]].append(item[-1])
-
-            for tape_index in archive_dict:
-
-                data_dir = '/papertape'
-                archive_dir = '/papertape/queue/{}'.format(self.pid)
-                archive_prefix = 'paper.{}.{}'.format(self.pid,tape_index)
-                archive_name = '{}.tar'.format(archive_prefix)
-                archive_file =  '{}/{}'.format(archive_dir,archive_name)
-                archive_list = '{}/{}.file_list'.format(archive_dir, archive_prefix)
-
-                self.archive_tar = tarfile.open(archive_file,mode='w:')
-
-                ## for file in archive group build archive
-                for item in archive_dict[tape_index]:
-                    self.debug.output('item - {}..{}'.format(tape_index,item))
-                    #arcname_rewrite = self.rewrite_path
-                    data_path = '/'.join([data_dir, item])
-                    ## TODO(dconover): remove excess leading paths from archive_path
-                    archive_path = '/'.join([archive_prefix, item])
-                    self.append_to_archive(data_path, file_path_rewrite=archive_path )
-
-                ## close the file
-                self.archive_tar.close()
-
-                ## send archive group to both tapes
-                for drive in [0,1]:
-                    self.debug.output('send data')
-                    self.send_archive_to_tape(drive, archive_list, archive_name, archive_file)
-
-        else:
-            ## I don't think its a good idea to do this since you have to read the data twice
-            self.debug.output('skipping data write')
-            pass
 
     def send_archive_to_tape(self, drive_int, archive_list, archive_name, archive_file):
         """send the current archive to tape"""

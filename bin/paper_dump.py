@@ -382,7 +382,7 @@ class DumpFast(Dump):
         self.tape.prep_tape(catalog_file)
 
         self.debug.output('got list - {}'.format(self.files.tape_list))
-        self.tape.ramtar.archive_from_list(self.files.tape_list)
+        self.tape.archive_from_list(self.files.tape_list)
 
         for label_id in tape_label_ids:
             dump_verify_status = self.dump_verify(label_id)
