@@ -230,7 +230,7 @@ class Dump(object):
         ## take output from tape_self_check and compare against current dump
         if self_check_status is self.status_code.OK:
 
-            self.debug.output('item_count {} == {}'.format(self.files.item_index, int(item_index)))
+            self.debug.output('confirming item_count {} == {}'.format(self.files.item_index, int(item_index)))
             if self.files.item_index != int(item_index):
                 self.debug.output("%s mismatch: %s, %s" % ("item_count", self.files.item_index, item_index))
                 dump_verify_status = self.status_code.dump_verify_item_index
@@ -242,7 +242,7 @@ class Dump(object):
 
             self.debug.output('confirming %s' % "md5_dict")
             if self.paperdb.file_md5_dict != md5_dict:
-                self.debug.output("%s mismatch: %s, %s" % ("md5_dict", self.pid, tape_pid))
+                self.debug.output("%s mismatch: %s, %s" % ("md5_dict", self.paperdb.file_md5_dict, md5_dict), debug_level=253)
                 dump_verify_status = self.status_code.dump_verify_md5_dict
 
             self.debug.output('confirming %s' % "pid")
