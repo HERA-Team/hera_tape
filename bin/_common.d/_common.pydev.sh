@@ -18,6 +18,7 @@ _logfile () {    ## open, close, or kill the logfile
             exec 1>&6 6>&-
             cat $log && rm $log
             cat $log
+            echo $log
         ;;
         tty)
             exec >/dev/tty 2>&1
