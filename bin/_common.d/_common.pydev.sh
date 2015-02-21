@@ -17,6 +17,8 @@ _logfile () {    ## open, close, or kill the logfile
         kill)
             exec 1>&6 6>&-
             cat $log && rm $log
+            cat $log
+            echo $log
         ;;
         tty)
             exec >/dev/tty 2>&1
@@ -29,6 +31,7 @@ _logfile () {    ## open, close, or kill the logfile
 
 export WORK_DIR=/root/git/papertape.dconover/bin 
 export LOG_DIR=$WORK_DIR/log TERM=ansi
+export LOGFILE_CLOSE=tty
 #alias pylint='pylint --rcfile=~/.pylint.d/pylintrc'
 
 _pgrep () { grep "$*" paper_*.py; }
@@ -63,9 +66,12 @@ _t (){
     fi
     echo _t:$(_date)
 
-    _logfile tty $_log_file
+    _logfile $LOGFILE_CLOSE $_log_file
     export TLAST=$_command
 }
+
+
+
 _v () { vim ${1:-$last};last=${1-$last}; }
 _m () { echo using file: ${2:-$mlast}; echo "$1"| mysql --defaults-extra-file=/root/.my.${2:-$mlast}.cnf||ls /root/.my.*; mlast=${2:-$mlast}; }
 _dd () {  dd if=/dev/nst0 bs=32k count=1 conv=sync,block; }
