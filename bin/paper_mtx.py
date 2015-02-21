@@ -620,14 +620,14 @@ class Drives(object):
         """write text contents to the first 32k block of a tape"""
         commands = []
         for drive_int in range(self.drive_select):
-            commands.append('dd conv=sync,block of=/dev/nst%s if=%s bs=32k count=1' % (drive_int, text_file))
+            commands.append('dd conv=sync,block of=/dev/nst%s if=%s bs=32k' % (drive_int, text_file))
         self.exec_commands(commands)
 
     def dd_read(self, drive_int):
         """assuming a loaded tape, read off the first block from the tape and
         return it as a string"""
 
-        command = ['dd', 'conv=sync,block', 'if=/dev/nst%s' % drive_int, 'bs=32k', 'count=1']
+        command = ['dd', 'conv=sync,block', 'if=/dev/nst%s' % drive_int, 'bs=32k']
         self.debug.output('%s' % command)
         output = check_output(command).decode('utf8').split('\n')
 
