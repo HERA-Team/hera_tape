@@ -265,6 +265,7 @@ class Dump(object):
         tape_self_check_status = self.status_code.OK
 
         ## load the tape if necessary
+        ## TODO(dconover): call with the correct tape drive_int or unload tape before tape_self_check
         self.tape.load_tape_drive(tape_id)
 
         ## read tape_catalog as file_list
@@ -384,14 +385,16 @@ class DumpFast(Dump):
         self.debug.output('got list - {}'.format(self.files.tape_list))
         self.tape.archive_from_list(self.files.tape_list)
 
+        ## unloading the tape pair allows for the tape to be loaded back from the library
+        ## for verification later
+        self.tape.unload_tape_pair()
+
         for label_id in tape_label_ids:
             dump_verify_status = self.dump_verify(label_id)
             if dump_verify_status is not self.status_code.OK:
                 self.debug.output('Fail: dump_verify {}'.format(dump_verify_status))
                 tar_archive_single_status = self.status_code.tar_archive_single_dump_verify
                 self.close_dump()
-
-        self.tape.unload_tape_pair()
 
         ## update the current dump state
         if tar_archive_fast_status is self.status_code.OK:
