@@ -200,7 +200,7 @@ class PaperDB(object):
             raw_path = item[2]
             self.debug.output("writing tapelocation: %s for %s" % (tape_index, raw_path))
             try:
-                self.cur.execute('update paperdata set tape_index="%s" where raw_path="%s"' % (tape_index, raw_path))
+                self.cur.execute('update paperdata set tape_index="%s", delete_file=1 where raw_path="%s"' % (tape_index, raw_path))
             except Exception as mysql_error:
                 self.debug.output('error {}'.format(mysql_error))
                 write_tape_index_status = self.status_code.write_tape_index_mysql
