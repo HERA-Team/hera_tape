@@ -17,6 +17,10 @@ _logfile () {    ## open, close, or kill the logfile
         kill)
             exec 1>&6 6>&-
             cat $log && rm $log
+            echo $log
+        ;;
+        cat)
+            exec 1>&6 6>&-
             cat $log
             echo $log
         ;;
