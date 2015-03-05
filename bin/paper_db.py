@@ -198,9 +198,9 @@ class PaperDB(object):
             ## tape_index: 20150103[papr1001,papr2001]-132:3
             tape_index = "%s[%s]-%s:%s" % (self.version, tape_id, item[0], item[1])
             raw_path = item[2]
-            self.debug.output("writing tapelocation: %s for %s" % (tape_index, raw_path))
+            self.debug.output("writing tape_index: %s for %s" % (tape_index, raw_path))
             try:
-                self.cur.execute('update paperdata set tape_index="%s" where raw_path="%s"' % (tape_index, raw_path))
+                self.cur.execute('update paperdata set tape_index="%s", delete_file=1 where raw_path="%s"' % (tape_index, raw_path))
             except Exception as mysql_error:
                 self.debug.output('error {}'.format(mysql_error))
                 write_tape_index_status = self.status_code.write_tape_index_mysql
