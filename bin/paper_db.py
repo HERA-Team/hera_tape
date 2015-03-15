@@ -110,7 +110,7 @@ class PaperDB(object):
                 where raw_path is not null 
                 and write_to_tape = 1 
                 and tape_index='NULL'
-                group by raw_path order by obsnum;
+                group by raw_path order by julian_day;
             """
 
         self.db_connect()
