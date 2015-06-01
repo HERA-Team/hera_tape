@@ -195,7 +195,7 @@ class PaperDB(object):
 
         ## item file_list is set in paper_io.py: self.tape_list.append([queue_pass, int, file])
         for item in tape_list:
-            ## tape_index: 20150103[papr1001,papr2001]-132:3
+            ## tape_index: 20150103[PAPR2001,PAPR2001]-132:3
             tape_index = "%s[%s]-%s:%s" % (self.version, tape_id, item[0], item[1])
             raw_path = item[2]
             self.debug.output("writing tape_index: %s for %s" % (tape_index, raw_path))
