@@ -724,6 +724,11 @@ class Drives(object):
                         processes.remove(process)
                     else:
                         fail()
+                        ## if we don't remove the process it will loop infinitely
+                        ## on the other hand if we proceed without escalating the failure properly,
+                        ## we'll probably keep running into the same problem with subsequent runs
+                        ## TODO(dconover): update return value to terminate dump cleanly
+                        ## processes.remove(process)
 
             if not processes and not cmds:
                 self.debug.output('break')

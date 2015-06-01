@@ -6,7 +6,7 @@
 
 source common.sh
 
-dump_script=/root/git/papertape.dconover/bin/test-prod_dump.py
+dump_script=/root/git/papertape.dconover/bin/papertape-prod_dump.py
 process_file=/var/run/papertape.pid
 log_file=/papertape/log/papertape.log.$$.$(date +%Y%m%d-%H%M)
 log_link=/papertape/log/papertape.log
@@ -35,7 +35,7 @@ echo $$ >>$process_file
 ## run dump
 echo starting papertape dump: $(date)
 time python $dump_script || (
-    echo Fail: bad exit from $dump_script
+    echo Fail: bad exit from $dump_script $?
     _logfile close
     exit $DUMP_FAILURE
 )
