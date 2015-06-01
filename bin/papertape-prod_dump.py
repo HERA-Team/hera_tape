@@ -2,7 +2,7 @@
 
 __author__ = 'dconover@sas.upenn.edu'
 
-from paper_dump import TestDump
+from paper_dump import DumpFast
 
 paper_creds = '/root/.my.papertape-prod.cnf'
 
