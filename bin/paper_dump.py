@@ -370,7 +370,7 @@ class DumpFast(Dump):
 
         ## select ids
         tape_label_ids = self.labeldb.select_ids()
-        self.labeldb.claim_ids(tape_label_ids)
+        # self.labeldb.claim_ids(tape_label_ids)
 
         ## load up a fresh set of tapes
         self.tape.load_tape_pair(tape_label_ids)
@@ -403,6 +403,24 @@ class DumpFast(Dump):
                 self.debug.output('problem writing labels out: {}'.format(log_label_ids_status))
         else:
             self.debug.output("Abort dump: {}".format(tar_archive_single_status))
+
+    def fast_batch(self):
+        """skip tar of local archive on disk
+
+           send files to two tapes using a single drive."""
+        ## batch_files() does the job of making the lists that queue_archive does
+        ## it also updates self.tape_index which is used by Changer.write()
+        self.debug.output('reloading sample data into paperdatatest database')
+
+
+        if self.batch_files():
+            self.debug.output('found %s files' % len(self.files.tape_list))
+            self.files.gen_final_catalog(self.files.catalog_name, self.files.tape_list, self.paperdb.file_md5_dict)
+            self.tar_archive_fast(self.files.catalog_name)
+            return True
+        else:
+            self.debug.output("no files batched")
+            return self.dump_state_code.dump_list_fail
 
     def batch_files(self, queue=False, regex=False, pid=False, claim=True):
         """populate self.catalog_list; transfer files to shm"""
@@ -468,9 +486,14 @@ class DumpStateCode(Enum):
 
     initialize     = 1 ## cleanup temporary files in paper_io              action: always close db
     dump_list      = 2 ## files claimed;                                   action: unclaim files; close db
-    dump_queue  = 3 ## claimed files queued;                            action: ignore (?); close db
-    dump_write   = 4 ## claimed files written to tape, but not verified; action: ignore (?); close db
+    dump_queue  = 3 ## claimed files queued;                               action: ignore (?); close db
+    dump_write   = 4 ## claimed files written to tape, but not verified;   action: ignore (?); close db
+    dump_list_fail = 5
+    dump_queue_fail = 6
+    dump_write_fail = 7
+    dump_verify_fail = 8
     dump_verify  = 0 ## done
+
 
 class ResumeDump(Dump):
     """methods for resuming a normal dump that was interrupted"""
@@ -506,21 +529,6 @@ class ResumeDump(Dump):
 class TestDump(DumpFast):
     """move all the testing methods here to cleanup the production dump class"""
 
-    def test_fast_archive(self):
-        """skip tar of local archive on disk
-
-           send files to two tapes using a single drive."""
-        ## batch_files() does the job of making the lists that queue_archive does
-        ## it also updates self.tape_index which is used by Changer.write()
-        self.debug.output('reloading sample data into paperdatatest database')
-
-
-        if self.batch_files():
-            self.debug.output('found %s files' % len(self.files.tape_list))
-            self.files.gen_final_catalog(self.files.catalog_name, self.files.tape_list, self.paperdb.file_md5_dict)
-            self.tar_archive_fast(self.files.catalog_name)
-        else:
-            self.debug.output("no files batched")
 
     def test_build_archive(self, regex=False):
         """master method to loop through files to write data to tape"""
