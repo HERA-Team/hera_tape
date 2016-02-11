@@ -22,7 +22,7 @@ if [ -f "$override_file" ]; then
 fi
 
 ## debug override_file
-#touch $override_file
+touch $override_file
 
 ## log link 
 [ -f "$log_link" ] && rm $log_link
