@@ -86,7 +86,7 @@ class PaperDB(object):
     def get_new(self, size_limit, regex=False, pid=False):
         """Retrieve a list of available files.
 
-        Outputs files that are "write_to_tape"
+        Outputs files that are "is_tapeable"
         Optionally, limit search by file_path regex or pid in tape_index
 
         Arguments:
@@ -95,22 +95,22 @@ class PaperDB(object):
         """
 
         if regex:
-            ready_sql = """select raw_path, raw_file_size_mb, md5sum from paperdata
-                where raw_path is not null
-                and write_to_tape = 1 
-                and tape_index='NULL'
-                and raw_path like '%s'
+            ready_sql = """select source, filesize, md5sum from File
+                where source is not null
+                and is_tapeable = 1 
+                and tape_index is null
+                and source like '%s'
             """ % regex
         elif pid:
-            ready_sql = """select raw_path, raw_file_size_mb, md5sum from paperdata
+            ready_sql = """select source, filesize, md5sum from File
                 where tape_index = 1{0:s}
             """.format(pid)
         else:
-            ready_sql = """select raw_path, raw_file_size_mb, md5sum from paperdata
-                where raw_path is not null 
-                and write_to_tape = 1 
-                and tape_index='NULL'
-                group by raw_path order by obsnum;
+            ready_sql = """select source, filesize, md5sum from File
+                where source is not null 
+                and is_tapeable = 1 
+                and tape_index is null
+                group by source order by obsnum;
             """
 
         self.db_connect()
@@ -148,9 +148,9 @@ class PaperDB(object):
         for file in file_list:
 
             if unclaim is True:
-                update_sql = "update paperdata set tape_index='' where raw_path='%s' and tape_index='%s%s'" % (file, status_type, self.pid)
+                update_sql = "update File set tape_index=null where source='%s' and tape_index='%s%s'" % (file, status_type, self.pid)
             else:
-                update_sql = "update paperdata set tape_index='%s%s' where raw_path='%s'" % (status_type, self.pid, file)
+                update_sql = "update File set tape_index='%s%s' where source='%s'" % (status_type, self.pid, file)
 
             self.debug.output('claim_files - %s' % update_sql)
             try:
@@ -195,10 +195,10 @@ class PaperDB(object):
         for catalog in catalog_list:
             ## tape_index: 20150103[papr1001,papr2001]-132:3
             tape_index = "%s[%s]-%s:%s" % (self.version, tape_id, catalog[0], catalog[1])
-            raw_path = catalog[2]
-            self.debug.output("writing tapelocation: %s for %s" % (tape_index, raw_path))
+            source = catalog[2]
+            self.debug.output("writing tapelocation: %s for %s" % (tape_index, source))
             try:
-                self.cur.execute('update paperdata set tape_index="%s" where raw_path="%s"' % (tape_index, raw_path))
+                self.cur.execute('update File set tape_index="%s" where source="%s"' % (tape_index, source))
             except Exception as mysql_error:
                 self.debug.output('error {}'.format(mysql_error))
                 write_tape_index_status = self.status_code.write_tape_index_mysql
