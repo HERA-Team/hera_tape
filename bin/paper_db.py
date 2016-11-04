@@ -95,22 +95,24 @@ class PaperDB(object):
         """
 
         if regex:
-            ready_sql = """select raw_path, raw_file_size_mb, md5sum from paperdata
-                where raw_path is not null
-                and write_to_tape = 1 
-                and tape_index='NULL'
-                and raw_path like '%s'
+            ready_sql = """select source, filesize, md5sum from File
+                where source is not null
+                and filetype = 'uv'
+                and is_tapeable = 1 
+                and tape_index is null
+                and source like '%s'
             """ % regex
         elif pid:
-            ready_sql = """select raw_path, raw_file_size_mb, md5sum from paperdata
+            ready_sql = """select source, filesize, md5sum from File
                 where tape_index = 1{0:s}
             """.format(pid)
         else:
-            ready_sql = """select raw_path, raw_file_size_mb, md5sum from paperdata
-                where raw_path is not null 
-                and write_to_tape = 1 
-                and tape_index='NULL'
-                group by raw_path order by julian_day;
+            ready_sql = """select source, filesize, md5sum from File
+                where source is not null 
+                and filetype = 'uv'
+                and is_tapeable = 1 
+                and tape_index is null
+                group by source order by obsnum;
             """
 
         self.db_connect()
@@ -148,11 +150,11 @@ class PaperDB(object):
         for file_name in file_list:
 
             if unclaim is True:
-                update_sql = "update paperdata set tape_index='' where raw_path='%s' and tape_index='%s%s'" % (file_name, status_type, self.pid)
+                update_sql = "update File set tape_index=null where source='%s' and tape_index='%s%s'" % (file_name, status_type, self.pid)
             else:
                 ## TODO(dconover): allow claim to use current state
                 status_type = self.paperdb_state_code.claim.value
-                update_sql = "update paperdata set tape_index='%s%s' where raw_path='%s'" % (status_type, self.pid, file_name)
+                update_sql = "update File set tape_index='%s%s' where source='%s'" % (status_type, self.pid, file_name)
 
             self.debug.output('claim_files - %s' % update_sql)
             try:
@@ -184,7 +186,7 @@ class PaperDB(object):
         """Take a dictionary of files and labels and update the database
 
         record the barcode of tape in the tape_index field, but not
-        setting the delete_file field to 1 for all files just written to tape.
+        setting the is_deletable field to 1 for all files just written to tape.
         :param tape_list: dict
         :param tape_id: str
         """
@@ -197,10 +199,10 @@ class PaperDB(object):
         for item in tape_list:
             ## tape_index: 20150103[PAPR2001,PAPR2001]-132:3
             tape_index = "%s[%s]-%s:%s" % (self.version, tape_id, item[0], item[1])
-            raw_path = item[2]
-            self.debug.output("writing tape_index: %s for %s" % (tape_index, raw_path))
+            source = item[2]
+            self.debug.output("writing tape_index: %s for %s" % (tape_index, source))
             try:
-                self.cur.execute('update paperdata set tape_index="%s", delete_file=1 where raw_path="%s"' % (tape_index, raw_path))
+                self.cur.execute('update File set tape_index="%s", is_deletable=1 where source="%s"' % (tape_index, source))
             except Exception as mysql_error:
                 self.debug.output('error {}'.format(mysql_error))
                 write_tape_index_status = self.status_code.write_tape_index_mysql
