@@ -535,3 +535,5 @@ class TestDump(DumpFast):
 
         self.batch_files(queue=True, regex=regex)
         self.files.gen_final_catalog(self.files.catalog_name, self.files.archive_list, self.paperdb.file_md5_dict)
+
+
