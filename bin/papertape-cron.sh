@@ -6,7 +6,7 @@
 
 source common.sh
 
-dump_script=/root/git/papertape.dconover/bin/papertape-prod_dump.py
+dump_script=papertape-prod_dump.py
 process_file=/var/run/papertape.pid
 log_file=/papertape/log/papertape.log.$$.$(date +%Y%m%d-%H%M)
 log_link=/papertape/log/papertape.log
