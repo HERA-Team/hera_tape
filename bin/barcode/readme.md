@@ -9,10 +9,20 @@
 ## manifest
    1. make_papr_barcode.sh
    2. relabel_barcodes.sh
-
-
+   
 ## usage
+metadata:
+```bash
+## project prefix
+prefix=PAPR
 
-  1. edit make_papr_barcode.sh to print label according to run requirments
+## typically 2 copies of each tape are produced differentiated by a version number [1|2]
+version=1
+
+## number of tapes to print
+label_count=15
+```
+
+  1. run: make_papr_barcode.sh $prefix $version $label_count
   2. run: make_papr_barcode.sh
 
