@@ -9,12 +9,14 @@
 ## -m margins (internal to barcode)
 ## -c disable checksum
 
-file_name=label.ps
-barcode="barcode -u mm -e code39 -p letter -o $file_name -c"  
-
+## optional variables
 prefix-${1:-PAPR}
 version=${2:-1}
 count=${3:-15}
+file_name=${4:-label.ps}
+
+## script
+barcode="barcode -u mm -e code39 -p letter -o $file_name -c"  
 
 ## barcodes are composed: ${prefix}${version}${count} like: PAPR1015
 ## the default settings prints 15 tape labels

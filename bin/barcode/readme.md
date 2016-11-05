@@ -21,8 +21,15 @@ version=1
 
 ## number of tapes to print
 label_count=15
+
+## descriptive label to add below barcode
+label="[ 20140922 - paper - raw - copy $version ]"
+
+## label filename
+file_name=label.ps
+
 ```
 
   1. run: make_papr_barcode.sh $prefix $version $label_count
-  2. run: make_papr_barcode.sh
+  2. run: make_papr_barcode.sh $file_name $label
 
