@@ -8,7 +8,7 @@ are written to tape.
 
 from datetime import datetime, timedelta
 
-import pymysql, subprocess
+import pymysql, subprocess, re
 from enum import Enum, unique
 
 from paper_debug import Debug
@@ -125,8 +125,16 @@ class PaperDB(object):
         for file_info in self.cur.fetchall():
             self.debug.output('found file - %s' % file_info[0], debug_level=254)
             file_size = float(file_info[1])
+
+            ## when size_limit is set to 0, change limit to 1 plus total + file_size
+            if size_limit == 0:
+                size_limit = total + file_size + 1
+
+            ## if the reported size is larger than the size limit we have a problem
             if file_size > size_limit:
                 self.debug.output('file_size (%s) larger than size limit(%s) - %s' % (file_size, size_limit, file_info[0]), debug_level=254)
+
+            ## check that we don't go over the limit
             if total+file_size < size_limit:
                 self.debug.output('file:', file_info[0], debug_level=254)
                 self.file_list.append(file_info[0])
@@ -134,6 +142,34 @@ class PaperDB(object):
                 total += file_size
 
         return self.file_list, total
+
+    def enumerate_paths(self):
+        ## run query with no size limit
+        ## remove "is_tapeable=1"
+        ready_sql = """select source from File
+                        where source is not null
+                        and filetype = 'uv'
+                        /* and is_tapeable = 1 */
+                        and tape_index is null
+                        group by source order by obsnum;
+                    """
+
+        self.db_connect()
+        self.cur.execute(ready_sql)
+        self.update_connection_time()
+
+        count=0
+        dir_list = {}
+        for file_info in self.cur.fetchall():
+            ## parse paths
+            ## like $host:/{mnt/,}$base/$subpath/$file
+            path_regex = re.compile(r'(.*:)(/mnt/|/)(\w+)/')
+            path_info = path_regex.match(file_info[0]).groups()
+            base_path = path_info[0] + path_info[1] + path_info[2]
+            dir_list[base_path] = dir_list[base_path] + 1 if base_path in dir_list else 0
+
+        ## return array
+        return dir_list
 
     def claim_files(self, file_list=None, unclaim=False):
         """Mark files in the database that are "claimed" by a dump process."""
