@@ -4,6 +4,7 @@
 """
 from enum import Enum, unique
 
+# noinspection PyClassHasNoInit
 @unique
 class StatusCode(Enum):
     OK      = 0

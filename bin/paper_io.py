@@ -60,19 +60,19 @@ class Archive(object):
         #self.transfer = LocalTransfer() if local_transfer else Transfer()
         self.transfer = LocalTransfer() if local_transfer else None
 
-        dir_status, self.archive_dir = self.ensure_dir('/papertape/shm/%s/' % self.pid)
+        dir_status, self.archive_copy_dir = self.ensure_dir('/papertape/shm/%s/' % self.pid)
         dir_status, self.queue_dir = self.ensure_dir('/papertape/queue/%s/' % self.pid)
 
         if dir_status is not True:
             self.debug.output('data dir init failed')
             raise Exception
 
-        self.catalog_name = "{0:s}/paper.{1:s}.list".format(self.queue_dir, self.pid)
-        self.tape_ids_filename = "{0:s}/paper.{1:s}.tape_ids.list".format(self.queue_dir, self.pid)
-        self.catalog_list = []    ## working list of files to write
-        self.tape_list = [] ## cumulative list of written files
-        self.item_index = 0 ## number of file path index
-        self.archive_state = 0 ## current dump state
+        self.catalog_name = "{0:s}/paper.{1:s}.file_list".format(self.queue_dir, self.pid)
+        self.tape_ids_filename = "{0:s}/paper.{1:s}.tape_ids.file_list".format(self.queue_dir, self.pid)
+        self.archive_list = []    ## working file_list of files to write
+        self.tape_list = []       ## cumulative file_list of written files
+        self.item_index = 0       ## number of file path index (human readable line numbers in catalog)
+        self.archive_state = 0    ## current archive state
 
 
     def __setattr__(self, attr_name, attr_value):
@@ -104,31 +104,32 @@ class Archive(object):
 
     def build_archive(self, file_list, source_select=None):
         """Copy files to /dev/shm/$PID, create md5sum data for all files"""
-        for file in file_list:
-            transfer_path = '%s/%s' % (self.archive_dir, file)
-            self.debug.output("build_archive - %s" % file)
-            get("/papertape/" + file, local_path=transfer_path, recursive=True)
+        for file_name in file_list:
+            transfer_path = '%s/%s' % (self.archive_copy_dir, file_name)
+            self.debug.output("build_archive - %s" % file_name)
+            get("/papertape/" + file_name, local_path=transfer_path, recursive=True)
 
     def gen_catalog(self, archive_catalog_file, file_list, tape_index):
-        """create a catalog file"""
+        """create a catalog file_name"""
         self.debug.output("intermediate catalog: %s" % archive_catalog_file)
-        with open(archive_catalog_file, 'w') as cfile:
+        # noinspection PyArgumentList
+        with open(archive_catalog_file, mode='w') as cfile:
             archive_index = 1
-            self.catalog_list = []
-            for file in file_list:
-                self.debug.output('catalog_list: %s %s %s' % (tape_index, archive_index, file), debug_level=249)
-                self.catalog_list.append([tape_index, archive_index, file])
-                cfile.write("%s:%s:%s\n" % (tape_index, archive_index, file))
+            self.archive_list = []
+            for file_name in file_list:
+                self.debug.output('archive_list: %s %s %s' % (tape_index, archive_index, file_name), debug_level=249)
+                self.archive_list.append([tape_index, archive_index, file_name])
+                cfile.write("%s:%s:%s\n" % (tape_index, archive_index, file_name))
                 archive_index += 1
 
 
     def gen_final_catalog(self, tape_catalog_file, tape_list, md5_dict):
-        """create a catalog file in /papertape/queue/$pid/$pid.list
+        """create a catalog file in /papertape/queue/$pid/$pid.file_list
 
         :param tape_catalog_file: str
-        :param tape_list: list of [int, int, string]
+        :param tape_list: file_list of [int, int, string]
         """
-        self.debug.output('tap_list - %s' % tape_list)
+        self.debug.output('tape_list - %s' % tape_list)
 
         job_details = " ".join([ 
             self.pid,  
@@ -144,7 +145,7 @@ class Archive(object):
 
         self.item_index = 1
 
-        with open(tape_catalog_file, 'w') as cfile:
+        with open(tape_catalog_file, mode='w') as cfile:
             ## write a preamble to describe the contents
             cfile.write(preamble_lines)
 
@@ -162,7 +163,7 @@ class Archive(object):
                 ## what is the md5sum of the file_path/visdata_file
                 data_md5 = md5_dict[file_path]
 
-                ## We don't need the item_index; it is a convenience to the user
+                ## We don't actually need the item_index; it is a convenience to the user
                 ## when reading the catalog
                 catalog_line = [self.item_index, tape_index, archive_index, data_md5, file_path]
                 output = ':'.join(str(x) for x in catalog_line) + "\n"
@@ -174,8 +175,8 @@ class Archive(object):
             self.item_index -= 1
 
     def final_from_file(self, catalog=None, tape_ids=False):
-        """gen final catalog from file"""
-        self.catalog_list = []
+        """gen final catalog from file_name"""
+        self.archive_list = []
         md5_dict = {}
         pid=''
         item_index=0
@@ -191,10 +192,10 @@ class Archive(object):
             catalog_lines = catalog
 
         else:
-            ## read from file
-            self.debug.output('reading from file')
-            with open(self.catalog_name, 'r') as file:
-                catalog_lines = file.readlines()
+            ## read from file_name
+            self.debug.output('reading from file_name')
+            with open(self.catalog_name, mode='r') as file_name:
+                catalog_lines = file_name.readlines()
 
         for line in catalog_lines:
             if catalog_line.match(line):
@@ -212,52 +213,54 @@ class Archive(object):
 
                 catalog_list = [tape_index, archive_index, file_path]
 
-                self.catalog_list.append(catalog_list)
+                self.archive_list.append(catalog_list)
 
             elif header_line.match(line):
                 self.debug.output('found header line')
                 pid = header_line.match(line).groups()[0]
 
-        return item_index, self.catalog_list, md5_dict, pid
+        return item_index, self.archive_list, md5_dict, pid
 
-    def queue_archive(self, tape_id, file_list):
+    def queue_archive(self, tape_index, file_list):
         """move the archive from /dev/shm to a tar file in the queue directory
            once we have 1.5tb of data we will create a catalog and write all the queued
            archives to tape.
         """
-        arcname = "%s.%s.%s" % ('paper', self.pid, tape_id)
+        arcname = "%s.%s.%s" % ('paper', self.pid, tape_index)
         tar_name = "%s/%s.tar" % (self.queue_dir, arcname)
-        catalog_name = "%s/%s.list" %(self.queue_dir, arcname)
+        catalog_name = "%s/%s.file_list" %(self.queue_dir, arcname)
 
         ## make the tar in the queue_directory
-        self.tar_archive(self.archive_dir, arcname, tar_name)
+        self.tar_archive(self.archive_copy_dir, arcname, tar_name)
 
         ## make room for additional transfers
-        self.remove_dir_list(file_list)
+        self.rm_archive_copy_dir_list(file_list)
 
         ## make the catalog
-        self.gen_catalog(catalog_name, file_list, tape_id)
+        self.gen_catalog(catalog_name, file_list, tape_index)
 
 
     def tar_fast_archive(self, tape_id, file_list):
         """send tar of file chunks directly to tape."""
         arcname = "%s.%s.%s" % ('paper', self.pid, tape_id)
         tar_name = "%s/%s.tar" % (self.queue_dir, arcname)
-        catalog_name = "%s/%s.list" %(self.queue_dir, arcname)
+        catalog_name = "%s/%s.file_list" %(self.queue_dir, arcname)
 
         ## make the tar in the queue_directory
-        self.tar_archive(self.archive_dir, arcname, tar_name)
+        self.tar_archive(self.archive_copy_dir, arcname, tar_name)
 
         ## make the catalog
         self.gen_catalog(catalog_name, file_list, tape_id)
 
-    def remove_dir_list(self, file_list):
-        """remove the given diretory tree
-        :param file_list: list of files
+    def rm_archive_copy_dir_list(self, file_list):
+        """remove the given directory tree of files that have been copied into
+        the temporary archive_copy_dir
+
+        :param file_list: file_list of files
         :type  file_list: list
         """
         for dir_path in file_list:
-            shutil.rmtree('%s/%s' % (self.archive_dir, dir_path))
+            shutil.rmtree('%s/%s' % (self.archive_copy_dir, dir_path))
 
     def tar_archive(self, source, arcname, destination):
         """create the queued tar for the archive file"""
@@ -269,10 +272,10 @@ class Archive(object):
         """return an md5sum for a file"""
         full_path = '%s/%s' % (directory_prefix, file_path)
         hasher = hashlib.md5()
-        with open('{}.md5sum'.format(full_path), 'w') as hash_file:
-            with open(full_path, 'rb') as open_file:
-                buffer = open_file.read()
-                hasher.update(buffer)
+        with open('{}.md5sum'.format(full_path), mode='w') as hash_file:
+            with open(full_path, mode='rb') as open_file:
+                file_buffer = open_file.read()
+                hasher.update(file_buffer)
 
             hash_file.write('%s\n' % hasher.hexdigest())
         return hasher.hexdigest
@@ -281,7 +284,7 @@ class Archive(object):
         """open a file and write the tape ids in case writing to the db fails"""
 
         self.debug.output('saving {0:s} to {1:s}'.format(tape_ids, self.tape_ids_filename))
-        tape_id_file = open(self.tape_ids_filename, 'w')
+        tape_id_file = open(self.tape_ids_filename, mode='w')
         tape_id_file.write("[{0:s}]\n".format(tape_ids))
         tape_id_file.close()
 
@@ -292,7 +295,7 @@ class Archive(object):
         tape_ids = ''
         tape_id_line = re.compile("\[(.*)\]")
         self.debug.output('{0:s}'.format(self.tape_ids_filename), debug_level=128)
-        with open(self.tape_ids_filename, 'r') as tape_id_file:
+        with open(self.tape_ids_filename, mode='r') as tape_id_file:
             self.debug.output("opening_file", debug_level=128)
             for line in tape_id_file:
                 self.debug.output('{0:s}'.format(line), debug_level=240)

@@ -79,7 +79,10 @@ Archival process:
     11. a block md5sum is performed on one tape randomly selected from each 
         archive
 
-    10. tapes are to be stored on a shelf in DRL-4nxx
+    12. the database field "delete_file" is set to 1, and files are later 
+        deleted from the filesystem
+
+    13. tapes are to be stored on a shelf in DRL-4nxx
 
 
 Integrity checking:

@@ -17,6 +17,12 @@ _logfile () {    ## open, close, or kill the logfile
         kill)
             exec 1>&6 6>&-
             cat $log && rm $log
+            echo $log
+        ;;
+        cat)
+            exec 1>&6 6>&-
+            cat $log
+            echo $log
         ;;
         tty)
             exec >/dev/tty 2>&1
@@ -29,6 +35,7 @@ _logfile () {    ## open, close, or kill the logfile
 
 export WORK_DIR=/root/git/papertape.dconover/bin 
 export LOG_DIR=$WORK_DIR/log TERM=ansi
+export LOGFILE_CLOSE=tty
 #alias pylint='pylint --rcfile=~/.pylint.d/pylintrc'
 
 _pgrep () { grep "$*" paper_*.py; } ## grep for regex in papertape source code
@@ -63,9 +70,10 @@ _t (){  ## execute a test run
     fi
     echo _t:$(_date)
 
-    _logfile tty $_log_file
+    _logfile $LOGFILE_CLOSE $_log_file
     export TLAST=$_command
 }
+
 _v () { vim ${1:-$last};last=${1-$last}; }  ## edit the current working file or a new one if given
 _m () {  ## run mysql interface 
     echo using file: ${2:-$mlast}; echo "$1"| mysql --defaults-extra-file=/root/.my.${2:-$mlast}.cnf||ls /root/.my.*; mlast=${2:-$mlast}; 
