@@ -33,3 +33,5 @@ file_name=label.ps
   1. run: make_papr_barcode.sh $prefix $version $label_count
   2. run: make_papr_barcode.sh $file_name $label >$file_name.new
 
+## printing
+The script has been configured to print labels on avery laser/ink jet white file folder labels (1/3 cut 2/3" x 3 7/16" - 48266) 
