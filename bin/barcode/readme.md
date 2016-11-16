@@ -1,4 +1,4 @@
-# barcode scrips
+# barcode scripts
 
 ## overview
   1. the two scripts in this directory can be used to print tape labels 
