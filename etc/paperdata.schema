@@ -1,6 +1,6 @@
 Description: 
 
-    Mysql schema for paperdata table tracks location infromation for all 
+    Mysql schema for paperdata table tracks location information for all 
 raw and compressed data.
 
 Metadata:
