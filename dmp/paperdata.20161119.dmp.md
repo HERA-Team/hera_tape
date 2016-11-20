@@ -1,7 +1,7 @@
 # dmp for paperdata database
 ## description
 
-    The "paperdata" database tracks location information for all
+  The "paperdata" database tracks location information for all
 raw and compressed data.
 
 ## metadata
