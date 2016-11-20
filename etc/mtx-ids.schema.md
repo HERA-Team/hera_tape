@@ -23,6 +23,7 @@ tape_location  varchar(64)   YES   NULL                          ## physical loc
 ```
 
 ## raw
+```bash
 root@shredder[~]# mysql -e 'show tables' mtx
 +---------------+
 | Tables_in_mtx |
