@@ -1,4 +1,7 @@
 # dmp for paperdata database
+
+owner: dconover:20161119   
+
 ## description
 
   The "paperdata" database tracks location information for all
