@@ -1,4 +1,4 @@
-# mtx database ids table schema 
+# table schema for mtx.ids
 ## description
 
   table (ids) used to keep track of tape ids in use by tape library
