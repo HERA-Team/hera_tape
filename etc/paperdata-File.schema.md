@@ -1,5 +1,7 @@
 # table schema for paperdata.File
 
+## related
+  1. [dmp](../dmp/paperdata.20161119.dmp.md)
 ## description 
 
     Mysql schema for File table tracks location information for all 
