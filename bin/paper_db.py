@@ -112,7 +112,7 @@ class PaperDB(object):
                 and filetype = 'uv'
                 and is_tapeable = 1 
                 and tape_index is null
-                group by source order by obsnum;
+                group by source order by filename;
             """
 
         self.db_connect()
@@ -151,7 +151,7 @@ class PaperDB(object):
                         and filetype = 'uv'
                         /* and is_tapeable = 1 */
                         and tape_index is null
-                        group by source order by obsnum;
+                        group by source order by filename;
                     """
 
         self.db_connect()
