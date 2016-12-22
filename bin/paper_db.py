@@ -86,7 +86,7 @@ class PaperDB(object):
     def get_new(self, size_limit, regex=False, pid=False):
         """Retrieve a file_list of available files.
 
-        Outputs files that are "is_tapeable"
+        Outputs files that are "write_to_tape"
         Optionally, limit search by file_path regex or pid in tape_index
 
         Arguments:
@@ -112,7 +112,7 @@ class PaperDB(object):
                 and filetype = 'uv'
                 and is_tapeable = 1 
                 and tape_index is null
-                group by source order by obsnum;
+                group by source order by filename;
             """
 
         self.db_connect()
@@ -151,7 +151,7 @@ class PaperDB(object):
                         and filetype = 'uv'
                         /* and is_tapeable = 1 */
                         and tape_index is null
-                        group by source order by obsnum;
+                        group by source order by filename;
                     """
 
         self.db_connect()
@@ -237,10 +237,8 @@ class PaperDB(object):
             tape_index = "%s[%s]-%s:%s" % (self.version, tape_id, item[0], item[1])
             source = item[2]
             self.debug.output("writing tape_index: %s for %s" % (tape_index, source))
-
             try:
                 self.cur.execute('update File set tape_index="%s", is_deletable=1 where source="%s"' % (tape_index, source))
-
             except Exception as mysql_error:
                 self.debug.output('error {}'.format(mysql_error))
                 write_tape_index_status = self.status_code.write_tape_index_mysql
