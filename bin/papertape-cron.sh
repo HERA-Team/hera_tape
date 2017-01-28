@@ -34,7 +34,7 @@ echo $$ >>$process_file
 
 ## run dump
 echo starting papertape dump: $(date)
-time python $dump_script || (
+time python3 $dump_script || (
     echo Fail: bad exit from $dump_script $?
     _logfile close
     exit $DUMP_FAILURE

@@ -15,8 +15,8 @@ from enum import Enum, unique
 
 from paper_mtx import Changer, MtxDB
 from paper_io import Archive
-#from paper_db import PaperDB
-from paper_db import TestPaperDB
+from paper_db import PaperDB
+#from paper_db import TestPaperDB
 from paper_debug import Debug
 from paper_status_code import StatusCode
 
@@ -32,7 +32,7 @@ class Dump(object):
         self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
 
         self.status_code = StatusCode
-        self.mtx_creds = '~/.my.mtx.cnf'
+        self.mtx_creds = '/home2/obs/.my.mtx.cnf'
         self.debug.output(credentials)
         self.paper_creds = credentials
 
@@ -46,9 +46,9 @@ class Dump(object):
         #self.tape_size = 13000
 
         ## setup PaperDB connection
-        #self.paperdb = PaperDB(self.version, self.paper_creds, self.pid, debug=True, debug_threshold=debug_threshold)
+        self.paperdb = PaperDB(self.version, self.paper_creds, self.pid, debug=True, debug_threshold=debug_threshold)
         ## test database
-        self.paperdb = TestPaperDB(self.version, self.paper_creds, self.pid, debug=True, debug_threshold=debug_threshold)
+        #self.paperdb = TestPaperDB(self.version, self.paper_creds, self.pid, debug=True, debug_threshold=debug_threshold)
         ## reload test data
         #self.paperdb.load_sample_data()
 

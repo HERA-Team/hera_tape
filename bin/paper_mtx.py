@@ -491,8 +491,8 @@ class MtxDB(object):
         ids = []
         for n in [0, 1]:
             select_sql = """select label from ids
-                where status is null and
-                label like 'PAPR%d%s'
+                where date is null and
+                label like 'P064%d%s'
                 order by label
             """ % (n+1, "%")
 
@@ -665,7 +665,7 @@ class Drives(object):
                 local _tape_dev=${4:-0}
 
                 local _tar_number=$_tape_index
-                local _archive_tar=paper.$_job_pid.$_tar_number.tar
+                local _archive_tar=papertape/shm/paper.$_job_pid.$_tar_number.tar
                 local _test_file=$_test_path/visdata
 
                 ## extract the archive tar, then extract the file to stdout, then run md5 on stdin
