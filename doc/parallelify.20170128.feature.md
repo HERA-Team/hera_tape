@@ -79,7 +79,7 @@ for verify in verify_list:
 ```
 
   Since we're passing in a reference to "self" we could also just set a
-variable and modify it from within the thread, but I like to explicitly pass
+variable and modify it from within the thread, but I like to explicitly return
 the variable out to the calling function with the custom status method.
 
 ## test
