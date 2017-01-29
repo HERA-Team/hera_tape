@@ -169,7 +169,7 @@ class Changer(object):
             self.debug.output('tape already empty', str(tape_int))
 
     def drives_empty(self, drive_int=None):
-        """retun true if the drives are currently empty"""
+        """return true if the drives are currently empty"""
         self.debug.output('recheck inventory')
         self.check_inventory()
 
@@ -290,27 +290,9 @@ class Changer(object):
 
         return self.tape_drives.count_files(drive_int)
 
-    def tape_archive_md5(self, tape_id, job_pid, catalog_list, md5_dict):
-        """loop through each archive on tape and check a random file md5 from each
+    def
 
-        :rtype : bool"""
 
-        ## default to True
-        tape_archive_md5_status = self.status_code.OK
-        reference = None
-
-        self.debug.output('loading tape: %s' % tape_id)
-        ## load a tape or rewind the existing tape
-        self.load_tape_drive(tape_id)
-        drive_int = self.drive_ids[tape_id][0]
-
-        ## for every tar advance the tape
-        ## select a random path from the tape
-        ## run md5sum_at_index(tape_index, drive_int=0)
-        archive_dict = defaultdict(list)
-
-        ## build a dictionary of archives
-        for item in catalog_list:
             self.debug.output('item to check: %s' % item)
             archive_dict[item[0]].append(item[-1])
 
