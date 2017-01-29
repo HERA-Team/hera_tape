@@ -46,7 +46,7 @@ In order to make the python run in parallel we should change
 DumpFast.tar_archive_fast() to run self.dump_verify on the label_ids using 
 python threads.
 
-  Something lik:
+  Something like:
 ```bash
 import threading
 
@@ -66,7 +66,7 @@ for label_id in tape_label_ids:
     
     verify = VerifyThread(label_id, self)
     verify_list.append(verify)
-    verify.start()
+    verify.start()    
 
 for verify in verify_list:
     verify.join
@@ -74,7 +74,7 @@ for verify in verify_list:
     if dump_verify_status is not self.status_code.OK:
         self.debug.output('Fail: dump_verify {}'.format(dump_verify_status))
         tar_archive_single_status = self.status_code.tar_archive_single_dump_verify
-        self.close_dump()
+        self.close_dump()   
 
 ```
 
@@ -88,6 +88,9 @@ before the function is called it will leave the tape in the drive and rewind it.
   We can pair this with the threaded call like:
 ```bash
 import threading
+
+class VerifyThread(threading.Thread):
+[... see custom class definition above]
 
 def dump_pair_verify(self, tape_label_ids):
     self.tape.load_tape_pair(tape_label_ids)
@@ -114,10 +117,11 @@ def dump_pair_verify(self, tape_label_ids):
 ## log
   1. review code
   2. document proposed fix
+  3. refactored tape_archive_md5
+  4. check if Changer.tape_archive_md5 uses only one drive
+  5. debug proposed fix
 
 ## todo 
-  3. check if Changer.tape_archive_md5 uses only one drive
-  4. debug proposed fix
   5. integrate code fix
   6. test fix
   7. report changes to plaplant via slack
