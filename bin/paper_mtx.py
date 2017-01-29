@@ -169,7 +169,7 @@ class Changer(object):
             self.debug.output('tape already empty', str(tape_int))
 
     def drives_empty(self, drive_int=None):
-        """retun true if the drives are currently empty"""
+        """return true if the drives are currently empty"""
         self.debug.output('recheck inventory')
         self.check_inventory()
 
@@ -328,6 +328,7 @@ class Changer(object):
             else:
                 self.debug.output('md5 match: %s|%s' % (md5sum, md5_dict[directory_path]))
 
+        self.unload_tape(tape_id)
         return tape_archive_md5_status, reference
 
     def close_changer(self):

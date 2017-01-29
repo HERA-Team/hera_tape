@@ -46,7 +46,7 @@ In order to make the python run in parallel we should change
 DumpFast.tar_archive_fast() to run self.dump_verify on the label_ids using 
 python threads.
 
-  This should look like:
+  Something like:
 ```bash
 import threading
 
@@ -66,7 +66,7 @@ for label_id in tape_label_ids:
     
     verify = VerifyThread(label_id, self)
     verify_list.append(verify)
-    verify.start()
+    verify.start()    
 
 for verify in verify_list:
     verify.join
@@ -74,7 +74,7 @@ for verify in verify_list:
     if dump_verify_status is not self.status_code.OK:
         self.debug.output('Fail: dump_verify {}'.format(dump_verify_status))
         tar_archive_single_status = self.status_code.tar_archive_single_dump_verify
-        self.close_dump()
+        self.close_dump()   
 
 ```
 
@@ -82,19 +82,54 @@ for verify in verify_list:
 variable and modify it from within the thread, but I like to explicitly return
 the variable out to the calling function with the custom status method.
 
+  Changer.tape_archive_md5() uses self.load_tape_drive(tape_id). If the tapes are loaded 
+before the function is called it will leave the tape in the drive and rewind it.
+
+  We can pair this with the threaded call like:
+```bash
+import threading
+
+class VerifyThread(threading.Thread):
+[... see custom class definition above]
+
+def dump_pair_verify(self, tape_label_ids):
+    self.tape.load_tape_pair(tape_label_ids)
+    
+    for label_id in tape_label_ids:
+        verify_list = []
+
+        verify = VerifyThread(label_id, self)
+        verify_list.append(verify)
+        verify.start()
+
+    for verify in verify_list:
+        verify.join
+        dump_verify_status = verify.status()
+        if dump_verify_status is not self.status_code.OK:
+            self.debug.output('Fail: dump_verify {}'.format(dump_verify_status))
+            tar_archive_single_status = self.status_code.tar_archive_single_dump_verify
+            self.close_dump()
+```
+
 ## test
   1. 
 
 ## log
   1. review code
   2. document proposed fix
+  3. refactored tape_archive_md5
+  4. check if Changer.tape_archive_md5 uses only one drive
+  5. debug proposed fix
 
 ## todo 
-  3. check if Changer.tape_archive_md5 uses only one drive
-  4. debug proposed fix
   5. integrate code fix
   6. test fix
   7. report changes to plaplant via slack
+
+## refactor
+  plaplant also requested that the verification process unload the tape 
+when complete. I am adding that to the end of tape_archive_md5().
+
 
 ## faq
   1. does Changer.tape_archive_md5 use a specific tape (e.g. /dev/nst0)?
@@ -171,4 +206,28 @@ oh yeah, definitely
 
 [11:22]  
 it’d also be helpful if we wanted to tape up the data in real time, since we’re projecting to take a tape’s worth of data per night next year
+```
+
+discussion around refactoring unloading tape after verification:
+```bash
+plaplant [11:07 AM] 
+cool, thanks so much for writing this up!
+
+[11:08]  
+one last thing that would be nice is unloading the tapes after successfully verifying
+
+[11:08]  
+right now, when the script finishes, there’s still a tape in drive 0
+
+d [4:55 PM] 
+I think the script has methods for unloading the drives if there’s a tape in it.
+
+plaplant [5:38 PM] 
+Oh okay, I'll try that
+
+[5:38]  
+Thanks
+
+d [6:17 PM] 
+I’ve added an unload call to the end of the verification process :slightly_smiling_face:
 ```
