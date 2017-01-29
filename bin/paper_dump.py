@@ -406,8 +406,8 @@ class DumpFast(Dump):
 
     def fast_batch(self):
         """skip tar of local archive on disk
-
            send files to two tapes using a single drive."""
+
         ## batch_files() does the job of making the lists that queue_archive does
         ## it also updates self.tape_index which is used by Changer.write()
         self.debug.output('reloading sample data into paperdatatest database')
