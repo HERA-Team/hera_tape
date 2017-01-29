@@ -46,7 +46,7 @@ In order to make the python run in parallel we should change
 DumpFast.tar_archive_fast() to run self.dump_verify on the label_ids using 
 python threads.
 
-  This should look like:
+  Something lik:
 ```bash
 import threading
 
@@ -82,11 +82,13 @@ for verify in verify_list:
 variable and modify it from within the thread, but I like to explicitly return
 the variable out to the calling function with the custom status method.
 
-Changer.tape_archive_md5() uses self.load_tape_drive(tape_id). If the tapes are loaded 
+  Changer.tape_archive_md5() uses self.load_tape_drive(tape_id). If the tapes are loaded 
 before the function is called it will leave the tape in the drive and rewind it.
 
-something like:
+  We can pair this with the threaded call like:
 ```bash
+import threading
+
 def dump_pair_verify(self, tape_label_ids):
     self.tape.load_tape_pair(tape_label_ids)
     
@@ -119,6 +121,11 @@ def dump_pair_verify(self, tape_label_ids):
   5. integrate code fix
   6. test fix
   7. report changes to plaplant via slack
+
+## refactor
+  plaplant also requested that the verification process unload the tape 
+when complete. I am adding that to the end of tape_archive_md5().
+
 
 ## faq
   1. does Changer.tape_archive_md5 use a specific tape (e.g. /dev/nst0)?
@@ -195,4 +202,28 @@ oh yeah, definitely
 
 [11:22]  
 it’d also be helpful if we wanted to tape up the data in real time, since we’re projecting to take a tape’s worth of data per night next year
+```
+
+discussion around refactoring unloading tape after verification:
+```bash
+plaplant [11:07 AM] 
+cool, thanks so much for writing this up!
+
+[11:08]  
+one last thing that would be nice is unloading the tapes after successfully verifying
+
+[11:08]  
+right now, when the script finishes, there’s still a tape in drive 0
+
+d [4:55 PM] 
+I think the script has methods for unloading the drives if there’s a tape in it.
+
+plaplant [5:38 PM] 
+Oh okay, I'll try that
+
+[5:38]  
+Thanks
+
+d [6:17 PM] 
+I’ve added an unload call to the end of the verification process :slightly_smiling_face:
 ```
