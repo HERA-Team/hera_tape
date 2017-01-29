@@ -328,6 +328,7 @@ class Changer(object):
             else:
                 self.debug.output('md5 match: %s|%s' % (md5sum, md5_dict[directory_path]))
 
+        self.unload_tape(tape_id)
         return tape_archive_md5_status, reference
 
     def close_changer(self):
