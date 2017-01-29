@@ -82,6 +82,30 @@ for verify in verify_list:
 variable and modify it from within the thread, but I like to explicitly return
 the variable out to the calling function with the custom status method.
 
+Changer.tape_archive_md5() uses self.load_tape_drive(tape_id). If the tapes are loaded 
+before the function is called it will leave the tape in the drive and rewind it.
+
+something like:
+```bash
+def dump_pair_verify(self, tape_label_ids):
+    self.tape.load_tape_pair(tape_label_ids)
+    
+    for label_id in tape_label_ids:
+        verify_list = []
+
+        verify = VerifyThread(label_id, self)
+        verify_list.append(verify)
+        verify.start()
+
+    for verify in verify_list:
+        verify.join
+        dump_verify_status = verify.status()
+        if dump_verify_status is not self.status_code.OK:
+            self.debug.output('Fail: dump_verify {}'.format(dump_verify_status))
+            tar_archive_single_status = self.status_code.tar_archive_single_dump_verify
+            self.close_dump()
+```
+
 ## test
   1. 
 
