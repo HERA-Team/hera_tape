@@ -79,25 +79,26 @@ for verify in verify_list:
 ```
 
   Since we're passing in a reference to "self" we could also just set a
-variable and modify it from within the thread, but I like to explicitly pass
+variable and modify it from within the thread, but I like to explicitly return
 the variable out to the calling function with the custom status method.
 
 ## test
-
+  1. 
 
 ## log
   1. review code
   2. document proposed fix
 
 ## todo 
-  3. debug proposed fix
-  4. integrate code fix
-  5. test fix
-  6. report changes to plaplant via slack
+  3. check if Changer.tape_archive_md5 uses only one drive
+  4. debug proposed fix
+  5. integrate code fix
+  6. test fix
+  7. report changes to plaplant via slack
 
 ## faq
   1. does Changer.tape_archive_md5 use a specific tape (e.g. /dev/nst0)?
-
+  if it does, we also need to change that code to be drive agnostic
 
 ## reference
   1. from python.org: python3 [threading](https://docs.python.org/3/library/threading.html)
