@@ -97,7 +97,7 @@ the variable out to the calling function with the custom status method.
 
 ## faq
   1. does Changer.tape_archive_md5 use a specific tape (e.g. /dev/nst0)?
-
+  if it does, we also need to change that code to be drive agnostic
 
 ## reference
   1. from python.org: python3 [threading](https://docs.python.org/3/library/threading.html)
