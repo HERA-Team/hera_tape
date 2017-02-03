@@ -7,6 +7,7 @@ be dumped to tape using this class.
 __author__ = 'dconover@sas.upenn.edu'
 __version__ = 20150103
 
+import threading
 from random import randint
 from os import getpid
 from sys import exit
@@ -403,6 +404,69 @@ class DumpFast(Dump):
                 self.debug.output('problem writing labels out: {}'.format(log_label_ids_status))
         else:
             self.debug.output("Abort dump: {}".format(tar_archive_single_status))
+
+    def tar_archive_faster(self, catalog_file):
+        """Archive files directly to tape using only a single drive to write 2 tapes"""
+
+        tar_archive_fast_status = self.status_code.OK
+
+        ## select ids
+        tape_label_ids = self.labeldb.select_ids()
+
+        ## load up a fresh set of tapes
+        self.tape.load_tape_pair(tape_label_ids)
+
+        ## add the catalog to the beginning of the tape
+        for label_id in tape_label_ids:
+            self.debug.output('archiving to label_id - {}'.format(label_id))
+
+        ## prepare the first block of the tape with the current tape_catalog
+        self.tape.prep_tape(catalog_file)
+
+
+        ## actually write the files in the catalog to a tape pair
+        self.debug.output('got list - {}'.format(self.files.tape_list))
+        self.tape.archive_from_list(self.files.tape_list)
+
+        ## check the status of the dumps; close the dump if verification fails
+        tar_archive_fast_status = self.dump_pair_verify(tape_label_ids)
+
+        ## unload the tape pair
+        self.tape.unload_tape_pair()
+
+        ## update the current dump state
+        if tar_archive_fast_status is self.status_code.OK:
+            log_label_ids_status = self.log_label_ids(tape_label_ids, self.files.tape_list)
+            if log_label_ids_status is not self.status_code.OK:
+                self.debug.output('problem writing labels out: {}'.format(log_label_ids_status))
+        else:
+            self.debug.output("Abort dump: {}".format(tar_archive_fast_status))
+
+    def dump_pair_verify(self, tape_label_ids):
+
+        tar_archive_verify_status = self.status_code.OK
+
+        ## this should rewind the given tapes
+        self.tape.load_tape_pair(tape_label_ids)
+
+        ## for each tape, create a new thread and start it
+        for label_id in tape_label_ids:
+            verify_list = []
+
+            verify = VerifyThread(label_id, self)
+            verify_list.append(verify)
+            verify.start()
+
+        ## for each thread that we start, wait for it to finish and check the status
+        for verify in verify_list:
+            verify.join
+            dump_verify_status = verify.status()
+            if dump_verify_status is not self.status_code.OK:
+                self.debug.output('Fail: dump_verify {}'.format(dump_verify_status))
+                tar_archive_verify_status = self.status_code.tar_archive_single_dump_verify
+                self.close_dump()
+
+        return tar_archive_verify_status
 
     def fast_batch(self):
         """skip tar of local archive on disk

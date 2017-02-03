@@ -9,6 +9,10 @@ writing process. Though the tapes are written in parallel, the verification
 process is performed in serial. We, therefore, would like to parallelize the 
 verification process, to improve throughput.
 
+## manifest
+  we should make changes to:
+  1. paper_dump.py - a new class: VerifyThread, a new dump verification method: dump_pair_verify, 
+  a new dump method: tar_archive_faster
 
 ## feature 
 
@@ -111,6 +115,14 @@ def dump_pair_verify(self, tape_label_ids):
             self.close_dump()
 ```
 
+
+finally we need to update DumpFast.tar_archive_fast() to call dump_pair_verify
+instead of the original verification for loop
+```bash
+    self.dump_pair_verify(tape_label_ids)
+``` 
+
+
 ## test
   1. 
 
@@ -118,8 +130,8 @@ def dump_pair_verify(self, tape_label_ids):
   1. review code
   2. document proposed fix
   3. refactored tape_archive_md5
-  4. check if Changer.tape_archive_md5 uses only one drive
-  5. debug proposed fix
+  4. check if Changer.tape_archive_md5 uses only one drive - it is agnostic if the tapes are already loaded
+  5. debug proposed fix - proposed creating new dump routine, so updates don't break current running code
 
 ## todo 
   5. integrate code fix
