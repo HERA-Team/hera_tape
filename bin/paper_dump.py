@@ -7,6 +7,7 @@ be dumped to tape using this class.
 __author__ = 'dconover@sas.upenn.edu'
 __version__ = 20150103
 
+from threading import Thread
 from random import randint
 from os import getpid
 from sys import exit
@@ -473,6 +474,96 @@ class DumpFast(Dump):
         self.debug.output("complete:%s:%s:%s:%s" % (queue, regex, pid, claim))
         return True if self.tape_used_size != 0 else False
 
+class DumpFaster(DumpFast):
+
+    """Queless archiving means that the data is never transferred to our disk queues
+
+    Disk queues are still used to maintain state in the event of a partial dump failure
+    Tape verification is rewritten to make use of python threading.
+
+    """
+
+    def dump_pair_verify(self, tape_label_ids):
+
+        tar_archive_verify_status = self.status_code.OK
+
+        ## this should rewind the given tapes
+        self.tape.load_tape_pair(tape_label_ids)
+
+        ## for each tape, create a new thread and start it
+        for label_id in tape_label_ids:
+            verify_list = []
+
+            verify = VerifyThread(label_id, self)
+            verify_list.append(verify)
+            verify.start()
+
+        ## for each thread that we start, wait for it to finish and check the status
+        for verify in verify_list:
+            verify.join
+            dump_verify_status = verify.status()
+            if dump_verify_status is not self.status_code.OK:
+                self.debug.output('Fail: dump_verify {}'.format(dump_verify_status))
+                tar_archive_verify_status = self.status_code.tar_archive_single_dump_verify
+                self.close_dump()
+
+        ## return updated verification status
+        return tar_archive_verify_status
+
+    def faster_batch(self):
+        """skip tar of local archive on disk
+           send files to two tapes using a single drive."""
+
+        ## batch_files() does the job of making the lists that queue_archive does
+        ## it also updates self.tape_index which is used by Changer.write()
+        self.debug.output('reloading sample data into paperdatatest database')
+
+        if self.batch_files():
+            self.debug.output('found %s files' % len(self.files.tape_list))
+            self.files.gen_final_catalog(self.files.catalog_name, self.files.tape_list, self.paperdb.file_md5_dict)
+            self.tar_archive_fast(self.files.catalog_name)
+            return True
+        else:
+            self.debug.output("no files batched")
+            return self.dump_state_code.dump_list_fail
+
+    def tar_archive_fast(self, catalog_file):
+        """Archive files directly to tape using only a single drive to write 2 tapes"""
+
+        tar_archive_fast_status = self.status_code.OK
+
+        ## select ids
+        tape_label_ids = self.labeldb.select_ids()
+
+        ## load up a fresh set of tapes
+        self.tape.load_tape_pair(tape_label_ids)
+
+        ## add the catalog to the beginning of the tape
+        for label_id in tape_label_ids:
+            self.debug.output('archiving to label_id - {}'.format(label_id))
+
+        ## prepare the first block of the tape with the current tape_catalog
+        self.tape.prep_tape(catalog_file)
+
+        ## actually write the files in the catalog to a tape pair
+        self.debug.output('got list - {}'.format(self.files.tape_list))
+        self.tape.archive_from_list(self.files.tape_list)
+
+        ## check the status of the dumps; close the dump if verification fails
+        tar_archive_fast_status = self.dump_pair_verify(tape_label_ids)
+
+        ## unload the tape pair
+        self.tape.unload_tape_pair()
+
+        ## update the current dump state
+        if tar_archive_fast_status is self.status_code.OK:
+            log_label_ids_status = self.log_label_ids(tape_label_ids, self.files.tape_list)
+            if log_label_ids_status is not self.status_code.OK:
+                self.debug.output('problem writing labels out: {}'.format(log_label_ids_status))
+        else:
+            self.debug.output("Abort dump: {}".format(tar_archive_fast_status))
+
+
 # noinspection PyClassHasNoInit
 @unique
 class DumpStateCode(Enum):
@@ -537,3 +628,16 @@ class TestDump(DumpFast):
         self.files.gen_final_catalog(self.files.catalog_name, self.files.archive_list, self.paperdb.file_md5_dict)
 
 
+class VerifyThread(Thread):
+    ## get tape id and initialize variable for recording status code
+    def __init__(self,tape_id,dump_object):
+        self.tape_id = tape_id
+        self.dump_verify_status = ''
+
+    ## run command and record status code
+    def run():
+        self.dump_verify_status = dump_object.dump_verify(label_id)
+
+    ## return status code when complete
+    def status():
+        return self.dump_verify_status
