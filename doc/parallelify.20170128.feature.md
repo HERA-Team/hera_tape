@@ -13,6 +13,7 @@ verification process, to improve throughput.
   we should make changes to:
   1. paper_dump.py - a new class: VerifyThread, a new dump verification method: dump_pair_verify, 
   a new dump method: tar_archive_faster
+  2. paper_mtx.py - refactor tape_archive_md5() to unload tapes when complete
 
 ## feature 
 
