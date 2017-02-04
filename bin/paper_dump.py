@@ -5,7 +5,7 @@ be dumped to tape using this class.
 """
 
 __author__ = 'dconover@sas.upenn.edu'
-__version__ = 20150103
+__version__ = 20170203
 
 from threading import Thread
 from random import randint
@@ -25,7 +25,7 @@ from paper_status_code import StatusCode
 class Dump(object):
     """Coordinate a dump to tape based on deletable files in database"""
 
-    def  __init__(self, credentials, debug=False, pid=None, disk_queue=True, drive_select=2, debug_threshold=255):
+    def  __init__(self, credentials, mtx_credentials='home2/obs/.my.mtx.cnf', debug=False, pid=None, disk_queue=True, drive_select=2, debug_threshold=255):
         """initialize"""
 
         self.version = __version__
@@ -33,7 +33,7 @@ class Dump(object):
         self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
 
         self.status_code = StatusCode
-        self.mtx_creds = '/home2/obs/.my.mtx.cnf'
+        self.mtx_creds = mtx_credentials
         self.debug.output(credentials)
         self.paper_creds = credentials
 
@@ -510,7 +510,7 @@ class DumpFaster(DumpFast):
         ## return updated verification status
         return tar_archive_verify_status
 
-    def faster_batch(self):
+    def fast_batch(self):
         """skip tar of local archive on disk
            send files to two tapes using a single drive."""
 
@@ -617,17 +617,6 @@ class ResumeDump(Dump):
         self.tar_archive_single(self.files.catalog_name)
         self.debug.output("manual to tape complete")
 
-class TestDump(DumpFast):
-    """move all the testing methods here to cleanup the production dump class"""
-
-
-    def test_build_archive(self, regex=False):
-        """master method to loop through files to write data to tape"""
-
-        self.batch_files(queue=True, regex=regex)
-        self.files.gen_final_catalog(self.files.catalog_name, self.files.archive_list, self.paperdb.file_md5_dict)
-
-
 class VerifyThread(Thread):
     ## get tape id and initialize variable for recording status code
     def __init__(self,tape_id,dump_object):
@@ -641,3 +630,32 @@ class VerifyThread(Thread):
     ## return status code when complete
     def status():
         return self.dump_verify_status
+
+class TestDump(DumpFaster):
+    """move all the testing methods here to cleanup the production dump class"""
+
+
+    def test_build_archive(self, regex=False):
+        """master method to loop through files to write data to tape"""
+
+        self.batch_files(queue=True, regex=regex)
+        self.files.gen_final_catalog(self.files.catalog_name, self.files.archive_list, self.paperdb.file_md5_dict)
+
+    def test_data_init(self):
+        "create a test data set"
+        pass
+
+    def test_dump_faster(self):
+        "run a test dump using the test data"
+
+        ## from paper_dump import DumpFast
+
+        ## paper_creds = '/home2/obs/.my.papertape-prod.cnf'
+        self.paper_creds = '/papertape/etc/.my.papertape-test.cnf'
+
+        ## add comment
+        ##x = DumpFaster(paper_creds, debug=True, drive_select=2, disk_queue=False, debug_threshold=128)
+        self.batch_size_mb = 15000
+        self.tape_size = 1536000
+        #x.tape_size = 2500000
+        self.fast_batch()

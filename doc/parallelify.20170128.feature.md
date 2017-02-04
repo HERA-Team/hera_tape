@@ -1,22 +1,36 @@
 # parallel verification of written tapes
 
-owner: dconover:20170128
+owner: dconover:20170128    
+review: optional
 
+## contents
+  1. [overview](#overview)
+  2. [manifest](#manifest)
+  3. [feature](#feature)
+  4. [test](#test)
+  5. [deploy](#deploy)
+  6. [log](#log)
+  7. [todo](#todo)
+  8. [refactor](#refactor)
+  9. [faq](#faq)
+  10. [reference](#reference)
+  11. [communications](#communications)
+  12. [suppplement](#suppplement)
+  
 ## overview
-
   We are currently verifying 25% of the files written to tape after the tape 
 writing process. Though the tapes are written in parallel, the verification 
 process is performed in serial. We, therefore, would like to parallelize the 
 verification process, to improve throughput.
 
 ## manifest
-  we should make changes to:
-  1. paper_dump.py - a new class: VerifyThread, a new dump verification method: dump_pair_verify, 
-  a new dump method: tar_archive_faster
+  to avoid interrupting production code, we are making changes as follows:
+  1. paper_dump.py - a new class: VerifyThread, a new dump class: DumpFaster, a 
+  new verification method: dump_pair_verify, an updated method: 
+  tar_archive_fast, an updated method: fast_batch
   2. paper_mtx.py - refactor tape_archive_md5() to unload tapes when complete
 
 ## feature 
-
   We are currently using DumpFast.tar_archive_fast() (in paper_dump.py) which
 contains the following:
 
@@ -54,25 +68,25 @@ python threads.
   Something like:
 ```bash
 import threading
-
+ 
 class VerifyThread(threading.Thread):
     def __init__(self,tape_id,dump_object):
         self.tape_id = tape_id
         self.dump_verify_status = ''
-
+ 
     def run():
         self.dump_verify_status = dump_object.dump_verify(label_id)
-
+ 
     def status(): 
         return self.dump_verify_status
-
+ 
 for label_id in tape_label_ids:
     verify_list = []
     
     verify = VerifyThread(label_id, self)
     verify_list.append(verify)
     verify.start()    
-
+ 
 for verify in verify_list:
     verify.join
     dump_verify_status = verify.status()
@@ -93,20 +107,20 @@ before the function is called it will leave the tape in the drive and rewind it.
   We can pair this with the threaded call like:
 ```bash
 import threading
-
+ 
 class VerifyThread(threading.Thread):
-[... see custom class definition above]
-
+## [... see custom class definition above]
+ 
 def dump_pair_verify(self, tape_label_ids):
     self.tape.load_tape_pair(tape_label_ids)
     
     for label_id in tape_label_ids:
         verify_list = []
-
+ 
         verify = VerifyThread(label_id, self)
         verify_list.append(verify)
         verify.start()
-
+ 
     for verify in verify_list:
         verify.join
         dump_verify_status = verify.status()
@@ -117,7 +131,7 @@ def dump_pair_verify(self, tape_label_ids):
 ```
 
 
-finally we need to update DumpFast.tar_archive_fast() to call dump_pair_verify
+finally we need to update DumpFaster.tar_archive_fast() to call dump_pair_verify
 instead of the original verification for loop
 ```bash
     self.dump_pair_verify(tape_label_ids)
@@ -125,7 +139,59 @@ instead of the original verification for loop
 
 
 ## test
-  1. 
+  We are adding new methods to the TestDump class in paper_dump.py
+  1. test_build_dataset - build a test dataset
+  2. test_dump_faster - use the new DumpFaster class to dump the dataset like in papertape-prod_dump.py
+  
+###### test_build_dataset()
+  for testing the new dump class we will employ the old tape library, still 
+attached to shredder. We need to perform the following to prepare for testing:
+  1. create a set of test files to dump
+  2. identify a pair of tapes to use
+  3. update the mtx database (a test mtxdb) to use those tapes
+  4. create test credentials files for the mtx db and test papertape db
+  
+###### test_dump_faster()
+  The test method calls the new dump class on a crafted test data set
+
+```bash
+      def test_dump_faster(self):
+        "run a test dump using the test data"
+ 
+        ## from paper_dump import DumpFast
+ 
+        ## paper_creds = '/home2/obs/.my.papertape-prod.cnf'
+        self.paper_creds = '/papertape/etc/my.papertape-test.cnf'
+ 
+        ## add comment
+        ##x = DumpFaster(paper_creds, debug=True, drive_select=2, disk_queue=False, debug_threshold=128)
+        self.batch_size_mb = 15000
+        self.tape_size = 1536000
+        #x.tape_size = 2500000
+        self.fast_batch()
+```
+  This will itself need to be run from a test script like:
+```bash
+from paper_dump import TestDump    
+    
+## credential variables
+paper_creds = '/root/.my.test-papertape.cnf'
+mtx_creds = '/root/.my.test-mtx.cnf'
+    
+## initialize the test code with test credentials
+x = TestDump(paper_creds, mtx_credentials=mtx_creds, debug=True, drive_select=2, disk_queue=False, debug_threshold=128)
+    
+## create the data set, run the test dump, cleanup the test data
+x.test_data_set(init=True)
+x.test_dump_faster()
+x.test_data_set(cleanup=True)
+
+```
+  
+  
+## deploy
+  1. review tests with slack(eoranalysis):/dm:plaplant
+  2. update papertape-prod_dump.py to use dump faster DumpFaster
 
 ## log
   1. review code
@@ -133,30 +199,35 @@ instead of the original verification for loop
   3. refactored tape_archive_md5
   4. check if Changer.tape_archive_md5 uses only one drive - it is agnostic if the tapes are already loaded
   5. debug proposed fix - proposed creating new dump routine, so updates don't break current running code
+  6. integrate code fix - dconover:20170203
 
 ## todo 
-  5. integrate code fix
-  6. test fix
-  7. report changes to plaplant via slack
+  7. build test dataset
+  8. test fix
+  9. report changes to plaplant via slack
+  10. update production dump script (papertape-prod_dump.py)
 
 ## refactor
   plaplant also requested that the verification process unload the tape 
 when complete. I am adding that to the end of tape_archive_md5().
 
+  while writing the test code I notice that the mtx credentials where hardcoded
+in the initialization for the Dump class. I am changing that to a default init variable. I am making the current default the same as the current
+running dumps so that we don't accidentally disrupt the current code.
 
 ## faq
   1. does Changer.tape_archive_md5 use a specific tape (e.g. /dev/nst0)?
-  if it does, we also need to change that code to be drive agnostic
+  **if the tapes are already loaded, it is agnostic**
+  2. where do the mtx db credentials get set?
+  **a default init variable (mtx_credentials) in the Dump class**
 
 ## reference
   1. from python.org: python3 [threading](https://docs.python.org/3/library/threading.html)
   2. create a [custom thread class](http://www.python-course.eu/threads.php) and modify 
   run to save the return value from dump_verify
 
-
 ## communications
-
-communications for this project have all been with Paul La Plante over slack on the
+  communications for this project have all been with Paul La Plante over slack on the
 group's slack via direct message
 
   1. the folio group uses their own slack channel eoaranalysis.slack.com
@@ -165,8 +236,6 @@ group's slack via direct message
 
 
 ## supplement
-
-
 slack discussion (eoranalysis:dm):
 ```bash
 plaplant [10:08 AM] 
@@ -244,3 +313,24 @@ Thanks
 d [6:17 PM] 
 I’ve added an unload call to the end of the verification process :slightly_smiling_face:
 ```
+discussion about testing:
+```bash
+d [12:25 PM] 
+I’ve finally integrated the new code. I still have to write some tests, but if you’re between runs, you can call it by changing the dump class from DumpFast to DumpFaster in the papertape-prod_dump.py file. I am hoping to be able to get some tests written and run on the old tape library this weekend.
+
+plaplant [12:25 PM] 
+Excellent, thanks so much! :slightly_smiling_face:
+
+[12:26]  
+I really appreciate all the work that went in
+
+[12:27]  
+I’m running a dump right now, but it should finish later today/early tomorrow. I might hold off on using the new version till all the tests are done, since the hard drive version of what I’m taping up now will be deleted when we’re done, so I want everything air-tight
+
+[12:28]  
+But thanks again for this change, it’ll really speed things up```
+
+<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+
+
+
