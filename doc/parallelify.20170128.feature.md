@@ -51,7 +51,7 @@ contains the following:
         self_check_status, item_index, catalog_list, md5_dict, tape_pid = self.tape_self_check(tape_id)
 ```
 
-  tape_self_check in turn calls tape.tape_archive_md5 (which is paper_mtx:)
+  tape_self_check in turn calls tape.tape_archive_md5 (found in paper_mtx.py)
 ```bash
         tape_archive_md5_status, reference = self.tape.tape_archive_md5(tape_id, tape_pid, catalog_list, md5_dict)
 ```
