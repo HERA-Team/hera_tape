@@ -48,10 +48,6 @@ class Dump(object):
 
         ## setup PaperDB connection
         self.paperdb = PaperDB(self.version, self.paper_creds, self.pid, debug=True, debug_threshold=debug_threshold)
-        ## test database
-        #self.paperdb = TestPaperDB(self.version, self.paper_creds, self.pid, debug=True, debug_threshold=debug_threshold)
-        ## reload test data
-        #self.paperdb.load_sample_data()
 
         ## setup tape library
         self.labeldb = MtxDB(self.version, self.mtx_creds, self.pid, debug=debug, debug_threshold=debug_threshold)

@@ -34,7 +34,7 @@ verification process, to improve throughput.
   We are currently using DumpFast.tar_archive_fast() (in paper_dump.py) which
 contains the following:
 
-```bash
+```python
         for label_id in tape_label_ids:
             dump_verify_status = self.dump_verify(label_id)
             if dump_verify_status is not self.status_code.OK:
@@ -46,13 +46,13 @@ contains the following:
   Instead we should pass the tape_label_ids into dump_verify().
 
   dump_verify() is inherited from Dump.dump_verify() and contains:
-```bash
+```python
         ## run a tape_self_check
         self_check_status, item_index, catalog_list, md5_dict, tape_pid = self.tape_self_check(tape_id)
 ```
 
   tape_self_check in turn calls tape.tape_archive_md5 (found in paper_mtx.py)
-```bash
+```python
         tape_archive_md5_status, reference = self.tape.tape_archive_md5(tape_id, tape_pid, catalog_list, md5_dict)
 ```
 
@@ -66,7 +66,7 @@ DumpFast.tar_archive_fast() to run self.dump_verify on the label_ids using
 python threads.
 
   Something like:
-```bash
+```python
 import threading
  
 ## custom thread class to capture status code
@@ -101,7 +101,7 @@ for verify in verify_list:
     verify.join()
 
     ## after run completes, we need to query the status code with our 
-    ## custom status() method
+    ## custom status() method (since join does not return the status code)
     dump_verify_status = verify.status()
 
     ## process the return code to see if we should abort or continue
@@ -120,7 +120,7 @@ the variable out to the calling function with the custom status method.
 before the function is called it will leave the tape in the drive and rewind it.
 
   We can pair this with the threaded call like:
-```bash
+```python
 import threading
  
 class VerifyThread(threading.Thread):
@@ -164,7 +164,7 @@ def dump_pair_verify(self, tape_label_ids):
 
 finally we need to update DumpFaster.tar_archive_fast() to call dump_pair_verify
 instead of the original verification for loop
-```bash
+```python
     def tar_archive_fast(self, catalog_file):
         """Archive files directly to tape using only a single drive to write 2 tapes"""
 
@@ -209,7 +209,7 @@ instead of the original verification for loop
   1. test_build_dataset - build a test dataset
   2. test_dump_faster - use the new DumpFaster class to dump the dataset like in papertape-prod_dump.py
 
-```bash
+```python
 class TestDump(DumpFaster):
 
     def test_data_init(self):
@@ -244,7 +244,7 @@ attached to shredder. We need to perform the following to prepare for testing:
 ###### test_dump_faster()
   The test method calls the new dump class on a crafted test data set
 
-```bash
+```python
       def test_dump_faster(self):
         "run a test dump using the test data"
  
@@ -256,7 +256,7 @@ attached to shredder. We need to perform the following to prepare for testing:
         self.fast_batch()
 ```
   This will itself need to be run from a test script like:
-```bash
+```python
 from paper_dump import TestDump    
     
 ## initialize the test code with test credentials
@@ -295,11 +295,29 @@ when complete. I am adding that to the end of tape_archive_md5().
 in the initialization for the Dump class. I am changing that to a default init variable. I am making the current default the same as the current
 running dumps so that we don't accidentally disrupt the current code.
 
-  while writing the test code I decided that if we have a method for 
-test data and variables, then we should use that as the default credentials. 
-This protects production data by default but alos give us a working instance
-no matter what we have in the beginning.
+  while writing integrating the new dump_verify code, I see that dump() close is not
+fully implemented and requires that self.dump_state get updated as various methods 
+are completed. I am adding an update to the self.dump_state in the dump_verify() method so 
+that dump_close() could eventually be made to work correctly.
 
+  creating a default variable for the credentials_file and a new method for checking 
+the validity of the credentials file
+
+```python
+from os import path
+@staticmethod
+def check_credentials_file(credentials):
+    ## default to false
+    _status_code = False
+    
+    ## return true if the credentials file exists and is not zero size
+    if path.isfile(credentials) and path.getsize(credentials) > 0:
+       _status_code = True
+     
+    ## return the status code
+    return _status_code
+```
+  
 ## faq
   1. does Changer.tape_archive_md5 use a specific tape (e.g. /dev/nst0)?
   **if the tapes are already loaded, it is agnostic**
