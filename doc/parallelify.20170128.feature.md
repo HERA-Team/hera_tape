@@ -70,6 +70,7 @@ python threads.
 import threading
  
 class VerifyThread(threading.Thread):
+    ## initialize some variables to 
     def __init__(self,tape_id,dump_object):
         self.tape_id = tape_id
         self.dump_verify_status = ''
