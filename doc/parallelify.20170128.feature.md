@@ -72,13 +72,17 @@ import threading
 ## custom thread class to capture status code
 class VerifyThread(threading.Thread):
     ## init object with tape_id and dump_object
+    ## so we can call dump_object(tape_id)
     def __init__(self,tape_id,dump_object):
         self.tape_id = tape_id
         self.dump_verify_status = ''
  
+    ## custom run to run dump_verify and save returned output
     def run():
         self.dump_verify_status = dump_object.dump_verify(label_id)
  
+    ## we need a function we catn call when run ends that will return 
+    ## the captured return code
     def status(): 
         return self.dump_verify_status
  
