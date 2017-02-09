@@ -70,6 +70,7 @@ python threads.
 import threading
  
 ## custom thread class to capture status code
+## when dump_verify() completes
 class VerifyThread(threading.Thread):
     ## init object with tape_id and dump_object
     ## so we can call dump_object(tape_id)
@@ -77,16 +78,17 @@ class VerifyThread(threading.Thread):
         self.tape_id = tape_id
         self.dump_verify_status = ''
  
-    ## custom run to run dump_verify and save returned output
+    ## custom run() to run dump_verify and save returned output
     def run():
         self.dump_verify_status = dump_object.dump_verify(label_id)
  
-    ## we need a function we catn call when run ends that will return 
+    ## we need a function we can call when run() ends that will return 
     ## the captured return code
     def status(): 
         return self.dump_verify_status
  
 ## example use of new custom class
+## this should be called from within a DumpFast object
 for label_id in tape_label_ids:
     verify_list = []
     
@@ -95,8 +97,14 @@ for label_id in tape_label_ids:
     verify.start()    
  
 for verify in verify_list:
-    verify.join
+    ## join() will block until run() completes
+    verify.join()
+
+    ## after run completes, we need to query the status code with our 
+    ## custom status() method
     dump_verify_status = verify.status()
+
+    ## process the return code to see if we should abort or continue
     if dump_verify_status is not self.status_code.OK:
         self.debug.output('Fail: dump_verify {}'.format(dump_verify_status))
         tar_archive_single_status = self.status_code.tar_archive_single_dump_verify
@@ -121,16 +129,26 @@ class VerifyThread(threading.Thread):
 def dump_pair_verify(self, tape_label_ids):
     self.tape.load_tape_pair(tape_label_ids)
     
+    ## create a thread for each tape (label_id)
     for label_id in tape_label_ids:
         verify_list = []
  
+        ## each thread needs a tape and the current dump object
         verify = VerifyThread(label_id, self)
         verify_list.append(verify)
         verify.start()
  
     for verify in verify_list:
+        ## join() will block until run() completes
         verify.join
+ 
+        ## after run completes, we need to query the status code with our
+        ## custom status() method
         dump_verify_status = verify.status()
+ 
+        ## process the return code to see if we should abort or continue
+        ## TODO: should we just pass the status code out to let 
+        ## the calling code decide whether or not to abort?
         if dump_verify_status is not self.status_code.OK:
             self.debug.output('Fail: dump_verify {}'.format(dump_verify_status))
             tar_archive_single_status = self.status_code.tar_archive_single_dump_verify
