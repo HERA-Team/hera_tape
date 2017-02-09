@@ -167,7 +167,31 @@ instead of the original verification for loop
   We are adding new methods to the TestDump class in paper_dump.py
   1. test_build_dataset - build a test dataset
   2. test_dump_faster - use the new DumpFaster class to dump the dataset like in papertape-prod_dump.py
-  
+
+```bash
+class TestDump(DumpFaster):
+
+    def test_data_init(self):
+        "create a test data set"
+        pass
+
+    def test_dump_faster(self):
+        "run a test dump using the test data"
+
+        ## from paper_dump import DumpFast
+
+        ## paper_creds = '/home2/obs/.my.papertape-prod.cnf'
+        self.paper_creds = '/papertape/etc/.my.papertape-test.cnf'
+
+        ## add comment
+        ##x = DumpFaster(paper_creds, debug=True, drive_select=2, disk_queue=False, debug_threshold=128)
+        self.batch_size_mb = 15000
+        self.tape_size = 1536000
+        #x.tape_size = 2500000
+        self.fast_batch()
+```  
+
+
 ###### test_build_dataset()
   for testing the new dump class we will employ the old tape library, still 
 attached to shredder. We need to perform the following to prepare for testing:

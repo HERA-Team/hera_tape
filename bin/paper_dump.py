@@ -659,3 +659,5 @@ class TestDump(DumpFaster):
         self.tape_size = 1536000
         #x.tape_size = 2500000
         self.fast_batch()
+
+
