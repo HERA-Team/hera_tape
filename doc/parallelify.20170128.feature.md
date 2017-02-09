@@ -71,6 +71,7 @@ import threading
  
 ## custom thread class to capture status code
 class VerifyThread(threading.Thread):
+    ## init object with tape_id and dump_object
     def __init__(self,tape_id,dump_object):
         self.tape_id = tape_id
         self.dump_verify_status = ''
