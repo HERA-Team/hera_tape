@@ -127,39 +127,80 @@ class VerifyThread(threading.Thread):
 ## [... see custom class definition above]
  
 def dump_pair_verify(self, tape_label_ids):
+
+    return_codes = {} ## return codes indexed by tape_label
+    verification_threads = {}  ## verification threads indexed by tape_label
+    
     self.tape.load_tape_pair(tape_label_ids)
     
     ## create a thread for each tape (label_id)
+    ## so tapes can be verified in parallel
     for label_id in tape_label_ids:
-        verify_list = []
  
         ## each thread needs a tape and the current dump object
-        verify = VerifyThread(label_id, self)
-        verify_list.append(verify)
-        verify.start()
+        verify_thread = VerifyThread(label_id, self)
+        verification_threads[label_id] = verify_thread
+        verify_thread.start()
  
-    for verify in verify_list:
+    ## after we start both threads, we then have to wait for the 
+    ## started threads to complete
+    for label_id in tape_label_ids:
         ## join() will block until run() completes
-        verify.join
- 
+        verification_threads[label_id].join()
+  
         ## after run completes, we need to query the status code with our
         ## custom status() method
-        dump_verify_status = verify.status()
+        return_codes[label_id] = verification_threads[label_id].status()
  
-        ## process the return code to see if we should abort or continue
-        ## TODO: should we just pass the status code out to let 
-        ## the calling code decide whether or not to abort?
-        if dump_verify_status is not self.status_code.OK:
-            self.debug.output('Fail: dump_verify {}'.format(dump_verify_status))
-            tar_archive_single_status = self.status_code.tar_archive_single_dump_verify
-            self.close_dump()
+    ## check both return codes and return failure if either is not OK
+    for label_id, return_code in return_codes.items():
+       if return_code is not self.status_code.OK:
+           return return_code
+        
+    ## if we didn't return a failure above, return success
+    return self.status_code.OK
+    
 ```
-
 
 finally we need to update DumpFaster.tar_archive_fast() to call dump_pair_verify
 instead of the original verification for loop
 ```bash
-    self.dump_pair_verify(tape_label_ids)
+    def tar_archive_fast(self, catalog_file):
+        """Archive files directly to tape using only a single drive to write 2 tapes"""
+
+        tar_archive_fast_status = self.status_code.OK
+
+        ## select ids
+        tape_label_ids = self.labeldb.select_ids()
+
+        ## load up a fresh set of tapes
+        self.tape.load_tape_pair(tape_label_ids)
+
+        ## add the catalog to the beginning of the tape
+        for label_id in tape_label_ids:
+            self.debug.output('archiving to label_id - {}'.format(label_id))
+
+        ## prepare the first block of the tape with the current tape_catalog
+        self.tape.prep_tape(catalog_file)
+
+        ## actually write the files in the catalog to a tape pair
+        self.debug.output('got list - {}'.format(self.files.tape_list))
+        self.tape.archive_from_list(self.files.tape_list)
+
+        ## check the status of the dumps; close the dump if verification fails
+        tar_archive_fast_status = self.dump_pair_verify(tape_label_ids)
+
+        ## unload the tape pair
+        self.tape.unload_tape_pair()
+
+        ## update the db if the current dump status is OK
+        if tar_archive_fast_status is self.status_code.OK:
+            log_label_ids_status = self.log_label_ids(tape_label_ids, self.files.tape_list)
+            if log_label_ids_status is not self.status_code.OK:
+                self.debug.output('problem writing labels out: {}'.format(log_label_ids_status))
+        else:
+            self.debug.output("Abort dump: {}".format(tar_archive_fast_status))
+            self.close_dump()
 ``` 
 
 
@@ -237,7 +278,6 @@ x.test_data_set(cleanup=True)
 
 ```
   
-  
 ## deploy
   1. review tests with slack(eoranalysis):/dm:plaplant
   2. update papertape-prod_dump.py to use dump faster DumpFaster
@@ -264,6 +304,11 @@ when complete. I am adding that to the end of tape_archive_md5().
 in the initialization for the Dump class. I am changing that to a default init variable. I am making the current default the same as the current
 running dumps so that we don't accidentally disrupt the current code.
 
+  while writing the test code I decided that if we have a method for 
+test data and variables, then we should use that as the default credentials. 
+This protects production data by default but alos give us a working instance
+no matter what we have in the beginning.
+
 ## faq
   1. does Changer.tape_archive_md5 use a specific tape (e.g. /dev/nst0)?
   **if the tapes are already loaded, it is agnostic**
@@ -282,7 +327,6 @@ group's slack via direct message
   1. the folio group uses their own slack channel eoaranalysis.slack.com
   2. paul la plante <plaplant@sas.upenn.edu>
   3. james aguirre <jaguirre@sas.upenn.edu>
-
 
 ## supplement
 slack discussion (eoranalysis:dm):

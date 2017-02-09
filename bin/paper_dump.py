@@ -25,7 +25,7 @@ from paper_status_code import StatusCode
 class Dump(object):
     """Coordinate a dump to tape based on deletable files in database"""
 
-    def  __init__(self, credentials, mtx_credentials='home2/obs/.my.mtx.cnf', debug=False, pid=None, disk_queue=True, drive_select=2, debug_threshold=255):
+    def  __init__(self, credentials='/papertape/etc/.my.papertape-test.cnf', mtx_credentials='home2/obs/.my.mtx.cnf', debug=False, pid=None, disk_queue=True, drive_select=2, debug_threshold=255):
         """initialize"""
 
         self.version = __version__
@@ -222,8 +222,10 @@ class Dump(object):
         then confirm the tape_list matches
 
         """
-
         dump_verify_status = self.status_code.OK
+
+        ## we update the dump state so self.dump_close() knows what actions to take
+        self.dump_state = self.dump_state_code.dump_verify
 
         ## run a tape_self_check
         self_check_status, item_index, catalog_list, md5_dict, tape_pid = self.tape_self_check(tape_id)
@@ -485,30 +487,36 @@ class DumpFaster(DumpFast):
 
     def dump_pair_verify(self, tape_label_ids):
 
-        tar_archive_verify_status = self.status_code.OK
+        return_codes = {}  ## return codes indexed by tape_label
+        verification_threads = {}  ## verification threads indexed by tape_label
 
-        ## this should rewind the given tapes
         self.tape.load_tape_pair(tape_label_ids)
 
-        ## for each tape, create a new thread and start it
+        ## create a thread for each tape (label_id)
+        ## so tapes can be verified in parallel
         for label_id in tape_label_ids:
-            verify_list = []
+            ## each thread needs a tape and the current dump object
+            verify_thread = VerifyThread(label_id, self)
+            verification_threads[label_id] = verify_thread
+            verify_thread.start()
 
-            verify = VerifyThread(label_id, self)
-            verify_list.append(verify)
-            verify.start()
+        ## after we start both threads, we then have to wait for the
+        ## started threads to complete
+        for label_id in tape_label_ids:
+            ## join() will block until run() completes
+            verification_threads[label_id].join()
 
-        ## for each thread that we start, wait for it to finish and check the status
-        for verify in verify_list:
-            verify.join
-            dump_verify_status = verify.status()
-            if dump_verify_status is not self.status_code.OK:
-                self.debug.output('Fail: dump_verify {}'.format(dump_verify_status))
-                tar_archive_verify_status = self.status_code.tar_archive_single_dump_verify
-                self.close_dump()
+            ## after run completes, we need to query the status code with our
+            ## custom status() method
+            return_codes[label_id] = verification_threads[label_id].status()
 
-        ## return updated verification status
-        return tar_archive_verify_status
+        ## check both return codes and return failure if either is not OK
+        for label_id, return_code in return_codes.items():
+            if return_code is not self.status_code.OK:
+                return return_code
+
+        ## if we didn't return a failure above, return success
+        return self.status_code.OK
 
     def fast_batch(self):
         """skip tar of local archive on disk
@@ -549,19 +557,21 @@ class DumpFaster(DumpFast):
         self.debug.output('got list - {}'.format(self.files.tape_list))
         self.tape.archive_from_list(self.files.tape_list)
 
-        ## check the status of the dumps; close the dump if verification fails
+        ## check the status of the dumps
         tar_archive_fast_status = self.dump_pair_verify(tape_label_ids)
 
         ## unload the tape pair
         self.tape.unload_tape_pair()
 
-        ## update the current dump state
+        ## update the db if the current dump status is OK
         if tar_archive_fast_status is self.status_code.OK:
             log_label_ids_status = self.log_label_ids(tape_label_ids, self.files.tape_list)
             if log_label_ids_status is not self.status_code.OK:
                 self.debug.output('problem writing labels out: {}'.format(log_label_ids_status))
         else:
             self.debug.output("Abort dump: {}".format(tar_archive_fast_status))
+            self.close_dump()
+
 
 
 # noinspection PyClassHasNoInit
@@ -619,13 +629,13 @@ class ResumeDump(Dump):
 
 class VerifyThread(Thread):
     ## get tape id and initialize variable for recording status code
-    def __init__(self,tape_id,dump_object):
+    def __init__(self, tape_id, dump_function):
         self.tape_id = tape_id
         self.dump_verify_status = ''
 
     ## run command and record status code
     def run():
-        self.dump_verify_status = dump_object.dump_verify(label_id)
+        self.dump_verify_status = dump_function(label_id)
 
     ## return status code when complete
     def status():
