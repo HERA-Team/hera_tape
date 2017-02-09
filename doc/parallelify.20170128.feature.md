@@ -25,10 +25,10 @@ verification process, to improve throughput.
 
 ## manifest
   to avoid interrupting production code, we are making changes as follows:
-  1. paper_dump.py - a new class: VerifyThread, a new dump class: DumpFaster, a 
+  1. [paper_dump.py](/bin/paper_dump.py) - a new class: VerifyThread, a new dump class: DumpFaster, a 
   new verification method: dump_pair_verify, an updated method: 
   tar_archive_fast, an updated method: fast_batch
-  2. paper_mtx.py - refactor tape_archive_md5() to unload tapes when complete
+  2. [paper_mtx.py](/bin/paper_mtx.py) - refactor tape_archive_md5() to unload tapes when complete
 
 ## feature 
   We are currently using DumpFast.tar_archive_fast() (in paper_dump.py) which
