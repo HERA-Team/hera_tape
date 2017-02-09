@@ -69,8 +69,9 @@ python threads.
 ```bash
 import threading
  
+## custom thread class to capture status code
 class VerifyThread(threading.Thread):
-    ## initialize some variables to 
+    ## init object with tape_id and dump_object
     def __init__(self,tape_id,dump_object):
         self.tape_id = tape_id
         self.dump_verify_status = ''
@@ -81,6 +82,7 @@ class VerifyThread(threading.Thread):
     def status(): 
         return self.dump_verify_status
  
+## example use of new custom class
 for label_id in tape_label_ids:
     verify_list = []
     
