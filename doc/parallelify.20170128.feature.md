@@ -74,13 +74,13 @@ import threading
 class VerifyThread(threading.Thread):
     ## init object with tape_id and dump_object
     ## so we can call dump_object(tape_id)
-    def __init__(self,tape_id,dump_object):
+    def __init__(self, tape_id, dump_verify):
         self.tape_id = tape_id
         self.dump_verify_status = ''
  
     ## custom run() to run dump_verify and save returned output
     def run():
-        self.dump_verify_status = dump_object.dump_verify(label_id)
+        self.dump_verify_status = dump_verify(label_id)
  
     ## we need a function we can call when run() ends that will return 
     ## the captured return code
@@ -187,7 +187,7 @@ instead of the original verification for loop
         self.debug.output('got list - {}'.format(self.files.tape_list))
         self.tape.archive_from_list(self.files.tape_list)
 
-        ## check the status of the dumps; close the dump if verification fails
+        ## check the status of the dumps
         tar_archive_fast_status = self.dump_pair_verify(tape_label_ids)
 
         ## unload the tape pair
@@ -248,33 +248,22 @@ attached to shredder. We need to perform the following to prepare for testing:
       def test_dump_faster(self):
         "run a test dump using the test data"
  
-        ## from paper_dump import DumpFast
- 
-        ## paper_creds = '/home2/obs/.my.papertape-prod.cnf'
-        self.paper_creds = '/papertape/etc/my.papertape-test.cnf'
- 
-        ## add comment
-        ##x = DumpFaster(paper_creds, debug=True, drive_select=2, disk_queue=False, debug_threshold=128)
+        # self.paper_creds = '/papertape/etc/my.papertape-test.cnf'
         self.batch_size_mb = 15000
         self.tape_size = 1536000
-        #x.tape_size = 2500000
+        
+        self.test_data_init()
         self.fast_batch()
 ```
   This will itself need to be run from a test script like:
 ```bash
 from paper_dump import TestDump    
     
-## credential variables
-paper_creds = '/root/.my.test-papertape.cnf'
-mtx_creds = '/root/.my.test-mtx.cnf'
-    
 ## initialize the test code with test credentials
-x = TestDump(paper_creds, mtx_credentials=mtx_creds, debug=True, drive_select=2, disk_queue=False, debug_threshold=128)
+dump = TestDump()
     
 ## create the data set, run the test dump, cleanup the test data
-x.test_data_set(init=True)
-x.test_dump_faster()
-x.test_data_set(cleanup=True)
+dump.test_dump_faster()
 
 ```
   
@@ -289,8 +278,10 @@ x.test_data_set(cleanup=True)
   4. check if Changer.tape_archive_md5 uses only one drive - it is agnostic if the tapes are already loaded
   5. debug proposed fix - proposed creating new dump routine, so updates don't break current running code
   6. integrate code fix - dconover:20170203
+  7. refactor code fix; refactor test code doc - dconover:20170208
 
 ## todo 
+  7. refactor DumpTest.__init__() to run self.test_data_init() and connect
   7. build test dataset
   8. test fix
   9. report changes to plaplant via slack

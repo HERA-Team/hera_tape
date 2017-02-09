@@ -25,7 +25,7 @@ from paper_status_code import StatusCode
 class Dump(object):
     """Coordinate a dump to tape based on deletable files in database"""
 
-    def  __init__(self, credentials='/papertape/etc/.my.papertape-test.cnf', mtx_credentials='home2/obs/.my.mtx.cnf', debug=False, pid=None, disk_queue=True, drive_select=2, debug_threshold=255):
+    def  __init__(self, credentials='/papertape/etc/my.papertape-test.cnf', mtx_credentials='home2/obs/.my.mtx.cnf', debug=False, pid=None, disk_queue=True, drive_select=2, debug_threshold=255):
         """initialize"""
 
         self.version = __version__
@@ -39,7 +39,7 @@ class Dump(object):
 
         self.tape_ids = ''
 
-        ## each dump process 6gb to /dev/shm (two at a time)
+        ## each dump process 12GB to /dev/shm (two at a time)
         self.batch_size_mb = 12000
 
         ## (1.5Tb -1 batch)
@@ -627,23 +627,31 @@ class ResumeDump(Dump):
         self.tar_archive_single(self.files.catalog_name)
         self.debug.output("manual to tape complete")
 
-class VerifyThread(Thread):
-    ## get tape id and initialize variable for recording status code
-    def __init__(self, tape_id, dump_function):
+## custom thread class to capture status code
+## when dump_verify() completes
+class VerifyThread(threading.Thread):
+    ## init object with tape_id and dump_object
+    ## so we can call dump_object(tape_id)
+    def __init__(self, tape_id, dump_verify):
         self.tape_id = tape_id
         self.dump_verify_status = ''
 
-    ## run command and record status code
+    ## custom run() to run dump_verify and save returned output
     def run():
-        self.dump_verify_status = dump_function(label_id)
+        self.dump_verify_status = dump_verify(label_id)
 
-    ## return status code when complete
+    ## we need a function we can call when run() ends that will return
+    ## the captured return code
     def status():
         return self.dump_verify_status
 
 class TestDump(DumpFaster):
     """move all the testing methods here to cleanup the production dump class"""
 
+    def __init__(self):
+        pass
+        ## copy from Dump.__init__()
+        self.test_data_init()
 
     def test_build_archive(self, regex=False):
         """master method to loop through files to write data to tape"""
@@ -658,16 +666,8 @@ class TestDump(DumpFaster):
     def test_dump_faster(self):
         "run a test dump using the test data"
 
-        ## from paper_dump import DumpFast
-
-        ## paper_creds = '/home2/obs/.my.papertape-prod.cnf'
-        self.paper_creds = '/papertape/etc/.my.papertape-test.cnf'
-
-        ## add comment
-        ##x = DumpFaster(paper_creds, debug=True, drive_select=2, disk_queue=False, debug_threshold=128)
         self.batch_size_mb = 15000
         self.tape_size = 1536000
-        #x.tape_size = 2500000
         self.fast_batch()
 
 
