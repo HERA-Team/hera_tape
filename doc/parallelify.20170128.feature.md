@@ -81,6 +81,7 @@ class VerifyThread(threading.Thread):
     def status(): 
         return self.dump_verify_status
  
+## example use of new custom class
 for label_id in tape_label_ids:
     verify_list = []
     
