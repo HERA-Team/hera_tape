@@ -281,7 +281,8 @@ dump.test_dump_faster()
   7. refactor code fix; refactor test code doc - dconover:20170208
 
 ## todo 
-  7. refactor DumpTest.__init__() to run self.test_data_init() and connect
+  8. refactor: update check_credentials_file() and PaperDB.__init__()
+  7. refactor: update DumpTest.__init__() to run self.test_data_init() and connect
   7. build test dataset
   8. test fix
   9. report changes to plaplant via slack
@@ -305,19 +306,57 @@ the validity of the credentials file
 
 ```python
 from os import path
-@staticmethod
-def check_credentials_file(credentials):
-    ## default to false
-    _status_code = False
-    
-    ## return true if the credentials file exists and is not zero size
-    if path.isfile(credentials) and path.getsize(credentials) > 0:
-       _status_code = True
-     
-    ## return the status code
-    return _status_code
+
+class PaperDB(object):
+    def __init__(self, version, credentials, pid, debug=False, debug_threshold=255):
+        """Initialize connection and collect file_list of files to dump.
+        :type version: int
+        :type credentials: string
+        :type pid: basestring
+        :type debug: bool
+        :type debug_threshold: int
+        """
+
+        self.pid = pid
+        self.version = version
+        self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
+        self.status_code = StatusCode
+
+        
+        ## we have a default credentials variable that may not exist, so we should check it first
+        self.check_credentials_file(credentials) || return
+
+        self.credentials = credentials
+        self.paperdb_state_code = PaperDBStateCode
+        self.paperdb_state = self.paperdb_state_code.initialize
+        self.connection_timeout = 90
+        self.connection_time = timedelta()
+        self.connect = ''
+        self.cur = ''
+        self.db_connect('init', credentials)
+
+        self.file_list = []
+        self.file_md5_dict = {}
+        self.claimed_files = []
+        self.claimed_state = 0
+        
+    @staticmethod
+    def check_credentials_file(credentials):
+    """Run checks on a credentials file; currently just check that it exists and is not empty.
+    :type credentials: string
+    """
+        ## default to false
+        _status_code = False
+        
+        ## return true if the credentials file exists and is not zero size
+        if path.isfile(credentials) and path.getsize(credentials) > 0:
+           _status_code = True
+         
+        ## return the status code
+        return _status_code
 ```
-  
+update __init__() to use the new file check:
+
 ## faq
   1. does Changer.tape_archive_md5 use a specific tape (e.g. /dev/nst0)?
   **if the tapes are already loaded, it is agnostic**
@@ -326,7 +365,7 @@ def check_credentials_file(credentials):
 
 ## reference
   1. from python.org: python3 [threading](https://docs.python.org/3/library/threading.html)
-  2. create a [custom thread class](http://www.python-course.eu/threads.php) and modify 
+  2. from python-course.eu: create a [custom thread class](http://www.python-course.eu/threads.php) and modify 
   run to save the return value from dump_verify
 
 ## communications
