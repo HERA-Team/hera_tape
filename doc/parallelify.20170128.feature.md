@@ -292,15 +292,78 @@ dump.test_dump_faster()
   plaplant also requested that the verification process unload the tape 
 when complete. I am adding that to the end of tape_archive_md5().
 
+```python
+   def tape_archive_md5(self, tape_id, job_pid, catalog_list, md5_dict):
+        """loop through each archive on tape and check a random file md5 from each
+
+        :rtype : bool"""
+
+        ## default to True
+        tape_archive_md5_status = self.status_code.OK
+        reference = None
+
+        self.debug.output('loading tape: %s' % tape_id)
+        ## load a tape or rewind the existing tape
+        self.load_tape_drive(tape_id)
+        drive_int = self.drive_ids[tape_id][0]
+
+        ## for every tar advance the tape
+        ## select a random path from the tape
+        ## run md5sum_at_index(tape_index, drive_int=0)
+        archive_dict = defaultdict(list)
+
+        ## build a dictionary of archives
+        for item in catalog_list:
+            self.debug.output('item to check: %s' % item)
+            archive_dict[item[0]].append(item[-1])
+
+        for tape_index in archive_dict:
+            directory_path = random.choice(archive_dict[tape_index])
+            ## starting at the beginning of the tape we can advance one at a
+            ## time through each archive and test one directory_path/visdata md5sum
+            self.debug.output('checking md5sum for %s' % directory_path)
+            md5sum = self.tape_drives.md5sum_at_index(job_pid, tape_index, directory_path, drive_int=drive_int)
+            if md5sum != md5_dict[directory_path]:
+                self.debug.output('mdsum does not match: %s, %s' % (md5sum, md5_dict[directory_path]))
+                tape_archive_md5_status = self.status_code.tape_archive_md5_mismatch
+                reference = ":".join([str(tape_index), directory_path])
+                break
+            else:
+                self.debug.output('md5 match: %s|%s' % (md5sum, md5_dict[directory_path]))
+
+        self.unload_tape(tape_id)
+        return tape_archive_md5_status, reference
+```
+
   while writing the test code I notice that the mtx credentials where hardcoded
 in the initialization for the Dump class. I am changing that to a default init variable. I am making the current default the same as the current
 running dumps so that we don't accidentally disrupt the current code.
 
+```python
+class Dump(object):
+    """Coordinate a dump to tape based on deletable files in database"""
+
+    def  __init__(self, credentials='/papertape/etc/my.papertape-test.cnf', mtx_credentials='home2/obs/.my.mtx.cnf', debug=False, pid=None, disk_queue=True, drive_select=2, debug_threshold=255):
+        """initialize"""
+## [... truncated for brevity]
+```
   while writing integrating the new dump_verify code, I see that dump() close is not
 fully implemented and requires that self.dump_state get updated as various methods 
 are completed. I am adding an update to the self.dump_state in the dump_verify() method so 
 that dump_close() could eventually be made to work correctly.
 
+```python
+    def dump_verify(self, tape_id):
+        """take the tape_id and run a self check,
+        then confirm the tape_list matches
+
+        """
+        dump_verify_status = self.status_code.OK
+
+        ## we update the dump state so self.dump_close() knows what actions to take
+        self.dump_state = self.dump_state_code.dump_verify
+## [... truncated for brevity]
+```
   creating a default variable for the credentials_file and a new method for checking 
 the validity of the credentials file
 
