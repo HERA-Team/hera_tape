@@ -219,16 +219,14 @@ class TestDump(DumpFaster):
     def test_dump_faster(self):
         "run a test dump using the test data"
 
-        ## from paper_dump import DumpFast
+        ## from paper_dump import TestDump
+        ## 
 
-        ## paper_creds = '/home2/obs/.my.papertape-prod.cnf'
         self.paper_creds = '/papertape/etc/.my.papertape-test.cnf'
 
-        ## add comment
-        ##x = DumpFaster(paper_creds, debug=True, drive_select=2, disk_queue=False, debug_threshold=128)
+        ## test variables (15GB batch and 1.536 TB tape size - lto4)
         self.batch_size_mb = 15000
         self.tape_size = 1536000
-        #x.tape_size = 2500000
         self.fast_batch()
 ```  
 
@@ -240,6 +238,18 @@ attached to shredder. We need to perform the following to prepare for testing:
   2. identify a pair of tapes to use
   3. update the mtx database (a test mtxdb) to use those tapes
   4. create test credentials files for the mtx db and test papertape db
+  
+  ```python
+  from os import makedirs
+      def test_build_dataset()
+          
+          ## make a test directory to hold some tes files
+          makedirs('/papertape/tmp/test',exist_ok=True)
+          ## check if we have enough room on the partition
+          ## make some small test files
+          ## add the test files to a database
+          
+```
   
 ###### test_dump_faster()
   The test method calls the new dump class on a crafted test data set
@@ -399,6 +409,9 @@ update __init__() to use the new file check:
   1. from python.org: python3 [threading](https://docs.python.org/3/library/threading.html)
   2. from python-course.eu: create a [custom thread class](http://www.python-course.eu/threads.php) and modify 
   run to save the return value from dump_verify
+  3. stackoverflow: [mkdir -p](http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python)
+  4. python3 docs: [os.makedirs](https://docs.python.org/3/library/os.html?highlight=makedirs#os.makedirs)
+  5. making pseudo [random data files](http://jessenoller.com/blog/2008/05/30/making-re-creatable-random-data-files-really-fast-in-python)
 
 ## communications
   communications for this project have all been with Paul La Plante over slack on the
