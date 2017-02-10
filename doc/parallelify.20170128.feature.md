@@ -298,38 +298,7 @@ when complete. I am adding that to the end of tape_archive_md5().
 
         :rtype : bool"""
 
-        ## default to True
-        tape_archive_md5_status = self.status_code.OK
-        reference = None
-
-        self.debug.output('loading tape: %s' % tape_id)
-        ## load a tape or rewind the existing tape
-        self.load_tape_drive(tape_id)
-        drive_int = self.drive_ids[tape_id][0]
-
-        ## for every tar advance the tape
-        ## select a random path from the tape
-        ## run md5sum_at_index(tape_index, drive_int=0)
-        archive_dict = defaultdict(list)
-
-        ## build a dictionary of archives
-        for item in catalog_list:
-            self.debug.output('item to check: %s' % item)
-            archive_dict[item[0]].append(item[-1])
-
-        for tape_index in archive_dict:
-            directory_path = random.choice(archive_dict[tape_index])
-            ## starting at the beginning of the tape we can advance one at a
-            ## time through each archive and test one directory_path/visdata md5sum
-            self.debug.output('checking md5sum for %s' % directory_path)
-            md5sum = self.tape_drives.md5sum_at_index(job_pid, tape_index, directory_path, drive_int=drive_int)
-            if md5sum != md5_dict[directory_path]:
-                self.debug.output('mdsum does not match: %s, %s' % (md5sum, md5_dict[directory_path]))
-                tape_archive_md5_status = self.status_code.tape_archive_md5_mismatch
-                reference = ":".join([str(tape_index), directory_path])
-                break
-            else:
-                self.debug.output('md5 match: %s|%s' % (md5sum, md5_dict[directory_path]))
+## [... truncated for brevity]
 
         self.unload_tape(tape_id)
         return tape_archive_md5_status, reference
