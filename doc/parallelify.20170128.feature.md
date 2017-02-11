@@ -239,16 +239,33 @@ attached to shredder. We need to perform the following to prepare for testing:
   3. update the mtx database (a test mtxdb) to use those tapes
   4. create test credentials files for the mtx db and test papertape db
   
+  make a temporary holding dir
   ```python
   from os import makedirs
-      def test_build_dataset()
+      def test_build_dataset(temp_filepath='/papertapte/tmp/test_data')
           
           ## make a test directory to hold some tes files
-          makedirs('/papertape/tmp/test',exist_ok=True)
+          makedirs(temp_filepath,exist_ok=True)
           ## check if we have enough room on the partition
+          file = 'statvfs.py'
+```
+
+check free space on the temp holding dir
+```python
+from os import statvfs
+
+    def test_free_space(file_path, free_limit): 
+    """given a free_limit return true if the available space is below the free_limit"""
+        _stat =  statvfs(file)
+        _gb_free = _stat[0]*_stat[2]/1024**3)
+        
+    self.test_free_space(test_tmp_path, expected_test_data_size)
+```
+
+make some files less than our expected_test_data_size and greater than our min_test_file_size
+```python
           ## make some small test files
           ## add the test files to a database
-          
 ```
   
 ###### test_dump_faster()
@@ -382,22 +399,20 @@ class PaperDB(object):
         self.claimed_files = []
         self.claimed_state = 0
         
-    @staticmethod
+    @property
     def check_credentials_file(credentials):
     """Run checks on a credentials file; currently just check that it exists and is not empty.
     :type credentials: string
     """
-        ## default to false
-        _status_code = False
-        
         ## return true if the credentials file exists and is not zero size
-        if path.isfile(credentials) and path.getsize(credentials) > 0:
-           _status_code = True
-         
-        ## return the status code
-        return _status_code
+        return path.isfile(credentials) and path.getsize(credentials) > 0
 ```
-update __init__() to use the new file check:
+update \__init__() to use the new file check:
+```python
+    def __init__():
+## [... truncated for brevity]    
+        self.check_credentials_file(credentials) || raise Exception
+```
 
 ## faq
   1. does Changer.tape_archive_md5 use a specific tape (e.g. /dev/nst0)?
@@ -412,6 +427,7 @@ update __init__() to use the new file check:
   3. stackoverflow: [mkdir -p](http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python)
   4. python3 docs: [os.makedirs](https://docs.python.org/3/library/os.html?highlight=makedirs#os.makedirs)
   5. making pseudo [random data files](http://jessenoller.com/blog/2008/05/30/making-re-creatable-random-data-files-really-fast-in-python)
+  6. filesystem [size](http://stackoverflow.com/questions/4260116/find-size-and-free-space-of-the-filesystem-containing-a-given-file)
 
 ## communications
   communications for this project have all been with Paul La Plante over slack on the
