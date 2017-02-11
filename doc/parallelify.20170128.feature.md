@@ -307,8 +307,8 @@ dump.test_dump_faster()
   7. refactor code fix; refactor test code doc - dconover:20170208
 
 ## todo 
-  8. refactor: update check_credentials_file() and PaperDB.__init__()
-  7. refactor: update DumpTest.__init__() to run self.test_data_init() and connect
+  8. refactor: update check_credentials_file() and PaperDB.\__init__()
+  7. refactor: update DumpTest.\__init__() to run self.test_data_init() and connect
   7. build test dataset
   8. test fix
   9. report changes to plaplant via slack
