@@ -245,8 +245,6 @@ attached to shredder. We need to perform the following to prepare for testing:
           
           ## make a test directory to hold some tes files
           makedirs(temp_filepath,exist_ok=True)
-          ## check if we have enough room on the partition
-          file = 'statvfs.py'
 ```
 
 check free space on the temp holding dir
@@ -255,9 +253,11 @@ from os import statvfs
 
     def test_free_space(file_path, free_limit): 
     """given a free_limit return true if the available space is below the free_limit"""
+        ## check if we have enough room on the partition
         _stat =  statvfs(file)
         _gb_free = _stat[0]*_stat[2]/1024**3)
         
+    ## example call to new method
     self.test_free_space(test_tmp_path, expected_test_data_size)
 ```
 
