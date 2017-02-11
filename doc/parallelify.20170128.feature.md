@@ -215,15 +215,15 @@ class TestDump(DumpFaster):
     def test_data_init(self):
         "create a test data set"
         pass
-
+ 
     def test_dump_faster(self):
         "run a test dump using the test data"
-
+ 
         ## from paper_dump import TestDump
         ## 
-
+ 
         self.paper_creds = '/papertape/etc/.my.papertape-test.cnf'
-
+ 
         ## test variables (15GB batch and 1.536 TB tape size - lto4)
         self.batch_size_mb = 15000
         self.tape_size = 1536000
