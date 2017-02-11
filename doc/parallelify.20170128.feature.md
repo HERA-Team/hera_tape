@@ -99,11 +99,11 @@ for label_id in tape_label_ids:
 for verify in verify_list:
     ## join() will block until run() completes
     verify.join()
-
+ 
     ## after run completes, we need to query the status code with our 
     ## custom status() method (since join does not return the status code)
     dump_verify_status = verify.status()
-
+ 
     ## process the return code to see if we should abort or continue
     if dump_verify_status is not self.status_code.OK:
         self.debug.output('Fail: dump_verify {}'.format(dump_verify_status))
@@ -167,32 +167,32 @@ instead of the original verification for loop
 ```python
     def tar_archive_fast(self, catalog_file):
         """Archive files directly to tape using only a single drive to write 2 tapes"""
-
+ 
         tar_archive_fast_status = self.status_code.OK
-
+ 
         ## select ids
         tape_label_ids = self.labeldb.select_ids()
-
+ 
         ## load up a fresh set of tapes
         self.tape.load_tape_pair(tape_label_ids)
-
+ 
         ## add the catalog to the beginning of the tape
         for label_id in tape_label_ids:
             self.debug.output('archiving to label_id - {}'.format(label_id))
-
+ 
         ## prepare the first block of the tape with the current tape_catalog
         self.tape.prep_tape(catalog_file)
-
+ 
         ## actually write the files in the catalog to a tape pair
         self.debug.output('got list - {}'.format(self.files.tape_list))
         self.tape.archive_from_list(self.files.tape_list)
-
+ 
         ## check the status of the dumps
         tar_archive_fast_status = self.dump_pair_verify(tape_label_ids)
-
+ 
         ## unload the tape pair
         self.tape.unload_tape_pair()
-
+ 
         ## update the db if the current dump status is OK
         if tar_archive_fast_status is self.status_code.OK:
             log_label_ids_status = self.log_label_ids(tape_label_ids, self.files.tape_list)
@@ -220,10 +220,9 @@ class TestDump(DumpFaster):
         "run a test dump using the test data"
  
         ## from paper_dump import TestDump
-        ## 
- 
+  
         self.paper_creds = '/papertape/etc/.my.papertape-test.cnf'
- 
+  
         ## test variables (15GB batch and 1.536 TB tape size - lto4)
         self.batch_size_mb = 15000
         self.tape_size = 1536000
@@ -322,11 +321,11 @@ when complete. I am adding that to the end of tape_archive_md5().
 ```python
    def tape_archive_md5(self, tape_id, job_pid, catalog_list, md5_dict):
         """loop through each archive on tape and check a random file md5 from each
-
+ 
         :rtype : bool"""
-
+ 
 ## [... truncated for brevity]
-
+ 
         self.unload_tape(tape_id)
         return tape_archive_md5_status, reference
 ```
@@ -338,7 +337,7 @@ running dumps so that we don't accidentally disrupt the current code.
 ```python
 class Dump(object):
     """Coordinate a dump to tape based on deletable files in database"""
-
+ 
     def  __init__(self, credentials='/papertape/etc/my.papertape-test.cnf', mtx_credentials='home2/obs/.my.mtx.cnf', debug=False, pid=None, disk_queue=True, drive_select=2, debug_threshold=255):
         """initialize"""
 ## [... truncated for brevity]
@@ -352,10 +351,10 @@ that dump_close() could eventually be made to work correctly.
     def dump_verify(self, tape_id):
         """take the tape_id and run a self check,
         then confirm the tape_list matches
-
+ 
         """
         dump_verify_status = self.status_code.OK
-
+ 
         ## we update the dump state so self.dump_close() knows what actions to take
         self.dump_state = self.dump_state_code.dump_verify
 ## [... truncated for brevity]
@@ -365,7 +364,7 @@ the validity of the credentials file
 
 ```python
 from os import path
-
+ 
 class PaperDB(object):
     def __init__(self, version, credentials, pid, debug=False, debug_threshold=255):
         """Initialize connection and collect file_list of files to dump.
@@ -375,16 +374,16 @@ class PaperDB(object):
         :type debug: bool
         :type debug_threshold: int
         """
-
+ 
         self.pid = pid
         self.version = version
         self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
         self.status_code = StatusCode
-
+ 
         
         ## we have a default credentials variable that may not exist, so we should check it first
         self.check_credentials_file(credentials) || return
-
+ 
         self.credentials = credentials
         self.paperdb_state_code = PaperDBStateCode
         self.paperdb_state = self.paperdb_state_code.initialize
@@ -393,7 +392,7 @@ class PaperDB(object):
         self.connect = ''
         self.cur = ''
         self.db_connect('init', credentials)
-
+ 
         self.file_list = []
         self.file_md5_dict = {}
         self.claimed_files = []
