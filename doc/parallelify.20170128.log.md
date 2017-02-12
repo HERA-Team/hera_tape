@@ -96,7 +96,7 @@ def dump_pair_verify(self, tape_label_ids):
   
 ###### check or except
   if I have a file_check(filename) that returns true or false for the given filename, I can 
-call it and raise an exception a class \_\_init__(self, filename) 
+call it and raise an exception inside a class \_\_init__(self, filename) 
 
 paper_check.py:
 ```python
@@ -135,7 +135,7 @@ Traceback (most recent call last):
 Exception: file_check failed
 ```
 ###### status or state
-  if I have an instance variable, can I return it with a method of the same name?
+  If I have an instance variable, can I return it with a method of the same name?
   
 instantiate-return.py:
 ```python
@@ -166,7 +166,7 @@ Traceback (most recent call last):
 TypeError: 'str' object is not callable
 ```
 ###### statvfs
-I want to use statvfs to see if I can check the free space on the partition
+Can I use statvfs to see if I can check the free space on the partition
 
 statvfs.py:
 ```python
