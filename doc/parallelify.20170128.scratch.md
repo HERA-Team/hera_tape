@@ -60,25 +60,25 @@ class VerifyThread(Thread):
 def dump_pair_verify(self, tape_label_ids):
  
     ## thread instances need to be started, we can use the output to make a list of threads
-    def start_verification(thread):
+    def _start_verification(thread):
         thread.start()
         return thread
     
     ## join will block until the thread completes, then we can retrieve the status from the verification
-    def get_verification_status(thread):
+    def _get_verification_status(thread):
         thread.join()
         return thread.status()
  
     ## given a pair of verification status codes, return a "non-OK" status if either is not "OK"
-    def check_thread_status(status_1, status_2):
+    def _check_thread_status(status_1, status_2):
         return status_1 if status_1 is not self.status_return_code.OK else status_2
  
     ## foreach label, start a thread and add it to a list
-    started_threads = [start_verification(VerifyThread(label_id, self)) for label_id in tape_label_ids]
+    started_threads = [_start_verification(VerifyThread(label_id, self)) for label_id in tape_label_ids]
     
     ## foreach thread, check the verification status and add it to a list
-    return_codes = [get_verification_status(thread) for thread in started_threads]
+    return_codes = [_get_verification_status(thread) for thread in started_threads]
     
     ## foreach status code, check if either is not "OK"
-    return reduce(check_thread_status, return_codes) 
+    return reduce(_check_thread_status, return_codes) 
 ```
