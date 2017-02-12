@@ -397,7 +397,6 @@ class PaperDB(object):
         self.claimed_files = []
         self.claimed_state = 0
         
-    @property
     def check_credentials_file(credentials):
     """Run checks on a credentials file; currently just check that it exists and is not empty.
     :type credentials: string
@@ -409,7 +408,8 @@ update \_\_init__() to use the new file check:
 ```python
     def __init__():
 ## [... truncated for brevity]    
-        self.check_credentials_file(credentials) || raise Exception
+        if self.check_credentials_file(credentials):
+            raise Exception("failed check_credentials_file()")
 ```
 
 ## faq
@@ -427,6 +427,7 @@ update \_\_init__() to use the new file check:
   5. making pseudo [random data files](http://jessenoller.com/blog/2008/05/30/making-re-creatable-random-data-files-really-fast-in-python)
   6. filesystem [size](http://stackoverflow.com/questions/4260116/find-size-and-free-space-of-the-filesystem-containing-a-given-file)
   7. from python-course.eu: [lambda, map, filter, reduce](http://www.python-course.eu/lambda.php)
+
 ## communications
   communications for this project have all been with Paul La Plante over slack on the
 group's slack via direct message

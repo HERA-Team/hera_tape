@@ -1,9 +1,9 @@
-# scratchpad for keeping track of ideas for parallelify.20170128.feature.md
+# log keeping track of ideas and modifications for parallelify.20170128.feature.md
 
 owner: dconover:20170211
 
 ## related
-  1. feature doc: [parallelify.20170128.feature.md](parallelify.20170128.feature.md)
+  1. feature doc: [parallelify.20170128.feature.md](parallelify.20170128.log.md)
   
 ## scratch
 
@@ -90,3 +90,104 @@ def dump_pair_verify(self, tape_label_ids):
     ## foreach status code, check if either is not "OK"
     return reduce(_check_thread_status, return_codes) 
 ```
+
+## try
+  I "try" things I don't understand
+  
+###### check or except
+  if I have a file_check(filename) that returns true or false for the given filename, I can 
+call it and raise an exception a class \_\_init__(self, filename) 
+
+paper_check.py:
+```python
+from os import path
+
+def file_check(filename):
+   return path.isfile(filename) and path.getsize(filename) > 0
+```
+
+class-dev.py:
+```python
+from os import path
+from paper_check import file_check
+
+class dev(object):
+    def  __init__ (self, filename):
+        if not file_check(filename):
+            print("check fails")
+            raise Exception('file_check failed')
+        print("check passes")
+
+x = dev("class-dev.py")
+x = dev("none-class-dev.py")
+```
+
+output:
+```bash
+root@test[~/git/papertape-dev/bin/try]$ python3 class-dev.py
+check passes
+check fails
+Traceback (most recent call last):
+  File "class-dev.py", line 21, in <module>
+    x = dev("none-class-dev.py")
+  File "class-dev.py", line 17, in __init__
+    raise Exception('file_check failed')
+Exception: file_check failed
+```
+###### status or state
+  if I have an instance variable, can I return it with a method of the same name?
+  
+instantiate-return.py:
+```python
+class test(object):
+  def __init__(self):
+    self.state = "hello"
+ ##   return False
+
+  def status(self):
+    return self.state
+
+  def state(self):
+    return self.state
+
+x = test()
+print(x.state)
+print(x.status())
+print(x.state())
+```
+output:
+```bash
+root@test[~/git/papertape-dev/bin/try]$ python3 instantiate-return.py
+hello
+hello
+Traceback (most recent call last):
+  File "instantiate-return.py", line 16, in <module>
+    print(x.state())
+TypeError: 'str' object is not callable
+```
+###### statvfs
+I want to use statvfs to see if I can check the free space on the partition
+
+statvfs.py:
+```python
+file = 'statvfs.py'
+
+from os import statvfs
+
+print(statvfs(file))
+
+_stat =  statvfs(file) 
+print(_stat[0]*_stat[4]/1024**3)
+```
+output:
+```bash
+root@test[~/papertape-dev/bin/try]# python statvfs.py
+(4096, 4096, 141097102, 19507110, 19507110, 145686528, 142330019, 142330019, 0, 255)
+74
+root@test[~/papertape-dev/bin/try]# df -h .
+Filesystem            Size  Used Avail Use% Mounted on
+/dev/sdc3             539G  464G   75G  87% /
+```
+
+## test
+  I "test" new code snippets to make sure they work as expected 
