@@ -58,8 +58,16 @@ class VerifyThread(Thread):
 ## [... see custom class definition above]
  
 def dump_pair_verify(self, tape_label_ids):
+    """This is essentially a wrapper to perform a threaded version of the 
+    original call to dump_verify(). Our "threading" is implemented  in three 
+    steps: 
+    
+      1. instantiate VerifyThread (that calls dump_verify()) and start each thread
+      2. wait on each thread and get the verification status code from each
+      3. check each status code and return failure if either is not "OK"
+    """
  
-    ## thread instances need to be started, we can use the output to make a list of threads
+    ## thread instances need to be started, we can use the output to make a list of started threads
     def _start_verification(thread):
         thread.start()
         return thread

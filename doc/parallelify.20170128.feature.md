@@ -128,8 +128,16 @@ class VerifyThread(Thread):
 ## [... see custom class definition above]
  
 def dump_pair_verify(self, tape_label_ids):
+    """This is essentially a wrapper to perform a threaded version of the 
+    original call to dump_verify(). Our "threading" is implemented  in three 
+    steps: 
+    
+      1. instantiate VerifyThread (that calls dump_verify()) and start each thread
+      2. wait on each thread and get the verification status code from each
+      3. check each status code and return failure if either is not "OK"
+    """
  
-    ## thread instances need to be started, we can use the output to make a list of threads
+    ## thread instances need to be started, we can use the output to make a list of started threads
     def _start_verification(thread):
         thread.start()
         return thread
@@ -418,7 +426,7 @@ update \_\_init__() to use the new file check:
   4. python3 docs: [os.makedirs](https://docs.python.org/3/library/os.html?highlight=makedirs#os.makedirs)
   5. making pseudo [random data files](http://jessenoller.com/blog/2008/05/30/making-re-creatable-random-data-files-really-fast-in-python)
   6. filesystem [size](http://stackoverflow.com/questions/4260116/find-size-and-free-space-of-the-filesystem-containing-a-given-file)
-
+  7. from python-course.eu: [lambda, map, filter, reduce](http://www.python-course.eu/lambda.php)
 ## communications
   communications for this project have all been with Paul La Plante over slack on the
 group's slack via direct message
