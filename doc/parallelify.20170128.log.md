@@ -95,8 +95,8 @@ def dump_pair_verify(self, tape_label_ids):
   I "try" things I don't understand
   
 ###### check or except
-  if I have a file_check(filename) that returns true or false for the given filename, I can 
-call it and raise an exception inside a class \_\_init__(self, filename) 
+  if I have a file_check(filename) that returns true or false for the given filename, can I 
+call it and raise an exception inside a class \_\_init__(self, filename)?
 
 paper_check.py:
 ```python
