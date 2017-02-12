@@ -7,7 +7,7 @@ owner: dconover:20170211
   
 ## scratch
 
-This for loop might benefit from rewritting in a more declarative style
+These for loops might benefit from rewriting in a more declarative style
 ```python
 import threading
  
@@ -64,7 +64,7 @@ def dump_pair_verify(self, tape_label_ids):
         thread.start()
         return thread
     
-    ## join will block till the thread completes, then we can retrieve the status from the verification
+    ## join will block until the thread completes, then we can retrieve the status from the verification
     def get_verification_status(thread):
         thread.join()
         return thread.status()
