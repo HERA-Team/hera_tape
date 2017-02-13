@@ -200,19 +200,19 @@ Filesystem            Size  Used Avail Use% Mounted on
   ```python
 from collections import deque
 from os import path
-
+ 
 def gen_file_data():
-
+ 
     source_file = "/usr/share/dic/linux.words", "r"
-
+ 
     a = deque("1092384956781341341234656953214543219")
     b = deque(open(source_file, "r").read().replace("\n", '').split())
-
+ 
     while True:
         yield ' '.join(list(a)[0:1024])
         a.rotate(int(b[0]))
         b.rotate(1)
-
+ 
 def gen_randomish_file(file_name)
     file_data = gen_file_data()
     size = 1073741824 # 1gb
@@ -220,7 +220,7 @@ def gen_randomish_file(file_name)
         while path.getsize(file_name) < size:
             file_handle.write(file_data.next())
     
-
+ 
 gen_randomish_file("test.data.txt")
 ```
 output:
@@ -232,6 +232,37 @@ Traceback (most recent call last):
   File "randomish.py", line 21, in gen_randomish_file
     file_handle.write(file_data.next())
 AttributeError: 'generator' object has no attribute 'next'
+```
+
+###### raise exception
+try-raise.py
+```python
+from os import path
+
+def check_credentials_file(credentials="non-exist.txt"):
+
+    if not (path.isfile(credentials) and path.getsize(credentials) > 0):
+        print("fail test " + credentials)
+        raise ValueError('credentials file either does not exist or is empty')
+
+    print("pass test " + credentials)
+
+file = "try-raise.py"
+check_credentials_file(file)
+check_credentials_file()
+```
+
+output:
+```python
+root@test[p4-dev:~/git/papertape-dev/bin/try]$ python try-raise.py
+pass test try-raise.py
+fail test non-exist.txt
+Traceback (most recent call last):
+  File "try-raise.py", line 13, in <module>
+    check_credentials_file()
+  File "try-raise.py", line 7, in check_credentials_file
+    raise ValueError('credentials file either does not exist or is empty')
+ValueError: credentials file either does not exist or is empty
 ```
 ## test
   I "test" new code snippets to make sure they work as expected 

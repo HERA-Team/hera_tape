@@ -381,7 +381,7 @@ class PaperDB(object):
  
         
         ## we have a default credentials variable that may not exist, so we should check it first
-        self.check_credentials_file(credentials) || raise Exception
+        self.check_credentials_file(credentials)
  
         self.credentials = credentials
         self.paperdb_state_code = PaperDBStateCode
@@ -402,14 +402,13 @@ class PaperDB(object):
     :type credentials: string
     """
         ## return true if the credentials file exists and is not zero size
-        return path.isfile(credentials) and path.getsize(credentials) > 0
+        path.isfile(credentials) and path.getsize(credentials) > 0
 ```
 update \_\_init__() to use the new file check:
 ```python
     def __init__():
 ## [... truncated for brevity]    
-        if self.check_credentials_file(credentials):
-            raise Exception("failed check_credentials_file()")
+        if self.check_credentials_file(credentials)
 ```
 
 ## faq
