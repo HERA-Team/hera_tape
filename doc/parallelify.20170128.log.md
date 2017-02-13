@@ -2,6 +2,11 @@
 
 owner: dconover:20170211
 
+## contents
+  1. [scratch](#scratch) - major edits/discussion to working documentation
+  2. [try](#try) - python code trying things I don't fully understand
+  3. [test](#test) - python code I test in snippets before moving to prod
+
 ## related
   1. feature doc: [parallelify.20170128.feature.md](parallelify.20170128.feature.md)
   
