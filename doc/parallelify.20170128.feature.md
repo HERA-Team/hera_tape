@@ -3,6 +3,9 @@
 owner: dconover:20170128    
 review: optional
 
+## related
+  1. [parallelify.20170128.log.md](parallelify.20170128.log.md)
+
 ## contents
   1. [overview](#overview)
   2. [manifest](#manifest)
