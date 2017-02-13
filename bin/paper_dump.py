@@ -9,8 +9,9 @@ __version__ = 20170203
 
 from threading import Thread
 from random import randint
-from os import getpid
+from os import statvfs, makedirs, getpid
 from sys import exit
+from functools import reduce
 
 from enum import Enum, unique
 
@@ -482,37 +483,37 @@ class DumpFaster(DumpFast):
     """
 
     def dump_pair_verify(self, tape_label_ids):
+        """This is a wrapper to perform a threaded version of the
+        original call to dump_verify(). Our "threading" is implemented  in three
+        steps:
 
-        return_codes = {}  ## return codes indexed by tape_label
-        verification_threads = {}  ## verification threads indexed by tape_label
+          1. instantiate VerifyThread (that calls dump_verify()) and start each thread
+          2. wait on each thread and get the verification status code from each
+          3. check each status code and return failure if either is not "OK"
+        """
 
-        self.tape.load_tape_pair(tape_label_ids)
+        ## thread instances need to be started, we can use the output to make a list of started threads
+        def _start_verification(thread):
+            thread.start()
+            return thread
 
-        ## create a thread for each tape (label_id)
-        ## so tapes can be verified in parallel
-        for label_id in tape_label_ids:
-            ## each thread needs a tape and the current dump object
-            verify_thread = VerifyThread(label_id, self)
-            verification_threads[label_id] = verify_thread
-            verify_thread.start()
+        ## join() will block until the thread completes, then we can retrieve the status from the verification
+        def _get_verification_status(thread):
+            thread.join()
+            return thread.dump_verify_status
 
-        ## after we start both threads, we then have to wait for the
-        ## started threads to complete
-        for label_id in tape_label_ids:
-            ## join() will block until run() completes
-            verification_threads[label_id].join()
+        ## given a pair of verification status codes, return a "non-OK" status if either is not "OK"
+        def _check_thread_status(status_1, status_2):
+            return status_1 if status_1 is not self.status_return_code.OK else status_2
 
-            ## after run completes, we need to query the status code with our
-            ## custom status() method
-            return_codes[label_id] = verification_threads[label_id].status()
+        ## foreach label, start a thread and add it to a list
+        started_threads = [_start_verification(VerifyThread(label_id, self)) for label_id in tape_label_ids]
 
-        ## check both return codes and return failure if either is not OK
-        for label_id, return_code in return_codes.items():
-            if return_code is not self.status_code.OK:
-                return return_code
+        ## foreach thread, check the verification status and add it to a list
+        return_codes = [_get_verification_status(thread) for thread in started_threads]
 
-        ## if we didn't return a failure above, return success
-        return self.status_code.OK
+        ## foreach status code, check if either is not "OK"
+        return reduce(_check_thread_status, return_codes)
 
     def fast_batch(self):
         """skip tar of local archive on disk
@@ -625,7 +626,7 @@ class ResumeDump(Dump):
 
 ## custom thread class to capture status code
 ## when dump_verify() completes
-class VerifyThread(threading.Thread):
+class VerifyThread(Thread):
     ## init object with tape_id and dump_object
     ## so we can call dump_object(tape_id)
     def __init__(self, tape_id, dump_verify):
@@ -648,6 +649,15 @@ class TestDump(DumpFaster):
         pass
         ## copy from Dump.__init__()
         self.test_data_init()
+
+    def test_free_space(self, file_path, free_limit):
+        """given a free_limit return true if the available space is above the free_limit"""
+
+        ## check if we have enough room on the partition
+        _stat = statvfs(file_path)
+        _gb_free = _stat[0] * _stat[2] / 1024 ** 3
+
+        return True if _gb_free > free_limit else False
 
     def test_build_archive(self, regex=False):
         """master method to loop through files to write data to tape"""

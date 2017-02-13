@@ -82,11 +82,6 @@ class VerifyThread(threading.Thread):
     def run():
         self.dump_verify_status = dump_verify(label_id)
  
-    ## we need a function we can call when run() ends that will return 
-    ## the captured return code
-    def status(): 
-        return self.dump_verify_status
- 
 ## example use of new custom class
 ## this should be called from within a DumpFast object
 for label_id in tape_label_ids:
@@ -102,7 +97,7 @@ for verify in verify_list:
  
     ## after run completes, we need to query the status code with our 
     ## custom status() method (since join does not return the status code)
-    dump_verify_status = verify.status()
+    dump_verify_status = verify.dump_verify_status
  
     ## process the return code to see if we should abort or continue
     if dump_verify_status is not self.status_code.OK:
@@ -145,7 +140,7 @@ def dump_pair_verify(self, tape_label_ids):
     ## join will block until the thread completes, then we can retrieve the status from the verification
     def _get_verification_status(thread):
         thread.join()
-        return thread.status()
+        return thread.dump_verify_status
  
     ## given a pair of verification status codes, return a "non-OK" status if either is not "OK"
     def _check_thread_status(status_1, status_2):
@@ -243,7 +238,7 @@ attached to shredder. We need to perform the following to prepare for testing:
       def test_build_dataset(temp_filepath='/papertapte/tmp/test_data')
           
           ## make a test directory to hold some tes files
-          makedirs(temp_filepath,exist_ok=True)
+          makedirs(temp_filepath, exist_ok=True)
 ```
 
 check free space on the temp holding dir
@@ -254,7 +249,9 @@ from os import statvfs
     """given a free_limit return true if the available space is below the free_limit"""
         ## check if we have enough room on the partition
         _stat =  statvfs(file)
-        _gb_free = _stat[0]*_stat[2]/1024**3)
+        _gb_free = _stat[0]*_stat[2]/1024**3
+        
+        return True if _gb_free > free_limit else False
         
     ## example call to new method
     self.test_free_space(test_tmp_path, expected_test_data_size)

@@ -189,5 +189,44 @@ Filesystem            Size  Used Avail Use% Mounted on
 /dev/sdc3             539G  464G   75G  87% /
 ```
 
+###### pseudo random
+  A method for writing some randomish files (modified from [blog post](http://jessenoller.com/blog/2008/05/30/making-re-creatable-random-data-files-really-fast-in-python))
+  
+  ```python
+from collections import deque
+from os import path
+
+def gen_file_data():
+
+    source_file = "/usr/share/dic/linux.words", "r"
+
+    a = deque("1092384956781341341234656953214543219")
+    b = deque(open(source_file, "r").read().replace("\n", '').split())
+
+    while True:
+        yield ' '.join(list(a)[0:1024])
+        a.rotate(int(b[0]))
+        b.rotate(1)
+
+def gen_randomish_file(file_name)
+    file_data = gen_file_data()
+    size = 1073741824 # 1gb
+    with open(file_name, "w") as file_handle
+        while path.getsize(file_name) < size:
+            file_handle.write(file_data.next())
+    
+
+gen_randomish_file("test.data.txt")
+```
+output:
+```bash
+root@test[p4-dev:~/git/papertape-dev/bin/try]# python3 randomish.py
+Traceback (most recent call last):
+  File "randomish.py", line 24, in <module>
+    gen_randomish_file("test.data.txt")
+  File "randomish.py", line 21, in gen_randomish_file
+    file_handle.write(file_data.next())
+AttributeError: 'generator' object has no attribute 'next'
+```
 ## test
   I "test" new code snippets to make sure they work as expected 
