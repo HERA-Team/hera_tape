@@ -238,15 +238,15 @@ AttributeError: 'generator' object has no attribute 'next'
 try-raise.py
 ```python
 from os import path
-
+ 
 def check_credentials_file(credentials="non-exist.txt"):
-
+ 
     if not (path.isfile(credentials) and path.getsize(credentials) > 0):
         print("fail test " + credentials)
         raise ValueError('credentials file either does not exist or is empty')
-
+ 
     print("pass test " + credentials)
-
+ 
 file = "try-raise.py"
 check_credentials_file(file)
 check_credentials_file()

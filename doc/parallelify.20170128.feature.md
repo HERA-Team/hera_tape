@@ -70,20 +70,20 @@ python threads.
 
   Something like:
 ```python
-import threading
+from threading import Thread
  
 ## custom thread class to capture status code
 ## when dump_verify() completes
-class VerifyThread(threading.Thread):
+class VerifyThread(Thread):
     ## init object with tape_id and dump_object
     ## so we can call dump_object(tape_id)
-    def __init__(self, tape_id, dump_verify):
+    def __init__(self, tape_id, dump_object):
         self.tape_id = tape_id
         self.dump_verify_status = ''
  
     ## custom run() to run dump_verify and save returned output
     def run():
-        self.dump_verify_status = dump_verify(label_id)
+        self.dump_verify_status = dump_object.dump_verify(label_id)
  
 ## example use of new custom class
 ## this should be called from within a DumpFast object
@@ -202,6 +202,50 @@ instead of the original verification for loop
 
 
 ## test
+
+###### test threading
+we can do some base testing of the new method if we make a custom test class
+  1. test class: `class TestDumpNoTape(Dump):`
+  2. create a dummmy: TestDumpNoTape.dump_verify() method
+   
+test_dump_pair_notape.py:
+```python
+from paper_dump import DumpFaster
+ 
+class TestDumpNoTape(DumpFaster):
+    ## in our test class we don't actually want to do a dump init
+    def __init__(self):
+        pass
+        
+    ## redefining dump_verify lets us test our new method without a full dump to tape
+    def dump_verify(label_id):
+        print("verification thread using " + label_id)   
+        
+label_ids = ['label_one', 'label_two']
+test_dump_instance = TestDumpNoTape()
+test_dump_instance.dump_pair_verify(label_ids)
+```
+
+pycharm output:
+```bash
+ssh://root@shredder.physics.upenn.edu:22/root/.pyenv/versions/3.4.1/bin/python -u /root/pycharm/dconover/paper-dump/bin/test_dump_pair_notape.py
+Traceback (most recent call last):
+  File "/root/pycharm/dconover/paper-dump/bin/test_dump_pair_notape.py", line 17, in <module>
+    test_dump_instance.dump_pair_verify(label_ids)
+  File "/root/pycharm/dconover/paper-dump/bin/paper_dump.py", line 510, in dump_pair_verify
+    started_threads = [_start_verification(VerifyThread(label_id, self)) for label_id in tape_label_ids]
+  File "/root/pycharm/dconover/paper-dump/bin/paper_dump.py", line 510, in <listcomp>
+    started_threads = [_start_verification(VerifyThread(label_id, self)) for label_id in tape_label_ids]
+  File "/root/pycharm/dconover/paper-dump/bin/paper_dump.py", line 497, in _start_verification
+    thread.start()
+  File "/root/.pyenv/versions/3.4.1/lib/python3.4/threading.py", line 842, in start
+    if not self._initialized:
+AttributeError: 'VerifyThread' object has no attribute '_initialized'
+
+Process finished with exit code 1
+```
+
+###### test deployment
   We are adding new methods to the TestDump class in paper_dump.py
   1. test_build_dataset - build a test dataset
   2. test_dump_faster - use the new DumpFaster class to dump the dataset like in papertape-prod_dump.py
