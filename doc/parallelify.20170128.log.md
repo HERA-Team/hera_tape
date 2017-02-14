@@ -2,14 +2,14 @@
 
 owner: dconover:20170211
 
+## related
+  1. feature doc: [parallelify.20170128.feature.md](parallelify.20170128.feature.md)
+  
 ## contents
   1. [scratch](#scratch) - major edits/discussion to working documentation
   2. [try](#try) - python code trying things I don't fully understand
   3. [test](#test) - python code I test in snippets before moving to prod
 
-## related
-  1. feature doc: [parallelify.20170128.feature.md](parallelify.20170128.feature.md)
-  
 ## scratch
 
 These for loops might benefit from rewriting in a more declarative style
