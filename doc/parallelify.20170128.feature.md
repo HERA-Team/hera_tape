@@ -382,9 +382,11 @@ dump.test_dump_faster()
   5. debug proposed fix - proposed creating new dump routine, so updates don't break current running code
   6. integrate code fix - dconover:20170203
   7. refactor code fix; refactor test code doc - dconover:20170208
+  8. refactor: update check_credentials_file() and PaperDB.\_\_init__()
+  9. code passes dry-run test of new threading code using mocked dump functions - dconover:20170213
+
 
 ## todo 
-  8. refactor: update check_credentials_file() and PaperDB.\_\_init__()
   7. refactor: update DumpTest.\_\_init__() to run self.test_data_init() and connect
   7. build test dataset
   8. test fix
