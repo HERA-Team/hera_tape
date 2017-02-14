@@ -194,7 +194,46 @@ class DumpFaster(DumpFast):
  
     """
  
-
+    def tar_archive_fast(self, catalog_file):
+        """Archive files directly to tape using only a single drive to write 2 tapes"""
+ 
+        tar_archive_fast_status = self.status_code.OK
+ 
+        ## select ids
+        tape_label_ids = self.labeldb.select_ids()
+        # self.labeldb.claim_ids(tape_label_ids)
+ 
+        ## load up a fresh set of tapes
+        self.tape.load_tape_pair(tape_label_ids)
+ 
+        ## add the catalog to the beginning of the tape
+        for label_id in tape_label_ids:
+            self.debug.output('archiving to label_id - {}'.format(label_id))
+ 
+        ## prepare the first block of the tape with the current tape_catalog
+        self.tape.prep_tape(catalog_file)
+ 
+        self.debug.output('got list - {}'.format(self.files.tape_list))
+        self.tape.archive_from_list(self.files.tape_list)
+ 
+        ## unloading the tape pair allows for the tape to be loaded back from the library
+        ## for verification later
+        self.tape.unload_tape_pair()
+ 
+        for label_id in tape_label_ids:
+            dump_verify_status = self.dump_verify(label_id)
+            if dump_verify_status is not self.status_code.OK:
+                self.debug.output('Fail: dump_verify {}'.format(dump_verify_status))
+                tar_archive_single_status = self.status_code.tar_archive_single_dump_verify
+                self.close_dump()
+ 
+        ## update the current dump state
+        if tar_archive_fast_status is self.status_code.OK:
+            log_label_ids_status = self.log_label_ids(tape_label_ids, self.files.tape_list)
+            if log_label_ids_status is not self.status_code.OK:
+                self.debug.output('problem writing labels out: {}'.format(log_label_ids_status))
+        else:
+            self.debug.output("Abort dump: {}".format(tar_archive_single_status))
 ``` 
 
 
@@ -207,39 +246,37 @@ we can do some base testing of the new method if we make a custom test class
    
 test_dump_pair_notape.py:
 ```python
-from paper_dump import DumpFaster
- 
+__author__ = 'dconover@sas.upenn.edu'
+
+from paper_dump import DumpFaster, VerifyThread
+from paper_status_code import StatusCode
+
+
 class TestDumpNoTape(DumpFaster):
     ## in our test class we don't actually want to do a dump init
     def __init__(self):
+        self.status_code = StatusCode
         pass
-        
+
     ## redefining dump_verify lets us test our new method without a full dump to tape
-    def dump_verify(label_id):
-        print("verification thread using " + label_id)   
-        
+    def dump_verify(self, label_id):
+        print("verification thread using " + label_id)
+
+
 label_ids = ['label_one', 'label_two']
 test_dump_instance = TestDumpNoTape()
 test_dump_instance.dump_pair_verify(label_ids)
 ```
 
-pycharm output:
-```bash
-ssh://root@shredder.physics.upenn.edu:22/root/.pyenv/versions/3.4.1/bin/python -u /root/pycharm/dconover/paper-dump/bin/test_dump_pair_notape.py
-Traceback (most recent call last):
-  File "/root/pycharm/dconover/paper-dump/bin/test_dump_pair_notape.py", line 17, in <module>
-    test_dump_instance.dump_pair_verify(label_ids)
-  File "/root/pycharm/dconover/paper-dump/bin/paper_dump.py", line 510, in dump_pair_verify
-    started_threads = [_start_verification(VerifyThread(label_id, self)) for label_id in tape_label_ids]
-  File "/root/pycharm/dconover/paper-dump/bin/paper_dump.py", line 510, in <listcomp>
-    started_threads = [_start_verification(VerifyThread(label_id, self)) for label_id in tape_label_ids]
-  File "/root/pycharm/dconover/paper-dump/bin/paper_dump.py", line 497, in _start_verification
-    thread.start()
-  File "/root/.pyenv/versions/3.4.1/lib/python3.4/threading.py", line 842, in start
-    if not self._initialized:
-AttributeError: 'VerifyThread' object has no attribute '_initialized'
+successful integration: 
+```
+ssh://root@shredder.physics.upenn.edu:22/root/.pyenv/versions/3.4.1/bin/python -u /root/.pycharm_helpers/pycharm/utrunner.py /root/pycharm/dconover/paper-dump/bin/test_dump_pair_notape.py true
+Testing started at 8:06 PM ...
+verification thread using label_one
+verification thread using label_two
 
-Process finished with exit code 1
+Process finished with exit code 0
+Empty test suite.
 ```
 
 ###### test deployment

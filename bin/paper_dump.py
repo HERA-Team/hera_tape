@@ -370,6 +370,8 @@ class DumpFast(Dump):
 
         ## select ids
         tape_label_ids = self.labeldb.select_ids()
+
+        ## commenting this out doesn't allow the tapes to be "claimed"
         # self.labeldb.claim_ids(tape_label_ids)
 
         ## load up a fresh set of tapes
