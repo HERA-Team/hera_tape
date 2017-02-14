@@ -484,6 +484,57 @@ class DumpFaster(DumpFast):
 
     """
 
+    def  __init__(self, credentials='/papertape/etc/my.papertape-test.cnf', mtx_credentials='home2/obs/.my.mtx.cnf', debug=False, pid=None, disk_queue=True, drive_select=2, debug_threshold=255):
+        """initialize"""
+
+        self.version = __version__
+        self.pid = "%0.6d%0.3d" % (getpid(), randint(1, 999)) if pid is None else pid
+        self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
+
+        self.status_code = StatusCode
+        self.check_credentials_file(mtx_credentials)
+        self.mtx_creds = mtx_credentials
+
+        self.debug.output(credentials)
+        self.check_credentials_file(credentials)
+        self.paper_creds = credentials
+
+        self.tape_ids = ''
+
+        ## each dump process 12GB to /dev/shm (two at a time)
+        self.batch_size_mb = 12000
+
+        ## (1.5Tb -1 batch)
+        self.tape_size = (1.5 * 1000 * 1000) - self.batch_size_mb
+        #self.tape_size = 13000
+
+        ## setup PaperDB connection
+        self.paperdb = PaperDB(self.version, self.paper_creds, self.pid, debug=True, debug_threshold=debug_threshold)
+
+        ## setup tape library
+        self.labeldb = MtxDB(self.version, self.mtx_creds, self.pid, debug=debug, debug_threshold=debug_threshold)
+
+        ## setup file access
+        self.files = Archive(self.version, self.pid, debug=debug, debug_threshold=debug_threshold)
+
+        ## use the pid here to lock changer
+        self.drive_select = drive_select
+        self.tape = Changer(self.version, self.pid, self.tape_size, debug=True, drive_select=drive_select, disk_queue=disk_queue, debug_threshold=debug_threshold)
+
+        self.dump_list = []
+        self.tape_index = 0
+        self.tape_used_size = 0 ## each dump process should write one tape worth of data
+        self.dump_state_code = DumpStateCode
+        self.dump_state = self.dump_state_code.initialize
+
+
+    def check_credentials_file(credentials):
+    """Run checks on a credentials file; currently just check that it exists and is not empty.
+    :type credentials: string
+    """
+        ## return true if the credentials file exists and is not zero size
+        path.isfile(credentials) and path.getsize(credentials) > 0
+
     def dump_pair_verify(self, tape_label_ids):
         """This is a wrapper to perform a threaded version of the
         original call to dump_verify(). Our "threading" is implemented  in three
