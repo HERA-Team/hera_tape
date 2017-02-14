@@ -266,3 +266,171 @@ ValueError: credentials file either does not exist or is empty
 ```
 ## test
   I "test" new code snippets to make sure they work as expected 
+
+initially I tested the proposed code as integrated, and it generated errors (test_dump_pair_notape.py):
+test_dump_pair_notape.py:
+```python
+from paper_dump import DumpFaster
+ 
+class TestDumpNoTape(DumpFaster):
+    ## in our test class we don't actually want to do a dump init
+    def __init__(self):
+        pass
+        
+    ## redefining dump_verify lets us test our new method without a full dump to tape
+    def dump_verify(label_id):
+        print("verification thread using " + label_id)   
+        
+label_ids = ['label_one', 'label_two']
+test_dump_instance = TestDumpNoTape()
+test_dump_instance.dump_pair_verify(label_ids)
+```
+
+pycharm output:
+```
+ssh://root@shredder.physics.upenn.edu:22/root/.pyenv/versions/3.4.1/bin/python -u /root/pycharm/dconover/paper-dump/bin/test_dump_pair_notape.py
+Traceback (most recent call last):
+  File "/root/pycharm/dconover/paper-dump/bin/test_dump_pair_notape.py", line 17, in <module>
+    test_dump_instance.dump_pair_verify(label_ids)
+  File "/root/pycharm/dconover/paper-dump/bin/paper_dump.py", line 510, in dump_pair_verify
+    started_threads = [_start_verification(VerifyThread(label_id, self)) for label_id in tape_label_ids]
+  File "/root/pycharm/dconover/paper-dump/bin/paper_dump.py", line 510, in <listcomp>
+    started_threads = [_start_verification(VerifyThread(label_id, self)) for label_id in tape_label_ids]
+  File "/root/pycharm/dconover/paper-dump/bin/paper_dump.py", line 497, in _start_verification
+    thread.start()
+  File "/root/.pyenv/versions/3.4.1/lib/python3.4/threading.py", line 842, in start
+    if not self._initialized:
+AttributeError: 'VerifyThread' object has no attribute '_initialized'
+
+Process finished with exit code 1
+```
+
+after some debugging, I came up with the following threaded code proof of concept test_dump_pair_notape.py:
+```python
+__author__ = 'dconover@sas.upenn.edu'
+
+from paper_dump import DumpFast
+from paper_status_code import StatusCode
+
+from threading import Thread
+from functools import reduce
+
+class DumpFaster(DumpFast):
+
+    """Queless archiving means that the data is never transferred to our disk queues
+
+    Disk queues are still used to maintain state in the event of a partial dump failure
+    Tape verification is rewritten to make use of python threading.
+
+    """
+
+    def dump_pair_verify(self, tape_label_ids):
+        """This is a wrapper to perform a threaded version of the
+        original call to dump_verify(). Our "threading" is implemented  in three
+        steps:
+
+          1. instantiate VerifyThread (that calls dump_verify()) and start each thread
+          2. wait on each thread and get the verification status code from each
+          3. check each status code and return failure if either is not "OK"
+        """
+
+        ## thread instances need to be started, we can use the output to make a list of started threads
+        def _start_verification(thread):
+            thread.start()
+            return thread
+
+        ## join() will block until the thread completes, then we can retrieve the status from the verification
+        def _get_verification_status(thread):
+            thread.join()
+            return thread.dump_verify_status
+
+        ## given a pair of verification status codes, return a "non-OK" status if either is not "OK"
+        def _check_thread_status(status_1, status_2):
+            return status_1 if status_1 is not self.status_code.OK else status_2
+
+        ## foreach label, start a thread and add it to a list
+        started_threads = [_start_verification(VerifyThread(label_id, self)) for label_id in tape_label_ids]
+
+        ## foreach thread, check the verification status and add it to a list
+        return_codes = [_get_verification_status(thread) for thread in started_threads]
+
+        ## foreach status code, check if either is not "OK"
+        return reduce(_check_thread_status, return_codes)
+
+## custom thread class to capture status code
+## when dump_verify() completes
+class VerifyThread(Thread):
+    ## init object with tape_id and dump_object
+    ## so we can call dump_object(tape_id)
+    def __init__(self, tape_id, dump_object):
+        Thread.__init__(self)
+        self.tape_id = tape_id
+        self.dump_object = dump_object
+        self.dump_verify_status = ''
+
+    ## custom run() to run dump_verify and save returned output
+    def run(self):
+        self.dump_verify_status = self.dump_object.dump_verify(self.tape_id)
+
+class TestDumpNoTape(DumpFaster):
+    ## in our test class we don't actually want to do a dump init
+    def __init__(self):
+        self.status_code = StatusCode
+        pass
+
+    ## redefining dump_verify lets us test our new method without a full dump to tape
+    def dump_verify(self, label_id):
+        print("verification thread using " + label_id)
+
+
+label_ids = ['label_one', 'label_two']
+test_dump_instance = TestDumpNoTape()
+test_dump_instance.dump_pair_verify(label_ids)
+```
+
+output showing success:
+```
+ssh://root@shredder.physics.upenn.edu:22/root/.pyenv/versions/3.4.1/bin/python -u /root/.pycharm_helpers/pycharm/utrunner.py /root/pycharm/dconover/paper-dump/bin/test_dump_pair_notape.py true
+Testing started at 7:51 PM ...
+verification thread using label_one
+verification thread using label_two
+
+Process finished with exit code 0
+Empty test suite.
+```
+
+afterwards I was able to re-integrate the code, deleting the local copy in test_dump_pair_notape.py and
+adding it in it's proper place in paper_dump.py:
+```python
+__author__ = 'dconover@sas.upenn.edu'
+
+from paper_dump import DumpFaster, VerifyThread
+from paper_status_code import StatusCode
+
+
+class TestDumpNoTape(DumpFaster):
+    ## in our test class we don't actually want to do a dump init
+    def __init__(self):
+        self.status_code = StatusCode
+        pass
+
+    ## redefining dump_verify lets us test our new method without a full dump to tape
+    def dump_verify(self, label_id):
+        print("verification thread using " + label_id)
+
+
+label_ids = ['label_one', 'label_two']
+test_dump_instance = TestDumpNoTape()
+test_dump_instance.dump_pair_verify(label_ids)
+```
+
+successful integration: 
+```
+ssh://root@shredder.physics.upenn.edu:22/root/.pyenv/versions/3.4.1/bin/python -u /root/.pycharm_helpers/pycharm/utrunner.py /root/pycharm/dconover/paper-dump/bin/test_dump_pair_notape.py true
+Testing started at 8:06 PM ...
+verification thread using label_one
+verification thread using label_two
+
+Process finished with exit code 0
+Empty test suite.
+```

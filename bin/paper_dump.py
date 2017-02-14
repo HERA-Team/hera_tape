@@ -504,7 +504,7 @@ class DumpFaster(DumpFast):
 
         ## given a pair of verification status codes, return a "non-OK" status if either is not "OK"
         def _check_thread_status(status_1, status_2):
-            return status_1 if status_1 is not self.status_return_code.OK else status_2
+            return status_1 if status_1 is not self.status_code.OK else status_2
 
         ## foreach label, start a thread and add it to a list
         started_threads = [_start_verification(VerifyThread(label_id, self)) for label_id in tape_label_ids]
@@ -630,13 +630,14 @@ class VerifyThread(Thread):
     ## init object with tape_id and dump_object
     ## so we can call dump_object(tape_id)
     def __init__(self, tape_id, dump_object):
+        Thread.__init__(self)
         self.tape_id = tape_id
         self.dump_object = dump_object
         self.dump_verify_status = ''
 
     ## custom run() to run dump_verify and save returned output
-    def run():
-        self.dump_verify_status = self.dump_object.dump_verify(label_id)
+    def run(self):
+        self.dump_verify_status = self.dump_object.dump_verify(self.tape_id)
 
 
 class TestDump(DumpFaster):
