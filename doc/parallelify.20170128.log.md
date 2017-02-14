@@ -305,7 +305,8 @@ AttributeError: 'VerifyThread' object has no attribute '_initialized'
 Process finished with exit code 1
 ```
 
-after some debugging, I came up with the following threaded code proof of concept test_dump_pair_notape.py:
+after some debugging, I came up with the following threaded code proof of concept test_dump_pair_notape.py (the VerifyThread init method was missing: `Thread.__init__(self)`)
+):
 ```python
 __author__ = 'dconover@sas.upenn.edu'
     
