@@ -58,14 +58,14 @@ ENDTIME=$(date +%s)
 rm $process_file
 echo ending papertape dump: $(date)
 
-_logfile close 
-
 ## if we didn't actually tape anything, the time difference will be small
-if [ $(($ENDTIME - $STARTTIME)) < 120 ]; then
-    echo "No more files to tape"
+if [ $(($ENDTIME - $STARTTIME)) -lt 120 ]; then
+    echo No more files to tape
+    _logfile close 
     exit $DUMP_FINISH
 else
     # remove override file
     rm $override_file
+    _logfile close
     exit $DUMP_SUCCESS
 fi

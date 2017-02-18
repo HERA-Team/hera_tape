@@ -26,7 +26,7 @@ from paper_status_code import StatusCode
 class Dump(object):
     """Coordinate a dump to tape based on deletable files in database"""
 
-    def  __init__(self, credentials='/papertape/etc/my.papertape-test.cnf', mtx_credentials='home2/obs/.my.mtx.cnf', debug=False, pid=None, disk_queue=True, drive_select=2, debug_threshold=255):
+    def  __init__(self, credentials='/papertape/etc/my.papertape-test.cnf', mtx_credentials='/home2/obs/.my.mtx.cnf', debug=False, pid=None, disk_queue=True, drive_select=2, debug_threshold=255):
         """initialize"""
 
         self.version = __version__
@@ -484,7 +484,7 @@ class DumpFaster(DumpFast):
 
     """
 
-    def  __init__(self, credentials='/papertape/etc/my.papertape-test.cnf', mtx_credentials='home2/obs/.my.mtx.cnf', debug=False, pid=None, disk_queue=True, drive_select=2, debug_threshold=255):
+    def  __init__(self, credentials='/papertape/etc/my.papertape-test.cnf', mtx_credentials='/home2/obs/.my.mtx.cnf', debug=False, pid=None, disk_queue=True, drive_select=2, debug_threshold=255):
         """initialize"""
 
         self.version = __version__
@@ -528,10 +528,10 @@ class DumpFaster(DumpFast):
         self.dump_state = self.dump_state_code.initialize
 
 
-    def check_credentials_file(credentials):
-    """Run checks on a credentials file; currently just check that it exists and is not empty.
-    :type credentials: string
-    """
+    def check_credentials_file(self, credentials):
+        """Run checks on a credentials file; currently just check that it exists and is not empty.
+        :type credentials: string
+        """
         ## return true if the credentials file exists and is not zero size
         path.isfile(credentials) and path.getsize(credentials) > 0
 
