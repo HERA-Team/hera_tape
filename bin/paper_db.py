@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 
 import pymysql, subprocess, re
 from enum import Enum, unique
+from os import path
 
 from paper_debug import Debug
 from paper_status_code import StatusCode
@@ -59,12 +60,12 @@ class PaperDB(object):
 
         super().__setattr__(attr_name, attr_value)
 
-    def check_credentials_file(credentials):
-    """Run checks on a credentials file; currently just check that it exists and is not empty.
-    this class should really implement a more thorough credentials file check since this check
-    is replicated in the dump class already.
-    :type credentials: string
-    """
+    def check_credentials_file(self, credentials):
+        """Run checks on a credentials file; currently just check that it exists and is not empty.
+        this class should really implement a more thorough credentials file check since this check
+        is replicated in the dump class already.
+        :type credentials: string
+        """
         ## return true if the credentials file exists and is not zero size
         path.isfile(credentials) and path.getsize(credentials) > 0
 
