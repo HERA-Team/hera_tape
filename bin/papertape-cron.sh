@@ -42,11 +42,11 @@ STARTTIME=$(date +%s)
 
 ## run dump
 echo starting papertape dump: $(date)
-time python3 $dump_script || (
+time python3 $dump_script || {
     echo Fail: bad exit from $dump_script $?
     _logfile close
     exit $DUMP_FAILURE
-)
+}
 
 ## get the elapsed time
 ENDTIME=$(date +%s)

@@ -214,7 +214,7 @@ class Dump(object):
 
         return log_label_ids_status
 
-    def dump_verify(self, tape_id):
+    def dump_verify(self, tape_id, drive=0):
         """take the tape_id and run a self check,
         then confirm the tape_list matches
 
@@ -225,7 +225,7 @@ class Dump(object):
         self.dump_state = self.dump_state_code.dump_verify
 
         ## run a tape_self_check
-        self_check_status, item_index, catalog_list, md5_dict, tape_pid = self.tape_self_check(tape_id)
+        self_check_status, item_index, catalog_list, md5_dict, tape_pid = self.tape_self_check(tape_id, drive)
 
         ## take output from tape_self_check and compare against current dump
         if self_check_status is self.status_code.OK:
@@ -257,7 +257,7 @@ class Dump(object):
         self.debug.output('final {}'.format(dump_verify_status))
         return dump_verify_status
 
-    def tape_self_check(self, tape_id):
+    def tape_self_check(self, tape_id, drive=0):
         """process to take a tape and run integrity check without reference to external database
 
         :rtype : bool
@@ -266,7 +266,7 @@ class Dump(object):
 
         ## load the tape if necessary
         ## TODO(dconover): call with the correct tape drive_int or unload tape before tape_self_check
-        self.tape.load_tape_drive(tape_id)
+        self.tape.load_tape_drive(tape_id, drive)
 
         ## read tape_catalog as file_list
         self.debug.output('read catalog from tape: %s' % tape_id)
@@ -276,7 +276,7 @@ class Dump(object):
         ## build an file_md5_dict
         item_index, catalog_list, md5_dict, tape_pid = self.files.final_from_file(catalog=first_block)
 
-        tape_archive_md5_status, reference = self.tape.tape_archive_md5(tape_id, tape_pid, catalog_list, md5_dict)
+        tape_archive_md5_status, reference = self.tape.tape_archive_md5(tape_id, tape_pid, catalog_list, md5_dict, drive)
         if tape_archive_md5_status is not self.status_code.OK:
             self.debug.output("tape failed md5 inspection at index: %s, status: %s" % (reference, tape_archive_md5_status))
             tape_self_check_status = tape_archive_md5_status
@@ -560,7 +560,7 @@ class DumpFaster(DumpFast):
             return status_1 if status_1 is not self.status_code.OK else status_2
 
         ## foreach label, start a thread and add it to a list
-        started_threads = [_start_verification(VerifyThread(label_id, self)) for label_id in tape_label_ids]
+        started_threads = [_start_verification(VerifyThread(label_id, drive, self)) for drive, label_id in enumerate(tape_label_ids)]
 
         ## foreach thread, check the verification status and add it to a list
         return_codes = [_get_verification_status(thread) for thread in started_threads]
@@ -682,15 +682,16 @@ class ResumeDump(Dump):
 class VerifyThread(Thread):
     ## init object with tape_id and dump_object
     ## so we can call dump_object(tape_id)
-    def __init__(self, tape_id, dump_object):
+    def __init__(self, tape_id, drive, dump_object):
         Thread.__init__(self)
         self.tape_id = tape_id
+        self.drive = drive
         self.dump_object = dump_object
         self.dump_verify_status = ''
 
     ## custom run() to run dump_verify and save returned output
     def run(self):
-        self.dump_verify_status = self.dump_object.dump_verify(self.tape_id)
+        self.dump_verify_status = self.dump_object.dump_verify(self.tape_id, self.drive)
 
 
 class TestDump(DumpFaster):
