@@ -610,6 +610,7 @@ I’m running a dump right now, but it should finish later today/early tomorrow.
 But thanks again for this change, it’ll really speed things up
 ```
 
+We integrated some of plaplant's changes:
 ```text
 plaplant [2:58 PM] 
 I’m coming up on the end of my current backup, and I wanted to switch over to DumpFaster for the next batch
@@ -708,6 +709,7 @@ makes sense
  
 ```
 
+Then we had problems with database files that were not mounted locally yet:
 ```text
 ----- February 17th -----
 plaplant [10:47 AM] 
@@ -993,7 +995,7 @@ d [2:43 PM]
 anytime :slightly_smiling_face:
 ```
 
-
+In the end it looks like the code paid off:
 ```text
 ----- Today February 21st, 2017 -----
 plaplant [11:12 AM] 
