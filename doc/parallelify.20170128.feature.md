@@ -608,8 +608,405 @@ I really appreciate all the work that went in
 I’m running a dump right now, but it should finish later today/early tomorrow. I might hold off on using the new version till all the tests are done, since the hard drive version of what I’m taping up now will be deleted when we’re done, so I want everything air-tight
 
 [12:28]  
-But thanks again for this change, it’ll really speed things up```
+But thanks again for this change, it’ll really speed things up
+```
 
+```text
+plaplant [2:58 PM] 
+I’m coming up on the end of my current backup, and I wanted to switch over to DumpFaster for the next batch
+ 
+[2:59]  
+Do I have to change anything besides the class in `papertape-prod_dump.py`?
+ 
+d [2:59 PM] 
+I’ve made a couple changes, that are in the repo, but not on pot4.
+ 
+[3:01]  
+I managed to test the syntax of the new code, but haven’t been able to write tests with an actual dump (unfortunate
+ 
+d [3:02 PM] 
+I think it should all work as expected, since I haven’t changed much in the actual dump code
+ 
+plaplant [3:02 PM] 
+Okay, great
+ 
+[3:03]  
+I’ve made some changes to the `papertape-cron.sh` and added a `run_backup.sh` script to run without my kicking each backup off by hand
+ 
+[3:03]  
+Can I merge those into the repo before pulling the latest changes?
+ 
+d [3:04 PM] 
+yeah, those look good
+ 
+[3:06]  
+Do you want me to merge those in now?
+ 
+plaplant [3:07 PM] 
+Yes please
+ 
+d [3:13 PM] 
+done
+ 
+[3:15]  
+root@pot4 can push and pull to our local gitlab repo (gitlab.sas), we can also give you an account on gitlab.sas if you want to see the repo from the gui...
+ 
+plaplant [3:18 PM] 
+so can I `sudo git push`?
+ 
+d [3:19 PM] 
+yup
+ 
+plaplant [3:19 PM] 
+okay cool, that’s great
+ 
+d [3:20 PM] 
+actually, you’ll have to do `sudo git push gitlab`. origin is currently set to github, which I only push to from my laptop (after the code is proven to work on pot4) (edited)
+ 
+plaplant [3:26 PM] 
+gotcha, thanks
+```
+ 
+I failed to run a code inspection before uploading the code, resulting in initialization errors:
+```text
+----- February 16th -----
+plaplant [1:13 PM] 
+i’m trying to invoke `DumpFaster`, but there are some initialization errors
+ 
+[1:13]  
+it’s choking on `check_credentials_file`
+ 
+[1:15]  
+it was complaining that there should be two arguments, so I added `self`:
+    def check_credentials_file(self, credentials):
+        """Run checks on a credentials file; currently just check that it exists and is not empty.
+        :type credentials: string
+        """
+        ## return true if the credentials file exists and is not zero size
+        path.isfile(credentials) and path.getsize(credentials) > 0
+ 
+ 
+[1:15]  
+but now I’m getting `NameError: name 'path' is not defined`
+ 
+[1:17]  
+I didn’t want to change too much without consulting, but my guess is I should just make it `os.path.isfile`, right?
+ 
+d [2:11 PM] 
+nope, path should be added to the import
+ 
+[2:12]  
+`from os import path` (edited)
+ 
+plaplant [2:12 PM] 
+okay thanks
+ 
+d [2:12 PM] 
+we like to restrict our imports
+ 
+plaplant [2:13 PM] 
+makes sense
+ 
+```
+
+```text
+----- February 17th -----
+plaplant [10:47 AM] 
+I’ve hit an error when the script tries to pull from files not on on `pot4`
+ 
+[10:48]  
+ debug:20170216-2319:016336295:paper_mtx.Changer.append_to_archive:tarfile exception - [Errno 2] No such file or directory: '/papertape/pot5.physics.upenn.edu:/data2/raw_data_FROM_FOLIO/EoR2013/psa6620/zen.2456620.16691.xx.uv'
+Traceback (most recent call last):
+  File "papertape-prod_dump.py", line 14, in <module>
+    x.fast_batch()
+  File "/papertape/bin/paper_dump.py", line 582, in fast_batch
+    self.tar_archive_fast(self.files.catalog_name)
+  File "/papertape/bin/paper_dump.py", line 608, in tar_archive_fast
+    self.tape.archive_from_list(self.files.tape_list)
+  File "/papertape/bin/paper_mtx.py", line 383, in archive_from_list
+    self.append_to_archive(data_path, file_path_rewrite=archive_path )
+  File "/papertape/bin/paper_mtx.py", line 344, in append_to_archive
+    self.archive_tar.add(file_path, arcname=arcname)
+  File "/usr/lib64/python3.4/tarfile.py", line 1913, in add
+    tarinfo = self.gettarinfo(name, arcname)
+  File "/usr/lib64/python3.4/tarfile.py", line 1785, in gettarinfo
+    statres = os.lstat(name)
+FileNotFoundError: [Errno 2] No such file or directory: '/papertape/pot5.physics.upenn.edu:/data2/raw_data_FROM_FOLIO/EoR2013/psa6620/zen.2456620.16691.xx.uv'
+ 
+ 
+[10:50]  
+the file looks like it exists at `pot5:/data2/…`, but it wasn’t found by the script
+ 
+[10:50]  
+do we need to move the files to `pot4` for the backup?
+ 
+[10:55]  
+I poked around a little and learned about `sshfs`, I’m going to mount `pot5` that way
+ 
+d [11:56 AM] 
+it would be better to mount them using nfs
+ 
+[11:58]  
+it will take longer over sshfs due to encryption and occasionally drops out...
+ 
+plaplant [11:59 AM] 
+okay, good to know
+ 
+[11:59]  
+i’ll switch to nfs
+ 
+d [12:00 PM] 
+wherever you mount it, then you also need to create a link. for example if I mount it under /nfs/pot5/data2 I would link it like ln -s /nfs/pot5 /papertape/pot5:
+ 
+[12:01]  
+or just mkdir /papertape/pot5: and mount it as /papertape/pot5:/data2
+ 
+plaplant [12:04 PM] 
+why do I need the link?
+ 
+[12:05]  
+could I just mount `pot5:/data2` at a `data2` directory in `/papertape/pot5.physics.upenn.edu:`?
+ 
+d [12:07 PM] 
+it’s prefixed to /papertape/$path, so if you put it someplace else, you have to link it.
+ 
+plaplant [12:07 PM] 
+okay, I see
+ 
+d [12:08 PM] 
+we should prly change that since it makes the dir a little messy
+ 
+[12:08]  
+something like papertape/data/$host:...
+ 
+[12:09]  
+or even try to resolve it based on actual hostname...
+ 
+[12:10]  
+but in the past all the data dirs were remote and nfs produced the fastest transfer speeds....
+ 
+plaplant [12:10 PM] 
+that’s okay, i don’t mind mounting the remote directories as nfs
+ 
+d [12:11 PM] 
+you can also enumerate it with the code, if that helps
+ 
+plaplant [12:11 PM] 
+so I tried to run `sudo mount pot5:/data2 /mnt/pot5\:/data2/` and got `mount.nfs: access denied by server while mounting pot5:/data2`
+ 
+d [12:12 PM] 
+pot5 has to export it to pot4
+ 
+[12:12]  
+it will need an entry in /etc/exports
+ 
+plaplant [12:13 PM] 
+okay
+ 
+[12:13]  
+there’s also a weird networking thing, where pot4 can see/ping pot5, but pot5 can’t ping pot4...
+ 
+d [12:14 PM] 
+is it just iptables?
+ 
+plaplant [12:14 PM] 
+also, pot5 has an entry in /etc/exports: `/data2 128.91.79.158(no_root_squash,rw,async,fsid=10) 192.168.1.152(no_root_squash,rw,async,fsid=10)`
+ 
+d [12:14 PM] 
+service nfs status?
+ 
+plaplant [12:15 PM] 
+Redirecting to /bin/systemctl status  nfs.service
+nfs-server.service - NFS server and services
+   Loaded: loaded (/usr/lib/systemd/system/nfs-server.service; enabled)
+   Active: active (exited) since Thu 2016-12-22 04:31:38 PST; 1 months 26 days ago
+ Main PID: 16098 (code=exited, status=0/SUCCESS)
+   CGroup: /system.slice/nfs-server.service
+ 
+Dec 22 04:31:38 pot5 systemd[1]: Started NFS server and services.
+Dec 22 04:46:39 pot5 systemd[1]: Started NFS server and services.
+ 
+ 
+[12:16]  
+this is on pot5
+ 
+d [12:16 PM] 
+looks like iptabels
+ 
+[12:16]  
+what ip is pot5?
+ 
+plaplant [12:16 PM] 
+obs@pot5[~]$ ifconfig
+enp2s0f0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 192.168.2.153  netmask 255.255.255.0  broadcast 192.168.2.255
+        inet6 fe80::ec4:7aff:fe4c:4b1e  prefixlen 64  scopeid 0x20<link>
+        ether 0c:c4:7a:4c:4b:1e  txqueuelen 1000  (Ethernet)
+        RX packets 35831018236  bytes 51898450536842 (47.2 TiB)
+        RX errors 0  dropped 693806  overruns 7135  frame 0
+        TX packets 5778463882  bytes 467037648580 (434.9 GiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+        device memory 0xdfce0000-dfcfffff
+ 
+enp2s0f1: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 10.0.10.5  netmask 255.255.255.0  broadcast 10.0.10.255
+        inet6 fe80::ec4:7aff:fe4c:4b1f  prefixlen 64  scopeid 0x20<link>
+        ether 0c:c4:7a:4c:4b:1f  txqueuelen 1000  (Ethernet)
+        RX packets 2  bytes 619 (619.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 27  bytes 3841 (3.7 KiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+        device memory 0xdfc60000-dfc7ffff
+ 
+lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
+        inet 127.0.0.1  netmask 255.0.0.0
+        inet6 ::1  prefixlen 128  scopeid 0x10<host>
+        loop  txqueuelen 0  (Local Loopback)
+        RX packets 993  bytes 81318 (79.4 KiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 993  bytes 81318 (79.4 KiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+ 
+ 
+[12:17]  
+folio sees it as 192.168.2.153
+ 
+d [12:21 PM] 
+alright how about now?
+ 
+plaplant [12:21 PM] 
+I still can’t mount nfs
+ 
+[12:22]  
+and I can’t go from pot5 -> pot4
+ 
+d [12:26 PM] 
+checking...
+ 
+d [12:45 PM] 
+driving atm, be back in 90 min
+ 
+ 
+ ```
+ 
+then the tape library broke:
+```text
+plaplant [5:43 PM] 
+I got the nfs to work, but now the tape library is acting strange
+ 
+[5:44]  
+I was trying to erase the tapes that were partially written with `mt -f /dev/nst0 erase`
+ 
+d [5:44 PM] 
+that’s funny I was just checking the nfs server on pot5
+ 
+plaplant [5:44 PM] 
+it seemed like it was hung, so I killed the process, but now the tape library isn’t working
+ 
+[5:44]  
+oh that’s funny
+ 
+d [5:45 PM] 
+hmm, well you don’t really need to erase, you can just overwrite
+ 
+plaplant [5:45 PM] 
+yeah, I changed the IP address in `/etc/exports` on pot5, and then ran `exportfs -ra` and then mounting on pot4 worked fine
+ 
+[5:45]  
+okay, good to know for the future
+ 
+[5:46]  
+unfortunately now the tape library isn’t working normally
+ 
+d [5:47 PM] 
+what’s the symptom?
+ 
+plaplant [5:47 PM] 
+so `mtx status` works fine, but I can’t load or unload tapes
+ 
+[5:47]  
+obs@pot4[~]$ mtx unload 2 1
+Unloading drive 1 into Storage Element 2...mtx: Request Sense: Long Report=yes
+mtx: Request Sense: Valid Residual=no
+mtx: Request Sense: Error Code=70 (Current)
+mtx: Request Sense: Sense Key=Not Ready
+mtx: Request Sense: FileMark=no
+mtx: Request Sense: EOM=no
+mtx: Request Sense: ILI=no
+mtx: Request Sense: Additional Sense Code = 04
+mtx: Request Sense: Additional Sense Qualifier = 12
+mtx: Request Sense: BPV=no
+mtx: Request Sense: Error in CDB=no
+mtx: Request Sense: SKSV=no
+MOVE MEDIUM from Element Address 257 to 4097 Failed
+ 
+[5:47]  
+I get something similar if I try to run `mtx load 1 0`
+ 
+d [5:50 PM] 
+that’s a quizibuck
+ 
+plaplant [5:51 PM] 
+I even tried to reboot pot4, but it’s still happening...
+ 
+[5:52]  
+I’m afraid I might have to reboot the tape library, but I’m out of town right now and am not sure how to do that remotely
+ 
+d [5:55 PM] 
+there might be a dell management api
+ 
+plaplant [6:02 PM] 
+I think they have a web app, but I haven't set it up because I couldn't figure out how to get the MAC address for the library...
+ 
+d [6:02 PM] 
+we should be able to install openmanage and access it via the cli
+ 
+plaplant [6:12 PM] 
+how do we install that?
+ 
+d [6:30 PM] 
+there should be an installer somewhere on the dell site
+ 
+plaplant [6:31 PM] 
+I poked around and could only find the Microsoft one...
+ 
+d [6:45 PM] 
+I think I’ll have to walk over and look at it.
+ 
+plaplant [6:46 PM] 
+Thanks! I appreciate it
+ 
+d [8:36 PM] 
+one of our admins is going to be able to visit it tomorrow afternoon.
+ 
+plaplant [9:13 PM] 
+cool, thanks a lot
+ 
+ 
+----- February 18th -----
+d [2:18 PM] 
+looks like we’re back. We also ran the cleaning tape through both drives.
+ 
+plaplant [2:43 PM] 
+Great! Thanks so much, I really appreciate the reset
+ 
+d [2:43 PM] 
+anytime :slightly_smiling_face:
+```
+
+
+```text
+----- Today February 21st, 2017 -----
+plaplant [11:12 AM] 
+I just finished the maiden voyage of `DumpFaster`, and it only took 20 hours (down from ~30)
+ 
+[11:12]  
+huge speedup!
+ 
+d [11:13 AM] 
+awesome. glad I could help```
+ 
+ 
 <br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
 
 

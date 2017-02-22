@@ -64,6 +64,8 @@ class PaperDB(object):
         """Run checks on a credentials file; currently just check that it exists and is not empty.
         this class should really implement a more thorough credentials file check since this check
         is replicated in the dump class already.
+
+        Parameters:
         :type credentials: string
         """
         ## return true if the credentials file exists and is not zero size
@@ -104,6 +106,7 @@ class PaperDB(object):
         Arguments:
         :param size_limit: int
         :param regex: str
+        :param pid: bool
         """
 
         if regex:
@@ -170,7 +173,6 @@ class PaperDB(object):
         self.cur.execute(ready_sql)
         self.update_connection_time()
 
-        count=0
         dir_list = {}
         for file_info in self.cur.fetchall():
             ## parse paths
@@ -295,7 +297,7 @@ class PaperDB(object):
             """unlcaim files in database; close database
             :rtype : bool
             """
-            _unclaim_status = True
+            #_unclaim_status = True
             self.unclaim_files()
             return _close()
 
