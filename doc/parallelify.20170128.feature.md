@@ -1,6 +1,6 @@
 # parallel verification of written tapes
 
-owner: dconover:20170128    
+owner: dconover:20170128:20170221    
 review: optional
 
 ## related
@@ -32,6 +32,7 @@ verification process, to improve throughput.
   new verification method: dump_pair_verify, an updated method: 
   tar_archive_fast, an updated method: fast_batch
   2. [paper_mtx.py](/bin/paper_mtx.py) - refactor tape_archive_md5() to unload tapes when complete
+  3. [paper_db.py](/bin/paper_db.py) - add credential file check method
 
 ## feature 
   We are currently using DumpFast.tar_archive_fast() (in paper_dump.py) which
