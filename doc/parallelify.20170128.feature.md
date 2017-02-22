@@ -515,7 +515,7 @@ group's slack via direct message
 
 ## supplement
 slack discussion (eoranalysis:dm):
-```bash
+```text
 plaplant [10:08 AM] 
 how hard would it be to parallelize the error-checking for the tapes?
 
@@ -569,7 +569,7 @@ it’d also be helpful if we wanted to tape up the data in real time, since we�
 ```
 
 discussion around refactoring unloading tape after verification:
-```bash
+```text
 plaplant [11:07 AM] 
 cool, thanks so much for writing this up!
 
@@ -591,8 +591,9 @@ Thanks
 d [6:17 PM] 
 I’ve added an unload call to the end of the verification process :slightly_smiling_face:
 ```
+
 discussion about testing:
-```bash
+```text
 d [12:25 PM] 
 I’ve finally integrated the new code. I still have to write some tests, but if you’re between runs, you can call it by changing the dump class from DumpFast to DumpFaster in the papertape-prod_dump.py file. I am hoping to be able to get some tests written and run on the old tape library this weekend.
 
@@ -885,7 +886,7 @@ d [12:45 PM]
 driving atm, be back in 90 min
  
  
- ```
+```
  
 then the tape library broke:
 ```text
@@ -1002,7 +1003,8 @@ I just finished the maiden voyage of `DumpFaster`, and it only took 20 hours (do
 huge speedup!
  
 d [11:13 AM] 
-awesome. glad I could help```
+awesome. glad I could help
+```
  
  
 <br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
