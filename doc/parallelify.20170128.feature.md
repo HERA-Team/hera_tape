@@ -384,14 +384,12 @@ dump.test_dump_faster()
   7. refactor code fix; refactor test code doc - dconover:20170208
   8. refactor: update check_credentials_file() and PaperDB.\_\_init__()
   9. code passes dry-run test of new threading code using mocked dump functions - dconover:20170213
+  10. repair implementation problems (plaplant)
+  11. test new dump with DumpFaster class (plaplant)
 
-
-## todo 
-  7. refactor: update DumpTest.\_\_init__() to run self.test_data_init() and connect
-  7. build test dataset
-  8. test fix
-  9. report changes to plaplant via slack
-  10. update production dump script (papertape-prod_dump.py)
+## deferred 
+  1. refactor: update DumpTest.\_\_init__() to run self.test_data_init() and connect
+  2. build test dataset
 
 ## refactor
   plaplant also requested that the verification process unload the tape 
