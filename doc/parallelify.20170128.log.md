@@ -9,7 +9,7 @@ owner: dconover:20170211
   1. [scratch](#scratch) - major edits/discussion to working documentation
   2. [try](#try) - python code trying things I don't fully understand
   3. [test](#test) - python code I test in snippets before moving to prod
-  4. [scrap](#scrap)
+  4. [scrap](#scrap) - proposed work that were scrapped before deployment
 
 ## scratch
 
