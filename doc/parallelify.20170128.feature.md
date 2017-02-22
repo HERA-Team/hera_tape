@@ -245,6 +245,7 @@ class DumpFaster(DumpFast):
 we can do some base testing of the new method if we make a custom test class
   1. test class: `class TestDumpNoTape(Dump):`
   2. create a dummmy: TestDumpNoTape.dump_verify() method
+  3. create a dummy: \_\_init__() to bypass the normal init process
    
 test_dump_pair_notape.py:
 ```python
@@ -270,7 +271,9 @@ test_dump_instance = TestDumpNoTape()
 test_dump_instance.dump_pair_verify(label_ids)
 ```
 
-successful integration: 
+Using the test code above we can demonstrate that the new code is successfully 
+integrated with the exising code (not necessarily that it provides the improvements
+that we intend): 
 ```
 ssh://root@shredder.physics.upenn.edu:22/root/.pyenv/versions/3.4.1/bin/python -u /root/.pycharm_helpers/pycharm/utrunner.py /root/pycharm/dconover/paper-dump/bin/test_dump_pair_notape.py true
 Testing started at 8:06 PM ...
