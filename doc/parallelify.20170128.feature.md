@@ -306,7 +306,7 @@ Empty test suite.
 
 ## deferred 
   1. refactor: update DumpTest.\_\_init_\_() to run self.test_data_init() and connect
-  2. build test dataset
+  2. build test dataset (see [parallelify.20170128.log.md#scrap](https://gitlab.sas.upenn.edu/hpc/papertape/blob/p4-dev/doc/parallelify.20170128.log.md#scrap))
 
 ## refactor
   plaplant also requested that the verification process unload the tape 
