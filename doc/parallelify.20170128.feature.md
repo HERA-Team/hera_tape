@@ -391,6 +391,7 @@ dump.test_dump_faster()
   9. code passes dry-run test of new threading code using mocked dump functions - dconover:20170213
   10. repair implementation problems (plaplant)
   11. test new dump with DumpFaster class (plaplant)
+  12. open merge request !1
 
 ## deferred 
   1. refactor: update DumpTest.\_\_init__() to run self.test_data_init() and connect
