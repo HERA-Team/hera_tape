@@ -114,7 +114,8 @@ for verify in verify_list:
 ```
 
   Since we're passing in a reference to "self" we could also just set a
-variable and modify it from within the thread.
+variable and modify it from within the thread, but I like explicitly setting 
+it in the calling method.
 
   Changer.tape_archive_md5() uses self.load_tape_drive(tape_id). If the tapes are loaded 
 before the function is called it will leave the tape in the drive and rewind it.
@@ -353,7 +354,7 @@ that dump_close() could eventually be made to work correctly.
 ## [... truncated for brevity]
 ```
   creating a default variable for the credentials_file and a new method for checking 
-the validity of the credentials file
+the validity of the credentials file.
 
 ```python
 from os import path
