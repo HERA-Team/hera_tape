@@ -394,7 +394,7 @@ dump.test_dump_faster()
   12. open merge request !1
 
 ## deferred 
-  1. refactor: update DumpTest.\_\_init__() to run self.test_data_init() and connect
+  1. refactor: update DumpTest.\_\_init_\_() to run self.test_data_init() and connect
   2. build test dataset
 
 ## refactor
