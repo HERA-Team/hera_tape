@@ -9,6 +9,7 @@ owner: dconover:20170211
   1. [scratch](#scratch) - major edits/discussion to working documentation
   2. [try](#try) - python code trying things I don't fully understand
   3. [test](#test) - python code I test in snippets before moving to prod
+  4. [scrap](#scrap)
 
 ## scratch
 
@@ -434,4 +435,99 @@ verification thread using label_two
 
 Process finished with exit code 0
 Empty test suite.
+```
+
+## scrap
+  We didn't implement all our proposed test code. It is included here in case it
+  it useful to future development.
+
+###### test deployment
+  We are adding new methods to the TestDump class in paper_dump.py
+  1. test_build_dataset - build a test dataset
+  2. test_dump_faster - use the new DumpFaster class to dump the dataset like in papertape-prod_dump.py
+
+```python
+class TestDump(DumpFaster):
+
+    def test_data_init(self):
+        "create a test data set"
+        pass
+ 
+    def test_dump_faster(self):
+        "run a test dump using the test data"
+ 
+        ## from paper_dump import TestDump
+  
+        self.paper_creds = '/papertape/etc/.my.papertape-test.cnf'
+  
+        ## test variables (15GB batch and 1.536 TB tape size - lto4)
+        self.batch_size_mb = 15000
+        self.tape_size = 1536000
+        self.fast_batch()
+```  
+
+
+###### test_build_dataset()
+  for testing the new dump class we will employ the old tape library, still 
+attached to shredder. We need to perform the following to prepare for testing:
+  1. create a set of test files to dump
+  2. identify a pair of tapes to use
+  3. update the mtx database (a test mtxdb) to use those tapes
+  4. create test credentials files for the mtx db and test papertape db
+  
+  make a temporary holding dir
+  ```python
+  from os import makedirs
+      def test_build_dataset(temp_filepath='/papertapte/tmp/test_data')
+          
+          ## make a test directory to hold some tes files
+          makedirs(temp_filepath, exist_ok=True)
+```
+
+check free space on the temp holding dir
+```python
+from os import statvfs
+
+    def test_free_space(file_path, free_limit): 
+    """given a free_limit return true if the available space is below the free_limit"""
+        ## check if we have enough room on the partition
+        _stat =  statvfs(file)
+        _gb_free = _stat[0]*_stat[2]/1024**3
+        
+        return True if _gb_free > free_limit else False
+        
+    ## example call to new method
+    self.test_free_space(test_tmp_path, expected_test_data_size)
+```
+
+make some files less than our expected_test_data_size and greater than our min_test_file_size
+```python
+          ## make some small test files
+          ## add the test files to a database
+```
+  
+###### test_dump_faster()
+  The test method calls the new dump class on a crafted test data set
+
+```python
+      def test_dump_faster(self):
+        "run a test dump using the test data"
+ 
+        # self.paper_creds = '/papertape/etc/my.papertape-test.cnf'
+        self.batch_size_mb = 15000
+        self.tape_size = 1536000
+        
+        self.test_data_init()
+        self.fast_batch()
+```
+  This will itself need to be run from a test script like:
+```python
+from paper_dump import TestDump    
+    
+## initialize the test code with test credentials
+dump = TestDump()
+    
+## create the data set, run the test dump, cleanup the test data
+dump.test_dump_faster()
+
 ```
