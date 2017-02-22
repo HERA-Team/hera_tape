@@ -47,7 +47,9 @@ contains the following:
                 self.close_dump()
 ``` 
 
-  Instead we should pass the tape_label_ids into dump_verify().
+  Instead we should pass the tape_label_ids into a new wrapper method called
+  dump_pair_verify() that then loops over each label with python threading 
+  and calls dump_verify().
 
   dump_verify() is inherited from Dump.dump_verify() and contains:
 ```python
@@ -112,8 +114,7 @@ for verify in verify_list:
 ```
 
   Since we're passing in a reference to "self" we could also just set a
-variable and modify it from within the thread, but I like to explicitly return
-the variable out to the calling function with the custom status method.
+variable and modify it from within the thread.
 
   Changer.tape_archive_md5() uses self.load_tape_drive(tape_id). If the tapes are loaded 
 before the function is called it will leave the tape in the drive and rewind it.
@@ -183,7 +184,7 @@ class VerifyThread(Thread):
         return reduce(_check_thread_status, return_codes)
 ```
 
-finally we need to update DumpFaster.tar_archive_fast() to call dump_pair_verify
+finally we need to update DumpFaster.tar_archive_fast() to call dump_pair_verify()
 instead of the original verification for loop
 ```python
 class DumpFaster(DumpFast):
