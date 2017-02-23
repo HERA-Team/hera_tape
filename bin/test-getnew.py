@@ -1,7 +1,7 @@
 __author__ = 'dconover@sas.upenn.edu'
 
 from paper_db import PaperDB
-cred='/root/.my.papertape-sample.cnf'
+cred='/home2/obs/.my.papertape-prod.cnf'
 
 x = PaperDB('201611',  cred, 1, debug=False)
 #a,b = x.get_new(0)

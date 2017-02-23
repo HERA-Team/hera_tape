@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 
 import pymysql, subprocess, re
 from enum import Enum, unique
+from os import path
 
 from paper_debug import Debug
 from paper_status_code import StatusCode
@@ -36,6 +37,8 @@ class PaperDB(object):
         self.paperdb_state = self.paperdb_state_code.initialize
         self.connection_timeout = 90
         self.connection_time = timedelta()
+
+        self.check_credentials_file(credentials)
         self.credentials = credentials
         self.connect = ''
         self.cur = ''
@@ -56,6 +59,17 @@ class PaperDB(object):
             self.debug.output("updating: {} with {}={}".format(class_name, attr_name, attr_value))
 
         super().__setattr__(attr_name, attr_value)
+
+    def check_credentials_file(self, credentials):
+        """Run checks on a credentials file; currently just check that it exists and is not empty.
+        this class should really implement a more thorough credentials file check since this check
+        is replicated in the dump class already.
+
+        Parameters:
+        :type credentials: string
+        """
+        ## return true if the credentials file exists and is not zero size
+        path.isfile(credentials) and path.getsize(credentials) > 0
 
     def update_connection_time(self):
         """refresh database connection time"""
@@ -92,6 +106,7 @@ class PaperDB(object):
         Arguments:
         :param size_limit: int
         :param regex: str
+        :param pid: bool
         """
 
         if regex:
@@ -158,7 +173,6 @@ class PaperDB(object):
         self.cur.execute(ready_sql)
         self.update_connection_time()
 
-        count=0
         dir_list = {}
         for file_info in self.cur.fetchall():
             ## parse paths
@@ -283,7 +297,7 @@ class PaperDB(object):
             """unlcaim files in database; close database
             :rtype : bool
             """
-            _unclaim_status = True
+            #_unclaim_status = True
             self.unclaim_files()
             return _close()
 
