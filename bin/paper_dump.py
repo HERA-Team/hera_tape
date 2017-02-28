@@ -5,7 +5,7 @@ be dumped to tape using this class.
 """
 
 __author__ = 'dconover@sas.upenn.edu'
-__version__ = 20170203
+__version__ = 20170221
 
 from threading import Thread
 from random import randint
