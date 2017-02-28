@@ -1,6 +1,6 @@
 # parallel verification of written tapes
 
-owner: dconover:20170128    
+owner: dconover:20170128:20170221    
 review: optional
 
 ## related
@@ -32,6 +32,7 @@ verification process, to improve throughput.
   new verification method: dump_pair_verify, an updated method: 
   tar_archive_fast, an updated method: fast_batch
   2. [paper_mtx.py](/bin/paper_mtx.py) - refactor tape_archive_md5() to unload tapes when complete
+  3. [paper_db.py](/bin/paper_db.py) - add credential file check method
 
 ## feature 
   We are currently using DumpFast.tar_archive_fast() (in paper_dump.py) which
@@ -46,7 +47,9 @@ contains the following:
                 self.close_dump()
 ``` 
 
-  Instead we should pass the tape_label_ids into dump_verify().
+  Instead we should pass the tape_label_ids into a new wrapper method called
+  dump_pair_verify() that then loops over each label with python threading 
+  and calls dump_verify().
 
   dump_verify() is inherited from Dump.dump_verify() and contains:
 ```python
@@ -111,8 +114,8 @@ for verify in verify_list:
 ```
 
   Since we're passing in a reference to "self" we could also just set a
-variable and modify it from within the thread, but I like to explicitly return
-the variable out to the calling function with the custom status method.
+variable and modify it from within the thread, but I like explicitly setting 
+it in the calling method.
 
   Changer.tape_archive_md5() uses self.load_tape_drive(tape_id). If the tapes are loaded 
 before the function is called it will leave the tape in the drive and rewind it.
@@ -182,7 +185,7 @@ class VerifyThread(Thread):
         return reduce(_check_thread_status, return_codes)
 ```
 
-finally we need to update DumpFaster.tar_archive_fast() to call dump_pair_verify
+finally we need to update DumpFaster.tar_archive_fast() to call dump_pair_verify()
 instead of the original verification for loop
 ```python
 class DumpFaster(DumpFast):
@@ -243,6 +246,7 @@ class DumpFaster(DumpFast):
 we can do some base testing of the new method if we make a custom test class
   1. test class: `class TestDumpNoTape(Dump):`
   2. create a dummmy: TestDumpNoTape.dump_verify() method
+  3. create a dummy: \_\_init__() to bypass the normal init process
    
 test_dump_pair_notape.py:
 ```python
@@ -268,7 +272,9 @@ test_dump_instance = TestDumpNoTape()
 test_dump_instance.dump_pair_verify(label_ids)
 ```
 
-successful integration: 
+Using the test code above we can demonstrate that the new code is successfully 
+integrated with the exising code (not necessarily that it provides the improvements
+that we intend): 
 ```
 ssh://root@shredder.physics.upenn.edu:22/root/.pyenv/versions/3.4.1/bin/python -u /root/.pycharm_helpers/pycharm/utrunner.py /root/pycharm/dconover/paper-dump/bin/test_dump_pair_notape.py true
 Testing started at 8:06 PM ...
@@ -279,96 +285,6 @@ Process finished with exit code 0
 Empty test suite.
 ```
 
-###### test deployment
-  We are adding new methods to the TestDump class in paper_dump.py
-  1. test_build_dataset - build a test dataset
-  2. test_dump_faster - use the new DumpFaster class to dump the dataset like in papertape-prod_dump.py
-
-```python
-class TestDump(DumpFaster):
-
-    def test_data_init(self):
-        "create a test data set"
-        pass
- 
-    def test_dump_faster(self):
-        "run a test dump using the test data"
- 
-        ## from paper_dump import TestDump
-  
-        self.paper_creds = '/papertape/etc/.my.papertape-test.cnf'
-  
-        ## test variables (15GB batch and 1.536 TB tape size - lto4)
-        self.batch_size_mb = 15000
-        self.tape_size = 1536000
-        self.fast_batch()
-```  
-
-
-###### test_build_dataset()
-  for testing the new dump class we will employ the old tape library, still 
-attached to shredder. We need to perform the following to prepare for testing:
-  1. create a set of test files to dump
-  2. identify a pair of tapes to use
-  3. update the mtx database (a test mtxdb) to use those tapes
-  4. create test credentials files for the mtx db and test papertape db
-  
-  make a temporary holding dir
-  ```python
-  from os import makedirs
-      def test_build_dataset(temp_filepath='/papertapte/tmp/test_data')
-          
-          ## make a test directory to hold some tes files
-          makedirs(temp_filepath, exist_ok=True)
-```
-
-check free space on the temp holding dir
-```python
-from os import statvfs
-
-    def test_free_space(file_path, free_limit): 
-    """given a free_limit return true if the available space is below the free_limit"""
-        ## check if we have enough room on the partition
-        _stat =  statvfs(file)
-        _gb_free = _stat[0]*_stat[2]/1024**3
-        
-        return True if _gb_free > free_limit else False
-        
-    ## example call to new method
-    self.test_free_space(test_tmp_path, expected_test_data_size)
-```
-
-make some files less than our expected_test_data_size and greater than our min_test_file_size
-```python
-          ## make some small test files
-          ## add the test files to a database
-```
-  
-###### test_dump_faster()
-  The test method calls the new dump class on a crafted test data set
-
-```python
-      def test_dump_faster(self):
-        "run a test dump using the test data"
- 
-        # self.paper_creds = '/papertape/etc/my.papertape-test.cnf'
-        self.batch_size_mb = 15000
-        self.tape_size = 1536000
-        
-        self.test_data_init()
-        self.fast_batch()
-```
-  This will itself need to be run from a test script like:
-```python
-from paper_dump import TestDump    
-    
-## initialize the test code with test credentials
-dump = TestDump()
-    
-## create the data set, run the test dump, cleanup the test data
-dump.test_dump_faster()
-
-```
   
 ## deploy
   1. review tests with slack(eoranalysis):/dm:plaplant
@@ -386,10 +302,11 @@ dump.test_dump_faster()
   9. code passes dry-run test of new threading code using mocked dump functions - dconover:20170213
   10. repair implementation problems (plaplant)
   11. test new dump with DumpFaster class (plaplant)
+  12. open merge request !1
 
 ## deferred 
-  1. refactor: update DumpTest.\_\_init__() to run self.test_data_init() and connect
-  2. build test dataset
+  1. refactor: update DumpTest.\_\_init_\_() to run self.test_data_init() and connect
+  2. build test dataset (see [parallelify.20170128.log.md#scrap](https://gitlab.sas.upenn.edu/hpc/papertape/blob/p4-dev/doc/parallelify.20170128.log.md#scrap))
 
 ## refactor
   plaplant also requested that the verification process unload the tape 
@@ -437,7 +354,7 @@ that dump_close() could eventually be made to work correctly.
 ## [... truncated for brevity]
 ```
   creating a default variable for the credentials_file and a new method for checking 
-the validity of the credentials file
+the validity of the credentials file.
 
 ```python
 from os import path
@@ -1007,6 +924,7 @@ huge speedup!
 d [11:13 AM] 
 awesome. glad I could help
 ```
+
  
  
 <br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
