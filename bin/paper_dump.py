@@ -200,10 +200,11 @@ class Dump(object):
 
         self.close_dump()
 
-    def log_label_ids(self, tape_label_ids, tape_list):
+    def log_label_ids(self, tape_label_ids):
         """send label ids to db"""
         log_label_ids_status = self.status_code.OK
         log_label_ids_status = self.paperdb.write_tape_index(self.files.tape_list, ','.join(tape_label_ids))
+
         if log_label_ids_status is not self.status_code.OK:
             self.debug.output('problem writing label: {}'.format(log_label_ids_status))
             self.files.save_tape_ids(','.join(tape_label_ids))
@@ -395,7 +396,7 @@ class DumpFast(Dump):
             dump_verify_status = self.dump_verify(label_id)
             if dump_verify_status is not self.status_code.OK:
                 self.debug.output('Fail: dump_verify {}'.format(dump_verify_status))
-                tar_archive_single_status = self.status_code.tar_archive_single_dump_verify
+                tar_archive_fast_status = self.status_code.tar_archive_single_dump_verify
                 self.close_dump()
 
         ## update the current dump state
@@ -404,7 +405,7 @@ class DumpFast(Dump):
             if log_label_ids_status is not self.status_code.OK:
                 self.debug.output('problem writing labels out: {}'.format(log_label_ids_status))
         else:
-            self.debug.output("Abort dump: {}".format(tar_archive_single_status))
+            self.debug.output("Abort dump: {}".format(tar_archive_fast_status))
 
     def fast_batch(self):
         """skip tar of local archive on disk
@@ -475,6 +476,8 @@ class DumpFast(Dump):
         self.debug.output("complete:%s:%s:%s:%s" % (queue, regex, pid, claim))
         return True if self.tape_used_size != 0 else False
 
+
+# noinspection PyMissingConstructor
 class DumpFaster(DumpFast):
 
     """Queless archiving means that the data is never transferred to our disk queues
@@ -694,6 +697,7 @@ class VerifyThread(Thread):
         self.dump_verify_status = self.dump_object.dump_verify(self.tape_id, self.drive)
 
 
+# noinspection PyMissingConstructor
 class TestDump(DumpFaster):
     """move all the testing methods here to cleanup the production dump class"""
 
@@ -718,11 +722,11 @@ class TestDump(DumpFaster):
         self.files.gen_final_catalog(self.files.catalog_name, self.files.archive_list, self.paperdb.file_md5_dict)
 
     def test_data_init(self):
-        "create a test data set"
+        """create a test data set"""
         pass
 
     def test_dump_faster(self):
-        "run a test dump using the test data"
+        """run a test dump using the test data"""
 
         self.batch_size_mb = 15000
         self.tape_size = 1536000
