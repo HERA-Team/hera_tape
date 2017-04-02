@@ -124,7 +124,9 @@ class Changer(object):
     def load_tape_drive(self, tape_id, drive=0):
         """load a given tape_id into a given drive=drive_int, unload if necessary.
         :type  tape_id: label of tape to load
-        :param tape_id: label of tape to load"""
+        :param tape_id: label of tape to load
+        :param drive: load a tape in a specific drive
+        """
         status = False
 
         self.debug.output('check then load - {}, {}'.format(tape_id, drive))

@@ -192,7 +192,7 @@ class Dump(object):
 
         ## update the current dump state
         if tar_archive_single_status is self.status_code.OK:
-            log_label_ids_status = self.log_label_ids(tape_label_ids, self.files.tape_list)
+            log_label_ids_status = self.log_label_ids(tape_label_ids)
             if log_label_ids_status is not self.status_code.OK:
                 self.debug.output('problem writing labels out: {}'.format(log_label_ids_status))
         else:
@@ -401,7 +401,7 @@ class DumpFast(Dump):
 
         ## update the current dump state
         if tar_archive_fast_status is self.status_code.OK:
-            log_label_ids_status = self.log_label_ids(tape_label_ids, self.files.tape_list)
+            log_label_ids_status = self.log_label_ids(tape_label_ids)
             if log_label_ids_status is not self.status_code.OK:
                 self.debug.output('problem writing labels out: {}'.format(log_label_ids_status))
         else:
@@ -618,7 +618,7 @@ class DumpFaster(DumpFast):
 
         ## update the db if the current dump status is OK
         if tar_archive_fast_status is self.status_code.OK:
-            log_label_ids_status = self.log_label_ids(tape_label_ids, self.files.tape_list)
+            log_label_ids_status = self.log_label_ids(tape_label_ids)
             if log_label_ids_status is not self.status_code.OK:
                 self.debug.output('problem writing labels out: {}'.format(log_label_ids_status))
         else:

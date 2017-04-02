@@ -128,6 +128,7 @@ class Archive(object):
 
         :param tape_catalog_file: str
         :param tape_list: file_list of [int, int, string]
+        :param md5_dict: list of files and md5sums
         """
         self.debug.output('tape_list - %s' % tape_list)
 
