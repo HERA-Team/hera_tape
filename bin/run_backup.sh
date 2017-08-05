@@ -34,7 +34,7 @@ function clean_exit {
     if [ ! -z ${PID} ]; then
 	wait $PID
 	exit_status=$?
-	echo "scipt exit status: $exit_status"
+	echo "script exit status: $exit_status"
     fi
 }
 

@@ -493,7 +493,7 @@ class MtxDB(object):
         for n in [0, 1]:
             select_sql = """select label from ids
                 where date is null and
-                label like 'P128%d%s'
+                label like 'H0C%d%s'
                 order by label
             """ % (n+1, "%")
 
