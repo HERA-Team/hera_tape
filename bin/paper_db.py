@@ -112,7 +112,7 @@ class PaperDB(object):
         if regex:
             ready_sql = """select source, filesize, md5sum from File
                 where source is not null
-                and filetype = 'uv'
+                and filetype like 'uv%'
                 and is_tapeable = 1 
                 and tape_index is null
                 and source like '%s'
@@ -124,7 +124,7 @@ class PaperDB(object):
         else:
             ready_sql = """select source, filesize, md5sum from File
                 where source is not null 
-                and filetype = 'uv'
+                and filetype like 'uv%'
                 and is_tapeable = 1 
                 and tape_index is null
                 group by source order by filename;
@@ -163,7 +163,7 @@ class PaperDB(object):
         ## remove "is_tapeable=1"
         ready_sql = """select source from File
                         where source is not null
-                        and filetype = 'uv'
+                        and filetype like 'uv%'
                         /* and is_tapeable = 1 */
                         and tape_index is null
                         group by source order by filename;
