@@ -38,18 +38,18 @@ export LOG_DIR=$WORK_DIR/log TERM=ansi
 export LOGFILE_CLOSE=tty
 #alias pylint='pylint --rcfile=~/.pylint.d/pylintrc'
 
-_pgrep () { grep "$*" paper_*.py; }
-_highlight () { highlight -A $1; }
-_pylint () { /root/.pyenv/shims/pylint --rcfile=~/.pylint.d/pylintrc $1; }
+_pgrep () { grep "$*" paper_*.py; } ## grep for regex in papertape source code
+_highlight () { highlight -A $1; }  ## run highlight on the given file
+_pylint () { /root/.pyenv/shims/pylint --rcfile=~/.pylint.d/pylintrc $1; } ## run pylint on a file
 
-_l () { TLAST=${1:-TLAST}; _pylint $TLAST; cat pylint_${TLAST%.py}.txt; }
-_p () { python -c "$1"; }
-_r () { rm -r /papertape/shm/*; ssh shredder 'mysql paperdatatest <x; mysql mtx <y'; }
+_l () { TLAST=${1:-TLAST}; _pylint $TLAST; cat pylint_${TLAST%.py}.txt; }  ## relint the last edited file
+_p () { python -c "$1"; } ## run python on the given file
+_r () { rm -r /papertape/shm/*; ssh shredder 'mysql paperdatatest <x; mysql mtx <y'; } ## reset the test database from dev dump files
 
-_date () {
+_date () {  ## standard date formating for each job
     date +%Y%m%d-%H%M
 }
-_t (){
+_t (){  ## execute a test run
     
     local _pid=$RANDOM
     local _log_file=$LOG_DIR/t.err.$_pid
@@ -74,16 +74,16 @@ _t (){
     export TLAST=$_command
 }
 
+_v () { vim ${1:-$last};last=${1-$last}; }  ## edit the current working file or a new one if given
+_m () {  ## run mysql interface 
+    echo using file: ${2:-$mlast}; echo "$1"| mysql --defaults-extra-file=/root/.my.${2:-$mlast}.cnf||ls /root/.my.*; mlast=${2:-$mlast}; 
+}
+_dd () {  dd if=/dev/nst0 bs=32k count=1 conv=sync,block; } ## read the first block from nst0
+_rewi () { mt -f /dev/nst0 rewi; }  ## rewind nst0
+_fsf () { mt -f /dev/nst0 fsf $1; }  ## advance one file record on nst0
+_tf () { tar tf /dev/nst0 ; }  ## return tar table for file on nst0
 
-
-_v () { vim ${1:-$last};last=${1-$last}; }
-_m () { echo using file: ${2:-$mlast}; echo "$1"| mysql --defaults-extra-file=/root/.my.${2:-$mlast}.cnf||ls /root/.my.*; mlast=${2:-$mlast}; }
-_dd () {  dd if=/dev/nst0 bs=32k count=1 conv=sync,block; }
-_rewi () { mt -f /dev/nst0 rewi; }
-_fsf () { mt -f /dev/nst0 fsf $1; }
-_tf () { tar tf /dev/nst0 ; }
-
-_comment () { sed -e 's/^/# /'; }
+_comment () { sed -e 's/^/# /'; } ## print comment
 
 _pc () {    ## list classes in a module
     local _module=$1
