@@ -290,7 +290,7 @@ class Changer(object):
 
         return self.tape_drives.count_files(drive_int)
 
-    def tape_archive_md5(self, tape_id, job_pid, catalog_list, md5_dict):
+    def tape_archive_md5(self, tape_id, job_pid, catalog_list, md5_dict, drive=0):
         """loop through each archive on tape and check a random file md5 from each
 
         :rtype : bool"""
@@ -301,7 +301,7 @@ class Changer(object):
 
         self.debug.output('loading tape: %s' % tape_id)
         ## load a tape or rewind the existing tape
-        self.load_tape_drive(tape_id)
+        self.load_tape_drive(tape_id, drive)
         drive_int = self.drive_ids[tape_id][0]
 
         ## for every tar advance the tape
@@ -493,7 +493,7 @@ class MtxDB(object):
         for n in [0, 1]:
             select_sql = """select label from ids
                 where date is null and
-                label like 'P128%d%s'
+                label like 'H0C%d%s'
                 order by label
             """ % (n+1, "%")
 
