@@ -1,0 +1,21 @@
+Feature Request:
+
+  Create an installer for the paper-dump scripts to be installed on a different machine
+
+
+
+Manifest:
+  
+  1. bin/paper-dump-installer.sh
+  2. etc/installer.tar.gz
+
+
+Test:
+
+    pull code to pot4 and run bin/paper-dump-installer.sh
+
+
+
+Owner: dconover:20160502
+Review: [username]:[date]
+

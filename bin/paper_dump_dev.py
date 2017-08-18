@@ -5,20 +5,18 @@ be dumped to tape using this class.
 """
 
 __author__ = 'dconover@sas.upenn.edu'
-__version__ = 20170221
+__version__ = 20150103
 
-from threading import Thread
 from random import randint
-from os import statvfs, makedirs, getpid, path
+from os import getpid
 from sys import exit
-from functools import reduce
 
 from enum import Enum, unique
 
 from paper_mtx import Changer, MtxDB
 from paper_io import Archive
-from paper_db import PaperDB
-#from paper_db import TestPaperDB
+#from paper_db import PaperDB
+from paper_db import TestPaperDB
 from paper_debug import Debug
 from paper_status_code import StatusCode
 
@@ -26,7 +24,7 @@ from paper_status_code import StatusCode
 class Dump(object):
     """Coordinate a dump to tape based on deletable files in database"""
 
-    def  __init__(self, credentials='/papertape/etc/my.papertape-test.cnf', mtx_credentials='/home2/obs/.my.mtx.cnf', debug=False, pid=None, disk_queue=True, drive_select=2, debug_threshold=255):
+    def  __init__(self, credentials, debug=False, pid=None, disk_queue=True, drive_select=2, debug_threshold=255):
         """initialize"""
 
         self.version = __version__
@@ -34,13 +32,13 @@ class Dump(object):
         self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
 
         self.status_code = StatusCode
-        self.mtx_creds = mtx_credentials
+        self.mtx_creds = '~/.my.mtx.cnf'
         self.debug.output(credentials)
         self.paper_creds = credentials
 
         self.tape_ids = ''
 
-        ## each dump process 12GB to /dev/shm (two at a time)
+        ## each dump process 6gb to /dev/shm (two at a time)
         self.batch_size_mb = 12000
 
         ## (1.5Tb -1 batch)
@@ -48,7 +46,11 @@ class Dump(object):
         #self.tape_size = 13000
 
         ## setup PaperDB connection
-        self.paperdb = PaperDB(self.version, self.paper_creds, self.pid, debug=True, debug_threshold=debug_threshold)
+        #self.paperdb = PaperDB(self.version, self.paper_creds, self.pid, debug=True, debug_threshold=debug_threshold)
+        ## test database
+        self.paperdb = TestPaperDB(self.version, self.paper_creds, self.pid, debug=True, debug_threshold=debug_threshold)
+        ## reload test data
+        #self.paperdb.load_sample_data()
 
         ## setup tape library
         self.labeldb = MtxDB(self.version, self.mtx_creds, self.pid, debug=debug, debug_threshold=debug_threshold)
@@ -192,7 +194,7 @@ class Dump(object):
 
         ## update the current dump state
         if tar_archive_single_status is self.status_code.OK:
-            log_label_ids_status = self.log_label_ids(tape_label_ids)
+            log_label_ids_status = self.log_label_ids(tape_label_ids, self.files.tape_list)
             if log_label_ids_status is not self.status_code.OK:
                 self.debug.output('problem writing labels out: {}'.format(log_label_ids_status))
         else:
@@ -200,11 +202,10 @@ class Dump(object):
 
         self.close_dump()
 
-    def log_label_ids(self, tape_label_ids):
+    def log_label_ids(self, tape_label_ids, tape_list):
         """send label ids to db"""
         log_label_ids_status = self.status_code.OK
         log_label_ids_status = self.paperdb.write_tape_index(self.files.tape_list, ','.join(tape_label_ids))
-
         if log_label_ids_status is not self.status_code.OK:
             self.debug.output('problem writing label: {}'.format(log_label_ids_status))
             self.files.save_tape_ids(','.join(tape_label_ids))
@@ -215,18 +216,16 @@ class Dump(object):
 
         return log_label_ids_status
 
-    def dump_verify(self, tape_id, drive=0):
+    def dump_verify(self, tape_id):
         """take the tape_id and run a self check,
         then confirm the tape_list matches
 
         """
+
         dump_verify_status = self.status_code.OK
 
-        ## we update the dump state so self.dump_close() knows what actions to take
-        self.dump_state = self.dump_state_code.dump_verify
-
         ## run a tape_self_check
-        self_check_status, item_index, catalog_list, md5_dict, tape_pid = self.tape_self_check(tape_id, drive)
+        self_check_status, item_index, catalog_list, md5_dict, tape_pid = self.tape_self_check(tape_id)
 
         ## take output from tape_self_check and compare against current dump
         if self_check_status is self.status_code.OK:
@@ -258,7 +257,7 @@ class Dump(object):
         self.debug.output('final {}'.format(dump_verify_status))
         return dump_verify_status
 
-    def tape_self_check(self, tape_id, drive=0):
+    def tape_self_check(self, tape_id):
         """process to take a tape and run integrity check without reference to external database
 
         :rtype : bool
@@ -267,7 +266,7 @@ class Dump(object):
 
         ## load the tape if necessary
         ## TODO(dconover): call with the correct tape drive_int or unload tape before tape_self_check
-        self.tape.load_tape_drive(tape_id, drive)
+        self.tape.load_tape_drive(tape_id)
 
         ## read tape_catalog as file_list
         self.debug.output('read catalog from tape: %s' % tape_id)
@@ -277,7 +276,7 @@ class Dump(object):
         ## build an file_md5_dict
         item_index, catalog_list, md5_dict, tape_pid = self.files.final_from_file(catalog=first_block)
 
-        tape_archive_md5_status, reference = self.tape.tape_archive_md5(tape_id, tape_pid, catalog_list, md5_dict, drive)
+        tape_archive_md5_status, reference = self.tape.tape_archive_md5(tape_id, tape_pid, catalog_list, md5_dict)
         if tape_archive_md5_status is not self.status_code.OK:
             self.debug.output("tape failed md5 inspection at index: %s, status: %s" % (reference, tape_archive_md5_status))
             tape_self_check_status = tape_archive_md5_status
@@ -371,9 +370,7 @@ class DumpFast(Dump):
 
         ## select ids
         tape_label_ids = self.labeldb.select_ids()
-
-        ## commenting this out doesn't allow the tapes to be "claimed"
-        self.labeldb.claim_ids(tape_label_ids)
+        # self.labeldb.claim_ids(tape_label_ids)
 
         ## load up a fresh set of tapes
         self.tape.load_tape_pair(tape_label_ids)
@@ -396,21 +393,21 @@ class DumpFast(Dump):
             dump_verify_status = self.dump_verify(label_id)
             if dump_verify_status is not self.status_code.OK:
                 self.debug.output('Fail: dump_verify {}'.format(dump_verify_status))
-                tar_archive_fast_status = self.status_code.tar_archive_single_dump_verify
+                tar_archive_single_status = self.status_code.tar_archive_single_dump_verify
                 self.close_dump()
 
         ## update the current dump state
         if tar_archive_fast_status is self.status_code.OK:
-            log_label_ids_status = self.log_label_ids(tape_label_ids)
+            log_label_ids_status = self.log_label_ids(tape_label_ids, self.files.tape_list)
             if log_label_ids_status is not self.status_code.OK:
                 self.debug.output('problem writing labels out: {}'.format(log_label_ids_status))
         else:
-            self.debug.output("Abort dump: {}".format(tar_archive_fast_status))
+            self.debug.output("Abort dump: {}".format(tar_archive_single_status))
 
     def fast_batch(self):
         """skip tar of local archive on disk
-           send files to two tapes using a single drive."""
 
+           send files to two tapes using a single drive."""
         ## batch_files() does the job of making the lists that queue_archive does
         ## it also updates self.tape_index which is used by Changer.write()
         self.debug.output('reloading sample data into paperdatatest database')
@@ -476,157 +473,6 @@ class DumpFast(Dump):
         self.debug.output("complete:%s:%s:%s:%s" % (queue, regex, pid, claim))
         return True if self.tape_used_size != 0 else False
 
-
-# noinspection PyMissingConstructor
-class DumpFaster(DumpFast):
-
-    """Queless archiving means that the data is never transferred to our disk queues
-
-    Disk queues are still used to maintain state in the event of a partial dump failure
-    Tape verification is rewritten to make use of python threading.
-
-    """
-
-    def  __init__(self, credentials='/papertape/etc/my.papertape-test.cnf', mtx_credentials='/home2/obs/.my.mtx.cnf', debug=False, pid=None, disk_queue=True, drive_select=2, debug_threshold=255):
-        """initialize"""
-
-        self.version = __version__
-        self.pid = "%0.6d%0.3d" % (getpid(), randint(1, 999)) if pid is None else pid
-        self.debug = Debug(self.pid, debug=debug, debug_threshold=debug_threshold)
-
-        self.status_code = StatusCode
-        self.check_credentials_file(mtx_credentials)
-        self.mtx_creds = mtx_credentials
-
-        self.debug.output(credentials)
-        self.check_credentials_file(credentials)
-        self.paper_creds = credentials
-
-        self.tape_ids = ''
-
-        ## each dump process 12GB to /dev/shm (two at a time)
-        self.batch_size_mb = 12000
-
-        ## (1.5Tb -1 batch)
-        self.tape_size = (1.5 * 1000 * 1000) - self.batch_size_mb
-        #self.tape_size = 13000
-
-        ## setup PaperDB connection
-        self.paperdb = PaperDB(self.version, self.paper_creds, self.pid, debug=True, debug_threshold=debug_threshold)
-
-        ## setup tape library
-        self.labeldb = MtxDB(self.version, self.mtx_creds, self.pid, debug=debug, debug_threshold=debug_threshold)
-
-        ## setup file access
-        self.files = Archive(self.version, self.pid, debug=debug, debug_threshold=debug_threshold)
-
-        ## use the pid here to lock changer
-        self.drive_select = drive_select
-        self.tape = Changer(self.version, self.pid, self.tape_size, debug=True, drive_select=drive_select, disk_queue=disk_queue, debug_threshold=debug_threshold)
-
-        self.dump_list = []
-        self.tape_index = 0
-        self.tape_used_size = 0 ## each dump process should write one tape worth of data
-        self.dump_state_code = DumpStateCode
-        self.dump_state = self.dump_state_code.initialize
-
-
-    def check_credentials_file(self, credentials):
-        """Run checks on a credentials file; currently just check that it exists and is not empty.
-        :type credentials: string
-        """
-        ## return true if the credentials file exists and is not zero size
-        path.isfile(credentials) and path.getsize(credentials) > 0
-
-    def dump_pair_verify(self, tape_label_ids):
-        """This is a wrapper to perform a threaded version of the
-        original call to dump_verify(). Our "threading" is implemented  in three
-        steps:
-
-          1. instantiate VerifyThread (that calls dump_verify()) and start each thread
-          2. wait on each thread and get the verification status code from each
-          3. check each status code and return failure if either is not "OK"
-        """
-
-        ## thread instances need to be started, we can use the output to make a list of started threads
-        def _start_verification(thread):
-            thread.start()
-            return thread
-
-        ## join() will block until the thread completes, then we can retrieve the status from the verification
-        def _get_verification_status(thread):
-            thread.join()
-            return thread.dump_verify_status
-
-        ## given a pair of verification status codes, return a "non-OK" status if either is not "OK"
-        def _check_thread_status(status_1, status_2):
-            return status_1 if status_1 is not self.status_code.OK else status_2
-
-        ## foreach label, start a thread and add it to a list
-        started_threads = [_start_verification(VerifyThread(label_id, drive, self)) for drive, label_id in enumerate(tape_label_ids)]
-
-        ## foreach thread, check the verification status and add it to a list
-        return_codes = [_get_verification_status(thread) for thread in started_threads]
-
-        ## foreach status code, check if either is not "OK"
-        return reduce(_check_thread_status, return_codes)
-
-    def fast_batch(self):
-        """skip tar of local archive on disk
-           send files to two tapes using a single drive."""
-
-        ## batch_files() does the job of making the lists that queue_archive does
-        ## it also updates self.tape_index which is used by Changer.write()
-        self.debug.output('reloading sample data into paperdatatest database')
-
-        if self.batch_files():
-            self.debug.output('found %s files' % len(self.files.tape_list))
-            self.files.gen_final_catalog(self.files.catalog_name, self.files.tape_list, self.paperdb.file_md5_dict)
-            self.tar_archive_fast(self.files.catalog_name)
-            return True
-        else:
-            self.debug.output("no files batched")
-            return self.dump_state_code.dump_list_fail
-
-    def tar_archive_fast(self, catalog_file):
-        """Archive files directly to tape using only a single drive to write 2 tapes"""
-
-        tar_archive_fast_status = self.status_code.OK
-
-        ## select ids
-        tape_label_ids = self.labeldb.select_ids()
-
-        ## load up a fresh set of tapes
-        self.tape.load_tape_pair(tape_label_ids)
-
-        ## add the catalog to the beginning of the tape
-        for label_id in tape_label_ids:
-            self.debug.output('archiving to label_id - {}'.format(label_id))
-
-        ## prepare the first block of the tape with the current tape_catalog
-        self.tape.prep_tape(catalog_file)
-
-        ## actually write the files in the catalog to a tape pair
-        self.debug.output('got list - {}'.format(self.files.tape_list))
-        self.tape.archive_from_list(self.files.tape_list)
-
-        ## check the status of the dumps
-        tar_archive_fast_status = self.dump_pair_verify(tape_label_ids)
-
-        ## unload the tape pair
-        self.tape.unload_tape_pair()
-
-        ## update the db if the current dump status is OK
-        if tar_archive_fast_status is self.status_code.OK:
-            log_label_ids_status = self.log_label_ids(tape_label_ids)
-            if log_label_ids_status is not self.status_code.OK:
-                self.debug.output('problem writing labels out: {}'.format(log_label_ids_status))
-        else:
-            self.debug.output("Abort dump: {}".format(tar_archive_fast_status))
-            self.close_dump()
-
-
-
 # noinspection PyClassHasNoInit
 @unique
 class DumpStateCode(Enum):
@@ -680,56 +526,14 @@ class ResumeDump(Dump):
         self.tar_archive_single(self.files.catalog_name)
         self.debug.output("manual to tape complete")
 
-## custom thread class to capture status code
-## when dump_verify() completes
-class VerifyThread(Thread):
-    ## init object with tape_id and dump_object
-    ## so we can call dump_object(tape_id)
-    def __init__(self, tape_id, drive, dump_object):
-        Thread.__init__(self)
-        self.tape_id = tape_id
-        self.drive = drive
-        self.dump_object = dump_object
-        self.dump_verify_status = ''
-
-    ## custom run() to run dump_verify and save returned output
-    def run(self):
-        self.dump_verify_status = self.dump_object.dump_verify(self.tape_id, self.drive)
-
-
-# noinspection PyMissingConstructor
-class TestDump(DumpFaster):
+class TestDump(DumpFast):
     """move all the testing methods here to cleanup the production dump class"""
 
-    def __init__(self):
-        pass
-        ## copy from Dump.__init__()
-        self.test_data_init()
-
-    def test_free_space(self, file_path, free_limit):
-        """given a free_limit return true if the available space is above the free_limit"""
-
-        ## check if we have enough room on the partition
-        _stat = statvfs(file_path)
-        _gb_free = _stat[0] * _stat[2] / 1024 ** 3
-
-        return True if _gb_free > free_limit else False
 
     def test_build_archive(self, regex=False):
         """master method to loop through files to write data to tape"""
 
         self.batch_files(queue=True, regex=regex)
         self.files.gen_final_catalog(self.files.catalog_name, self.files.archive_list, self.paperdb.file_md5_dict)
-
-    def test_data_init(self):
-        """create a test data set"""
-        pass
-
-    def test_dump_faster(self):
-        """run a test dump using the test data"""
-
-        self.batch_size_mb = 15000
-        self.tape_size = 1536000
-        self.fast_batch()
 
 

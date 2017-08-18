@@ -169,7 +169,7 @@ class Changer(object):
             self.debug.output('tape already empty', str(tape_int))
 
     def drives_empty(self, drive_int=None):
-        """retun true if the drives are currently empty"""
+        """return true if the drives are currently empty"""
         self.debug.output('recheck inventory')
         self.check_inventory()
 
@@ -290,7 +290,7 @@ class Changer(object):
 
         return self.tape_drives.count_files(drive_int)
 
-    def tape_archive_md5(self, tape_id, job_pid, catalog_list, md5_dict):
+    def tape_archive_md5(self, tape_id, job_pid, catalog_list, md5_dict, drive=0):
         """loop through each archive on tape and check a random file md5 from each
 
         :rtype : bool"""
@@ -301,7 +301,7 @@ class Changer(object):
 
         self.debug.output('loading tape: %s' % tape_id)
         ## load a tape or rewind the existing tape
-        self.load_tape_drive(tape_id)
+        self.load_tape_drive(tape_id, drive)
         drive_int = self.drive_ids[tape_id][0]
 
         ## for every tar advance the tape
@@ -328,6 +328,7 @@ class Changer(object):
             else:
                 self.debug.output('md5 match: %s|%s' % (md5sum, md5_dict[directory_path]))
 
+        self.unload_tape(tape_id)
         return tape_archive_md5_status, reference
 
     def close_changer(self):
@@ -491,8 +492,8 @@ class MtxDB(object):
         ids = []
         for n in [0, 1]:
             select_sql = """select label from ids
-                where status is null and
-                label like 'PAPR%d%s'
+                where date is null and
+                label like 'H0C%d%s'
                 order by label
             """ % (n+1, "%")
 
@@ -665,7 +666,7 @@ class Drives(object):
                 local _tape_dev=${4:-0}
 
                 local _tar_number=$_tape_index
-                local _archive_tar=paper.$_job_pid.$_tar_number.tar
+                local _archive_tar=papertape/shm/paper.$_job_pid.$_tar_number.tar
                 local _test_file=$_test_path/visdata
 
                 ## extract the archive tar, then extract the file to stdout, then run md5 on stdin

@@ -12,6 +12,11 @@ log_file=/papertape/log/papertape.log.$$.$(date +%Y%m%d-%H%M)
 log_link=/papertape/log/papertape.log
 override_file=/var/run/papertape.override
 
+DUMP_SUCCESS=0
+DUMP_OVERRIDE=1
+DUMP_FAILURE=2
+DUMP_FINISH=3
+
 _logfile open $log_file
 
 ## check override file
@@ -32,21 +37,35 @@ ln -s $log_file $log_link
 _filelock $process_file
 echo $$ >>$process_file
 
+## start a timer
+STARTTIME=$(date +%s)
+
 ## run dump
 echo starting papertape dump: $(date)
-time python $dump_script || (
+time python3 $dump_script || {
     echo Fail: bad exit from $dump_script $?
     _logfile close
     exit $DUMP_FAILURE
-)
+}
+
+## get the elapsed time
+ENDTIME=$(date +%s)
 
 ## schedule next run
-echo $0|at now +10min
+#echo $0|at now +10min
 
 ## unlock process file
 rm $process_file
 echo ending papertape dump: $(date)
 
-_logfile close 
-
-
+## if we didn't actually tape anything, the time difference will be small
+if [ $(($ENDTIME - $STARTTIME)) -lt 120 ]; then
+    echo No more files to tape
+    _logfile close 
+    exit $DUMP_FINISH
+else
+    # remove override file
+    rm $override_file
+    _logfile close
+    exit $DUMP_SUCCESS
+fi
