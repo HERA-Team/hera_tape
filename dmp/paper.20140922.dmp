@@ -104,7 +104,7 @@ archive process.
 
 Archive monitoring:
 
-	1. once a month, one tape is selected from the written collection and
+    1. once a month, one tape is selected from the written collection and
        sample files are restored from the selected tape to check data integrity 
        and to evaluate new archive options
     2. results for each test are logged in the database so that no tape will be 

@@ -1,5 +1,8 @@
 # table schema for paperdata.File
 
+## related
+  1. [dmp](../dmp/paperdata.20161119.dmp.md)
+
 ## description 
 
     Mysql schema for File table tracks location information for all 
@@ -12,7 +15,7 @@ raw and compressed data.
     table_name: File
 
 ## schema
-
+```bash
 Field               Type            Null  Key   Default  Extra
 host          varchar(100)          YES  NULL                    ## fullname of host where file is located
 base_path     varchar(100)          YES  NULL                    ## path to file if on filesystem
@@ -27,6 +30,7 @@ is_tapeable   tinyint(1)            YES  NULL                    ## status 1 if 
 is_deletable  tinyint(1)            YES  NULL
 timestamp     datetime              YES  NULL
 init_host     varchar(100)          YES  NULL
+```
 
 ## raw
 
